@@ -1,0 +1,103 @@
+name: Visual Regression Check
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Modo de execucao'
+        required: true
+        default: 'ci'
+        type: choice
+        options:
+          - ci
+          - evaluate
+
+jobs:
+  visual-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── Setup ──────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar Chromium (Playwright)
+        run: npx playwright install chromium --with-deps
+
+      # ── CI: Captura + Comparacao ───────────────────────
+      - name: Capturar screenshots
+        if: ${{ github.event.inputs.mode != 'evaluate' }}
+        run: npm run capture
+
+      - name: Comparar com baselines
+        if: ${{ github.event.inputs.mode != 'evaluate' }}
+        run: npm run compare
+
+      - name: Gerar relatorio CI
+        if: ${{ github.event.inputs.mode != 'evaluate' }}
+        run: npm run report
+
+      # ── Evaluate: Avaliacao completa (manual) ──────────
+      - name: Executar avaliacao completa
+        if: ${{ github.event.inputs.mode == 'evaluate' }}
+        run: npm run evaluate
+
+      - name: Gerar relatorio de avaliacao
+        if: ${{ github.event.inputs.mode == 'evaluate' }}
+        run: node tests/report.js --evaluate
+
+      # ── Artefatos ──────────────────────────────────────
+      - name: Upload de resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-results
+          path: results/
+          retention-days: 30
+
+      # ── Comentario no PR ───────────────────────────────
+      - name: Comentar no PR
+        if: ${{ github.event_name == 'pull_request' && always() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const resultsPath = 'results/results.json';
+
+            if (!fs.existsSync(resultsPath)) {
+              return;
+            }
+
+            const data = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
+            const s = data.summary;
+
+            const status = s.failed > 0 ? '❌' : '✅';
+            let body = `## ${status} Regressao Visual\n\n`;
+            body += `| Tecnica | Resultado |\n|---------|----------|\n`;
+
+            for (const tech of ['pixel', 'ssim', 'region']) {
+              const t = s.techniques[tech];
+              const icon = t.failed > 0 ? '❌' : '✅';
+              body += `| ${tech} | ${icon} ${t.passed} OK / ${t.failed} FAIL |\n`;
+            }
+
+            body += `\n> Detalhes nos artefatos do workflow.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
