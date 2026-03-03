@@ -34,16 +34,17 @@ Merge na main → Workflow atualiza baselines automaticamente
 Para garantir que o pipeline e o Review UI funcionem corretamente, configure o seguinte:
 
 - **Secrets no GitHub**
-  - `VRT_TOKEN` (recomendado): PAT usado pelo Review UI e pelo workflow `update-baselines` para postar status e commitar baselines. Adicione em **Settings → Secrets and variables → Actions**.
-  - O servidor também aceita `GITHUB_TOKEN`, `GH_TOKEN` ou `GITHUB_PAT` como alternativas locais.
+  - `VRT_TOKEN`: PAT usado **exclusivamente** pelo workflow `update-baselines` para fazer `git push` na branch `main` (necessário para contornar Repository Rulesets). Adicione em **Settings → Secrets and variables → Actions**.
+  - Todos os demais acessos nos workflows (checkout, status checks, comentários em PRs, deploy de Pages) usam o `GITHUB_TOKEN` padrão do GitHub Actions — nenhum secret extra é necessário para eles.
+  - Para uso **local** do Review UI, o servidor aceita `VRT_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` ou `GITHUB_PAT` para postar status checks via API.
 
-- **Escopos / Permissões do token**
-  - Use um PAT com escopo `repo` para permitir postar status (`statuses`), criar commits e pushar baselines.
-  - Se preferir restringir, certifique-se de pelo menos: `repo:status` (postar status checks) e `contents:write` (commitar arquivos).
+- **Escopos / Permissões do `VRT_TOKEN`**
+  - O token só precisa de permissão para **push** na `main`. Use um PAT com escopo `repo` (clássico) ou, para fine-grained, conceda `Contents: Read & write`.
+  - Se você usa **Repository Rulesets**, adicione o bot/app associado ao token como **bypass actor** na regra.
 
 - **Permissões nos workflows**
-  - O workflow `visual-regression.yml` precisa declarar `statuses: write` (já configurado) para criar status checks.
-  - O workflow `update-baselines.yml` faz `actions/checkout` com `token: ${{ secrets.VRT_TOKEN }}` — esse secret deve possuir permissão para escrever no repositório (push).
+  - O workflow `visual-regression.yml` declara `statuses: write`, `pull-requests: write` e `pages: write` (já configurado).
+  - O workflow `update-baselines.yml` faz checkout com `GITHUB_TOKEN` normal e usa `VRT_TOKEN` **apenas na hora do push** (via `git remote set-url`).
 
 - **Branch protection**
   - Em **Settings → Branches → Add rule** para `main`, exija o status check `visual-regression/review` (o check só aparece após o primeiro run do workflow).
@@ -83,16 +84,24 @@ Para que o merge só seja permitido após aprovação visual:
 > ⚠️ O status check `visual-regression/review` só aparece para seleção **depois** que o workflow roda pela primeira vez.
 > Execute o workflow manualmente uma vez (via `workflow_dispatch`) para registrar o check.
 
-### 1.2 Permissões do VRT_TOKEN
+### 1.2 Permissões dos tokens nos workflows
 
-O `VRT_TOKEN` padrão do Actions já tem permissão suficiente. Os workflows declaram:
+Os workflows usam o `GITHUB_TOKEN` padrão para a maioria das operações. As permissões declaradas:
 
 ```yaml
+# visual-regression.yml
 permissions:
-  contents: read        # ler código
+  contents: write       # ler código + deploy Pages
   pull-requests: write  # comentar no PR
   statuses: write       # criar status checks
+  pages: write          # deploy Review UI
+
+# update-baselines.yml
+permissions:
+  contents: write       # ler código + commitar baselines
 ```
+
+O `VRT_TOKEN` (PAT) é usado **apenas** no step de `git push` do workflow `update-baselines`, para contornar Repository Rulesets que bloqueiam push direto na `main`.
 
 ---
 
