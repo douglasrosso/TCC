@@ -109,8 +109,8 @@ npm run report
 ### 6. Revisar diffs interativamente
 
 ```bash
-npm run review          # Status no terminal
-npm run review:ui       # UI web em http://localhost:3060
+npm run review          # Build + start review UI (http://localhost:3060)
+npm run review:start    # Start review server only (assumes dist/)
 ```
 
 ### 7. Aprovar ou rejeitar
@@ -141,12 +141,13 @@ node tests/review.js --reject dashboard-mobile-360w --comment "Bug no botão"
 | `npm run update-baselines` | Copiar capturas atuais → baselines |
 | `npm run ci` | Pipeline completo (capture → compare → report) |
 | `npm run evaluate` | Avaliação com mutações (TP/FP/F1) |
-| `npm run review` | Status de review no terminal |
+| `npm run review` | Build + start review UI (http://localhost:3060) |
 | `npm run review:approve-all` | Aprovar todas as diffs |
 | `npm run review:reject-all` | Rejeitar todas as diffs |
 | `npm run review:history` | Histórico de reviews |
 | `npm run review:reset` | Resetar status |
-| `npm run review:ui` | UI web de review (porta 3060) |
+| `npm run review:start` | Start review server (serve `packages/pixelguard-review/dist/`) |
+| `npm run review:build` | Build da UI de review (packages/pixelguard-review) |
 | `npm run e2e` | Testes E2E Playwright |
 | `npm run e2e:ui` | Testes E2E com interface visual |
 
@@ -158,6 +159,86 @@ npm run e2e:ui           # Interface visual do Playwright
 ```
 
 ## Avaliação para TCC
+
+## Configuração necessária
+
+Antes de usar o pipeline de Visual Regression e o Review UI, confirme as configurações abaixo:
+
+- **Segredos / Tokens (CI e local)**:
+  - `VRT_TOKEN` (recomendado): token usado pelo servidor de review para postar status no GitHub e pelo workflow `update-baselines` para commitar baselines. No GitHub Actions crie um Secret `VRT_TOKEN` com um Personal Access Token (PAT) que tenha as permissões descritas abaixo.
+  - Alternativas aceitas pelo servidor: `GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_PAT` (o servidor procura por essas variáveis também).
+
+- **Permissões do PAT**:
+  - `repo` (ou pelo menos `repo:status` + `contents:write`) — necessário para que a ação/CLI poste `status` checks e para que o workflow que atualiza baselines consiga commitar e pushar alterações em `baselines/`.
+  - Se você pretende alterar regras de branch protection via API, o token precisa de permissões administrativas no repositório (`admin:repo_hook` / `repo` com privilégios suficientes).
+
+- **Branch protection (recomendado)**:
+  - Adicione uma regra de proteção para `main` que exija o status check `visual-regression/review` (o workflow usa esse contexto). Assim PRs ficam bloqueadas até o review visual ser aprovado.
+
+- **Diretórios e artefatos**:
+  - `results/` — artefatos gerados pelo CI (upload/download de resultados para revisão local).
+  - `baselines/` — imagens de referência que o comparador usa. O workflow `update-baselines` atualiza este diretório quando um merge é realizado em `main`.
+
+- **Portas padrão (local)**:
+  - Dashboard: `http://localhost:3050/` (Vite dev)
+  - Review UI: `http://localhost:3060/` (servidor estático + API)
+
+- **Uso local (exemplo)**:
+  - Defina o token localmente (PowerShell):
+    ```powershell
+    $env:VRT_TOKEN = "ghp_SeuTokenAqui"
+    npm run review
+    ```
+  - Ou (Linux/macOS):
+    ```bash
+    VRT_TOKEN=ghp_SeuTokenAqui npm run review
+    ```
+
+  ### Passo a passo (criar token, adicionar secret e configurar branch protection)
+
+  1) Criar um PAT no GitHub (opção simples — Token clássico)
+    - GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token
+    - Name: `pixelguard-review`
+    - Expiration: escolha conforme sua política (ou `No expiration` para testes locais)
+    - Scopes: marque `repo` (ou ao menos `repo:status` + `repo` > `contents:write`)
+    - Generate token → copie o valor (será mostrado só uma vez)
+
+  2) (Opcional) Criar Fine-grained token
+    - GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token
+    - Resource owner: selecione seu repositório
+    - Permissions: `Commit statuses: Read & write`, `Contents: Read & write` (ou equivalente)
+    - Generate token → copie o valor
+
+  3) Adicionar secret no repositório
+    - Vá em `Settings → Secrets and variables → Actions → New repository secret`
+    - Name: `VRT_TOKEN`
+    - Value: cole o token gerado
+    - Save secret
+
+  4) Configurar Branch Protection para `main`
+    - Vá em `Settings → Branches → Add rule`
+    - Branch name pattern: `main`
+    - Marque `Require status checks to pass before merging`
+    - Na lista de checks, selecione `visual-regression/review` (se não aparecer, rode o workflow manualmente uma vez)
+    - (Opcional) marque `Require branches to be up to date before merging`
+    - Save changes
+
+  5) Verificar / registrar o status check
+    - Rode manualmente o workflow `visual-regression.yml` (Actions → Visual Regression → Run workflow) para que o context `visual-regression/review` apareça na lista de checks.
+
+  6) Exemplo de uso local
+  ```powershell
+  $env:VRT_TOKEN = "ghp_SeuTokenAqui"
+  npm run review
+  ```
+
+  ou (Linux/macOS):
+
+  ```bash
+  VRT_TOKEN=ghp_SeuTokenAqui npm run review
+  ```
+
+  Se quiser, posso gerar capturas passo-a-passo (screens) mostrando exatamente onde clicar no GitHub UI e opcionalmente criar uma ação de CI que faz build do `packages/pixelguard-review` para publicar um preview (Netlify/Vercel/GitHub Pages). Diga qual prefere.
 
 ```bash
 npm run evaluate                    # Injeta mutações e calcula métricas

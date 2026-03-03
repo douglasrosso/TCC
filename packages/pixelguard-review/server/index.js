@@ -1,15 +1,12 @@
 /**
- * Servidor HTTP local para review interativo de diffs visuais.
+ * PixelGuard Review Server
  *
- * Fornece uma UI web com:
- *   - Visualização side-by-side (baseline × atual × diff)
- *   - Botões de aprovar / rejeitar individual e em lote
- *   - Histórico de reviews
- *   - API REST para integração
+ * Standalone HTTP server that serves the review UI and REST API.
  *
- * Uso:
- *   node tests/review-server.js              → porta 3060
- *   node tests/review-server.js --port 4000  → porta customizada
+ * Usage:
+ *   node server/index.js                        → port 3060
+ *   node server/index.js --port 4000            → custom port
+ *   node server/index.js --results-dir ./results → custom results dir
  */
 import fs            from 'node:fs';
 import http          from 'node:http';
@@ -29,15 +26,18 @@ import {
 } from './review.js';
 
 const __dirname    = path.dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR     = path.resolve(__dirname, '..');
-// Load .env from project root if present so we can read tokens from it
-dotenv.config({ path: path.join(ROOT_DIR, '.env') });
-const DIST_DIR     = path.resolve(ROOT_DIR, 'dist');
-const RESULTS_DIR  = path.resolve(ROOT_DIR, 'results');
-const BASELINES    = path.resolve(ROOT_DIR, 'baselines');
+const PKG_ROOT     = path.resolve(__dirname, '..');
+
+// Try to load .env from the consuming project's root (cwd)
+dotenv.config({ path: path.join(process.cwd(), '.env') });
+
+// Resolve directories
+const DIST_DIR     = path.resolve(PKG_ROOT, 'dist');
+const RESULTS_DIR  = process.env.PIXELGUARD_RESULTS_DIR || path.resolve(process.cwd(), 'results');
+const BASELINES    = process.env.PIXELGUARD_BASELINES_DIR || path.resolve(process.cwd(), 'baselines');
 const CURRENT_DIR  = path.resolve(RESULTS_DIR, 'current');
 
-/* MIME types para servir arquivos estáticos */
+/* MIME types */
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js':   'application/javascript; charset=utf-8',
@@ -70,19 +70,18 @@ function serveIndex(res) {
   const indexPath = path.join(DIST_DIR, 'index.html');
   if (!fs.existsSync(indexPath)) {
     res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Build não encontrado. Execute: npm run build');
+    res.end('Build não encontrado. Execute: npx pixelguard-review build');
     return;
   }
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
   fs.createReadStream(indexPath).pipe(res);
 }
 
-/* ===== Configuração ===== */
+/* ===== Config ===== */
 const portIdx  = process.argv.indexOf('--port');
 const PORT     = portIdx >= 0 ? parseInt(process.argv[portIdx + 1], 10) : 3060;
 
 /* ===== Helpers ===== */
-
 function jsonResponse(res, data, statusCode = 200) {
   res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(data));
@@ -112,9 +111,7 @@ function serveImage(res, filePath) {
   fs.createReadStream(filePath).pipe(res);
 }
 
-
-/* ===== Roteador ===== */
-
+/* ===== Router ===== */
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const pathname = url.pathname;
@@ -125,37 +122,32 @@ async function handleRequest(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  /* ===== Serve images ===== */
+  /* ===== Images ===== */
   if (pathname.startsWith('/img/baseline/')) {
-    const file = decodeURIComponent(pathname.replace('/img/baseline/', ''));
-    serveImage(res, path.join(BASELINES, file));
+    serveImage(res, path.join(BASELINES, decodeURIComponent(pathname.replace('/img/baseline/', ''))));
     return;
   }
   if (pathname.startsWith('/img/current/')) {
-    const file = decodeURIComponent(pathname.replace('/img/current/', ''));
-    serveImage(res, path.join(CURRENT_DIR, file));
+    serveImage(res, path.join(CURRENT_DIR, decodeURIComponent(pathname.replace('/img/current/', ''))));
     return;
   }
   if (pathname.startsWith('/img/diff/')) {
-    const rest = decodeURIComponent(pathname.replace('/img/diff/', ''));
-    serveImage(res, path.join(RESULTS_DIR, 'diffs', rest));
+    serveImage(res, path.join(RESULTS_DIR, 'diffs', decodeURIComponent(pathname.replace('/img/diff/', ''))));
     return;
   }
 
-  /* ===== API: Status ===== */
+  /* ===== API ===== */
   if (pathname === '/api/status' && req.method === 'GET') {
     jsonResponse(res, getStatus());
     return;
   }
 
-  /* ===== API: History ===== */
   if (pathname === '/api/history' && req.method === 'GET') {
     const limit = parseInt(url.searchParams.get('limit') || '50', 10);
     jsonResponse(res, getHistory(limit));
     return;
   }
 
-  /* ===== API: Review individual ===== */
   if (pathname === '/api/review' && req.method === 'POST') {
     const body = await parseBody(req);
     const { action, file, comment } = body;
@@ -168,67 +160,48 @@ async function handleRequest(req, res) {
     return;
   }
 
-  /* ===== API: Review all ===== */
   if (pathname === '/api/review/all' && req.method === 'POST') {
     const body = await parseBody(req);
     const { action, comment } = body;
     let result;
-    if (action === 'approve-all') {
-      result = approveAll(comment || '');
-    } else if (action === 'reject-all') {
-      result = rejectAll(comment || '');
-    } else {
-      jsonResponse(res, { error: 'Ação desconhecida' }, 400);
-      return;
-    }
+    if (action === 'approve-all') result = approveAll(comment || '');
+    else if (action === 'reject-all') result = rejectAll(comment || '');
+    else { jsonResponse(res, { error: 'Ação desconhecida' }, 400); return; }
     jsonResponse(res, { ok: true, result });
     return;
   }
 
-  /* ===== API: Reset ===== */
   if (pathname === '/api/review/reset' && req.method === 'POST') {
     resetAll();
     jsonResponse(res, { ok: true });
     return;
   }
 
-  /* ===== API: Results ===== */
   if (pathname === '/api/results' && req.method === 'GET') {
     const results = loadResults();
     jsonResponse(res, results || { error: 'Nenhum resultado encontrado' });
     return;
   }
 
-  /* ===== API: Meta (CI info — commit, branch, PR) ===== */
   if (pathname === '/api/meta' && req.method === 'GET') {
     const metaPath = path.join(RESULTS_DIR, 'meta.json');
     if (fs.existsSync(metaPath)) {
       jsonResponse(res, JSON.parse(fs.readFileSync(metaPath, 'utf-8')));
     } else {
       jsonResponse(res, {
-        commitSha: 'local',
-        commitShort: 'local',
-        branch: 'local',
-        baseBranch: 'main',
-        prNumber: 0,
-        prTitle: '',
-        actor: 'local',
-        runId: '',
-        repository: '',
-        timestamp: new Date().toISOString(),
-        hasDiffs: false,
-        failedCount: 0,
+        commitSha: 'local', commitShort: 'local', branch: 'local', baseBranch: 'main',
+        prNumber: 0, prTitle: '', actor: 'local', runId: '', repository: '',
+        timestamp: new Date().toISOString(), hasDiffs: false, failedCount: 0,
       });
     }
     return;
   }
 
-  /* ===== API: Atualizar GitHub status check ===== */
+  /* ===== GitHub Status ===== */
   if (pathname === '/api/github/status' && req.method === 'POST') {
     const body = await parseBody(req);
-    const { state, description } = body;
+    const { state, description, context } = body;
 
-    // Carregar meta.json com info do CI
     const metaPath = path.join(RESULTS_DIR, 'meta.json');
     if (!fs.existsSync(metaPath)) {
       jsonResponse(res, { error: 'meta.json não encontrado — este review não veio do CI' }, 400);
@@ -241,32 +214,9 @@ async function handleRequest(req, res) {
       return;
     }
 
-    // Usar token do GitHub (aceita vários nomes de variável de ambiente)
-    // Prioridade: VRT_TOKEN, GH_TOKEN, GITHUB_PAT, VRT_TOKEN, GITHUB_API_TOKEN
-      // Resolver token do GitHub — aceitar múltiplos nomes e fallback para .env
-      let token = process.env.VRT_TOKEN || process.env.GH_TOKEN || process.env.VRT_TOKEN || process.env.GITHUB_PAT;
-      if (!token) {
-        try {
-          const envPath = path.join(ROOT_DIR, '.env');
-          if (fs.existsSync(envPath)) {
-            const envRaw = fs.readFileSync(envPath, 'utf8');
-            const m = envRaw.match(/(?:^|\\n)\\s*(?:VRT_TOKEN|GH_TOKEN|VRT_TOKEN|GITHUB_PAT)\\s*=\\s*\\"?([^\\\\"\\n\\r]+)\\"?/);
-            if (m) token = m[1];
-          }
-        } catch (e) {
-          // ignore and fall through
-        }
-      }
-
-      if (!token) {
-        jsonResponse(res, { error: 'VRT_TOKEN não configurado. Defina VRT_TOKEN / GH_TOKEN / VRT_TOKEN no ambiente ou em .env' }, 401);
-        return;
-      }
-
+    const token = process.env.VRT_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_PAT || process.env.GITHUB_TOKEN;
     if (!token) {
-      jsonResponse(res, {
-        error: 'Nenhum token do GitHub configurado. Defina uma das variáveis de ambiente: VRT_TOKEN, GH_TOKEN, GITHUB_PAT, VRT_TOKEN ou GITHUB_API_TOKEN',
-      }, 401);
+      jsonResponse(res, { error: 'Nenhum token do GitHub configurado. Defina VRT_TOKEN, GH_TOKEN ou GITHUB_PAT no ambiente ou em .env' }, 401);
       return;
     }
 
@@ -282,7 +232,7 @@ async function handleRequest(req, res) {
         body: JSON.stringify({
           state: state || 'success',
           description: description || 'Review visual concluído',
-          context: 'visual-regression/review',
+          context: context || 'visual-regression/review',
           target_url: meta.runId
             ? `https://github.com/${meta.repository}/actions/runs/${meta.runId}`
             : undefined,
@@ -302,31 +252,29 @@ async function handleRequest(req, res) {
     return;
   }
 
-  /* ===== Servir arquivos estáticos do build (dist/) ===== */
-  // Tentar servir arquivo estático de dist/
+  /* ===== Static files from dist/ ===== */
   const staticPath = path.join(DIST_DIR, pathname);
   if (serveStatic(res, staticPath)) return;
 
-  // SPA fallback — qualquer rota não-API serve index.html
+  /* SPA fallback */
   serveIndex(res);
 }
 
-/* ===== Start Server ===== */
+/* ===== Start ===== */
 const server = http.createServer(handleRequest);
 server.listen(PORT, () => {
   const hasBuild = fs.existsSync(path.join(DIST_DIR, 'index.html'));
-  console.log(`\n🔍 Review Server rodando em http://localhost:${PORT}`);
-  console.log(`   Review UI: http://localhost:${PORT}/review`);
-  if (!hasBuild) {
-    console.log(`\n   ⚠️  Build não encontrado em dist/ — execute: npm run build`);
-  }
-  console.log(`\nAPI endpoints:`);
-  console.log(`  GET  /api/status       → Status de cada arquivo`);
-  console.log(`  GET  /api/history      → Histórico de reviews`);
-  console.log(`  GET  /api/results      → Resultados da comparação`);
-  console.log(`  GET  /api/meta         → Info do CI (commit, branch, PR)`);
-  console.log(`  POST /api/review       → Aprovar/rejeitar arquivo {action, file, comment}`);
-  console.log(`  POST /api/review/all   → Aprovar/rejeitar todos  {action, comment}`);
-  console.log(`  POST /api/review/reset → Resetar status`);
-  console.log(`  POST /api/github/status → Atualizar status check no GitHub\n`);
+  console.log(`\n🔍 PixelGuard Review Server — http://localhost:${PORT}`);
+  if (!hasBuild) console.log(`\n   ⚠️  Build not found in dist/ — run: npx pixelguard-review build`);
+  console.log(`\n   Results dir: ${RESULTS_DIR}`);
+  console.log(`   Baselines:   ${BASELINES}\n`);
+  console.log(`API endpoints:`);
+  console.log(`  GET  /api/status         → Status de cada arquivo`);
+  console.log(`  GET  /api/history        → Histórico de reviews`);
+  console.log(`  GET  /api/results        → Resultados da comparação`);
+  console.log(`  GET  /api/meta           → Info do CI (commit, branch, PR)`);
+  console.log(`  POST /api/review         → Aprovar/rejeitar arquivo`);
+  console.log(`  POST /api/review/all     → Aprovar/rejeitar todos`);
+  console.log(`  POST /api/review/reset   → Resetar status`);
+  console.log(`  POST /api/github/status  → Atualizar GitHub status check\n`);
 });

@@ -12,18 +12,17 @@
     "report": "node tests/report.js",
     "update-baselines": "node scripts/update-baselines.js",
     "ci": "node tests/capture.js && node tests/compare.js && node tests/report.js",
-    "review:ui": "node tests/review-server.js",
-    "review:start": "npm run build && npm run review:ui"
+    "review:build": "cd packages/pixelguard-review && npx vite build",
+    "review:start": "node packages/pixelguard-review/server/index.js",
+    "review": "npm run review:build && npm run review:start"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",
     "@emotion/styled": "^11.13.0",
     "@mui/icons-material": "^6.4.0",
     "@mui/material": "^6.4.0",
-    "dotenv": "^16.1.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^7.13.1"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

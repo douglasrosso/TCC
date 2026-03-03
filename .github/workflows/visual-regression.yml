@@ -172,8 +172,8 @@ jobs:
               body += `**Para revisar localmente:**\n`;
               body += `1. Baixe os artefatos do [workflow](${runUrl})\n`;
               body += `2. Extraia a pasta \`results/\` na raiz do projeto\n`;
-              body += `3. Execute: \`npm run build\` e \`npm run review:ui\`\n`;
-              body += `4. Acesse: http://localhost:3060/review\n`;
+              body += `3. Execute: \`npm run review\`\n`;
+              body += `4. Acesse: http://localhost:3060\n`;
               body += `5. Ao aprovar todas as telas, o status da PR será atualizado automaticamente\n`;
             }
 
