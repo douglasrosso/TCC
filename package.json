@@ -13,6 +13,12 @@
     "report": "node tests/report.js",
     "update-baselines": "node scripts/update-baselines.js",
     "ci": "node tests/capture.js && node tests/compare.js && node tests/report.js",
+    "review": "node tests/review.js --status",
+    "review:approve-all": "node tests/review.js --approve-all",
+    "review:reject-all": "node tests/review.js --reject-all",
+    "review:history": "node tests/review.js --history",
+    "review:reset": "node tests/review.js --reset",
+    "review:ui": "node tests/review-server.js",
     "e2e": "npx playwright test",
     "e2e:ui": "npx playwright test --ui"
   },
@@ -22,7 +28,8 @@
     "@mui/icons-material": "^6.4.0",
     "@mui/material": "^6.4.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",

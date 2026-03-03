@@ -1,3 +1,23 @@
+# Dependências
 node_modules/
+
+# Build
+dist/
+
+# Resultados de testes visuais (gerados pelo capture/compare)
 results/
+
+# Playwright
+test-results/
+playwright-report/
+
+# Snapshots de visual (Playwright) — regenerados por --update-snapshots
+e2e/visual.spec.js-snapshots/
+
+# Logs
 *.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.swp

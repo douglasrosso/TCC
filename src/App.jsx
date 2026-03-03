@@ -3,30 +3,39 @@ import HeroBanner from './components/HeroBanner';
 import StatsGrid from './components/StatsGrid';
 import TransactionsTable from './components/TransactionsTable';
 import InfoSidebar from './components/InfoSidebar';
+import ActivityFeed from './components/ActivityFeed';
 import Footer from './components/Footer';
 import Container from '@mui/material/Container';
-import Grid from '@mui/material/Grid';
+import Box from '@mui/material/Box';
 
 export default function App() {
   return (
-    <>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
       <NavBar />
       <HeroBanner />
 
-      <Container maxWidth="lg" sx={{ my: 3 }}>
+      <Container maxWidth="lg" sx={{ py: 4, flex: 1 }}>
         <StatsGrid />
 
-        <Grid container spacing={3} sx={{ mt: 0 }}>
-          <Grid size={{ xs: 12, md: 8 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 3,
+            mt: 3,
+          }}
+        >
+          <Box sx={{ flex: '1 1 600px', minWidth: 0 }}>
             <TransactionsTable />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
+          </Box>
+          <Box sx={{ flex: '1 1 280px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <InfoSidebar />
-          </Grid>
-        </Grid>
+            <ActivityFeed />
+          </Box>
+        </Box>
       </Container>
 
       <Footer />
-    </>
+    </Box>
   );
 }

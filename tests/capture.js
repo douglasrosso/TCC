@@ -1,5 +1,5 @@
 /**
- * Captura screenshots da aplicação em todos os viewports configurados.
+ * Captura screenshots da aplicação React (Vite) em todos os viewports.
  *
  * Uso:
  *   node tests/capture.js                   → salva em results/current/
@@ -7,15 +7,15 @@
  *
  * O relógio e Math.random são congelados para garantir determinismo.
  */
-import { chromium }    from 'playwright';
-import path            from 'node:path';
-import fs              from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { startServer } from './server.js';
+import { chromium }        from 'playwright';
+import path                from 'node:path';
+import fs                  from 'node:fs';
+import { fileURLToPath }   from 'node:url';
+import { createServer }    from 'vite';
 import { viewports, pages } from './config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const APP_DIR   = path.resolve(__dirname, '..', 'app');
+const ROOT_DIR  = path.resolve(__dirname, '..');
 const PORT      = 3050;
 
 /**
@@ -50,7 +50,13 @@ export async function capture({ outDir, mutation, freeze = true } = {}) {
   const outputDir = outDir || path.resolve(__dirname, '..', 'results', 'current');
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const server  = await startServer(APP_DIR, PORT);
+  const vite = await createServer({
+    root: ROOT_DIR,
+    server: { port: PORT, strictPort: true },
+    logLevel: 'silent',
+  });
+  await vite.listen();
+
   const browser = await chromium.launch();
   const paths   = [];
 
@@ -69,12 +75,12 @@ export async function capture({ outDir, mutation, freeze = true } = {}) {
         // Congelar Date/random ANTES de navegar
         if (freeze) await page.addInitScript({ content: FREEZE_SCRIPT });
 
-        // Desativar animações/transições
+        await page.goto(`http://localhost:${PORT}${pg.path}`, { waitUntil: 'networkidle' });
+
+        // Desativar animações/transições APÓS carregar (para MUI)
         await page.addStyleTag({
           content: '*, *::before, *::after { animation: none !important; transition: none !important; }',
         });
-
-        await page.goto(`http://localhost:${PORT}${pg.path}`, { waitUntil: 'networkidle' });
 
         // Injetar mutação, se houver
         if (mutation) {
@@ -83,8 +89,11 @@ export async function capture({ outDir, mutation, freeze = true } = {}) {
           } else if (mutation.type === 'script') {
             await page.evaluate(mutation.content);
           }
-          await page.waitForTimeout(200);
+          await page.waitForTimeout(300);
         }
+
+        // Aguardar MUI renderizar completamente
+        await page.waitForTimeout(500);
 
         const filename = `${pg.name}-${vp.name}-${vp.width}w.png`;
         const filePath = path.join(outputDir, filename);
@@ -96,7 +105,7 @@ export async function capture({ outDir, mutation, freeze = true } = {}) {
     }
   } finally {
     await browser.close();
-    server.close();
+    await vite.close();
   }
 
   return paths;

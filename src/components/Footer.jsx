@@ -1,16 +1,23 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
 
 export default function Footer() {
   return (
-    <>
-      <Divider sx={{ mt: 4 }} />
-      <Box sx={{ textAlign: 'center', py: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          &copy; 2025 VRT Demo &mdash; Trabalho de Conclusão de Curso
-        </Typography>
-      </Box>
-    </>
+    <Box
+      component="footer"
+      sx={{
+        textAlign: 'center',
+        py: 3,
+        px: 2,
+        mt: 'auto',
+        borderTop: '1px solid',
+        borderColor: 'divider',
+        bgcolor: '#fff',
+      }}
+    >
+      <Typography variant="caption" color="text.secondary">
+        &copy; 2025 VRT Demo &mdash; Trabalho de Conclusão de Curso
+      </Typography>
+    </Box>
   );
 }

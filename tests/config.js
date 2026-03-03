@@ -41,42 +41,48 @@ export const masks = [
 export const mutations = {
   'font-size': {
     type: 'css',
-    content: 'body { font-size: 18px !important; } h1 { font-size: 2.5rem !important; }',
+    content: 'body { font-size: 20px !important; } h1, h2, h3, h4, h5, h6 { font-size: 2.5rem !important; }',
     description: 'Alteração no tamanho da fonte',
   },
   'color': {
     type: 'css',
-    content: ':root { --primary: #e74c3c !important; --primary-dark: #c0392b !important; }',
+    content:
+      '.MuiAppBar-root { background-color: #e74c3c !important; } ' +
+      '.MuiTypography-colorPrimary, .MuiTypography-root.MuiTypography-h4[style] { color: #e74c3c !important; } ' +
+      '[class*="MuiCardContent"] .MuiTypography-h4 { color: #e74c3c !important; }',
     description: 'Alteração na cor primária',
   },
   'spacing': {
     type: 'css',
     content:
-      '.card { padding: 2rem !important; } ' +
-      '.stats-grid { gap: 2rem !important; } ' +
-      '.content-grid { gap: 3rem !important; }',
+      '.MuiCard-root { padding: 2rem !important; } ' +
+      '.MuiGrid-container { gap: 2rem !important; } ' +
+      '.MuiContainer-root { padding: 3rem !important; }',
     description: 'Alteração no espaçamento dos componentes',
   },
   'displacement': {
     type: 'css',
     content:
-      '.hero { padding-left: 60px !important; } ' +
-      '.nav-brand { margin-left: 30px !important; }',
+      '.MuiToolbar-root { padding-left: 60px !important; } ' +
+      '.MuiContainer-root { margin-left: 40px !important; }',
     description: 'Deslocamento de elementos',
   },
   'layout-break': {
     type: 'css',
     content:
-      '.stats-grid { display: flex !important; flex-direction: column !important; } ' +
-      '.content-grid { display: block !important; }',
+      '[style*="flex-wrap"] { flex-direction: column !important; } ' +
+      '[style*="flex-wrap"] > * { flex: 1 1 100% !important; max-width: 100% !important; }',
     description: 'Quebra de layout (colunas → pilha)',
   },
   'dynamic-content': {
     type: 'script',
     content: `
-      document.getElementById('current-date').textContent  = '31/12/2099';
-      document.getElementById('current-time').textContent  = '23:59:59';
-      document.getElementById('visit-counter').textContent = '999';
+      const dateEl = document.getElementById('current-date') || document.querySelector('[data-testid="current-date"]');
+      const timeEl = document.getElementById('current-time') || document.querySelector('[data-testid="current-time"]');
+      const visitEl = document.getElementById('visit-counter') || document.querySelector('[data-testid="visit-counter"]');
+      if (dateEl)  dateEl.textContent = '31/12/2099';
+      if (timeEl)  timeEl.textContent = '23:59:59';
+      if (visitEl) visitEl.textContent = '999';
     `,
     description: 'Alteração em conteúdo dinâmico (data, hora, contador)',
   },
