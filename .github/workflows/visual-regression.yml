@@ -3,58 +3,39 @@ name: Visual Regression Check
 on:
   pull_request:
     branches: [main]
-  workflow_dispatch:
-    inputs:
-      mode:
-        description: 'Modo de execucao'
-        required: true
-        default: 'ci'
-        type: choice
-        options:
-          - ci
-          - evaluate
 
 permissions:
   contents: read
   pull-requests: write
   statuses: write
 
-# Garante que cada PR rode apenas uma instância por vez
 concurrency:
-  group: visual-regression-${{ github.event.pull_request.number || github.ref }}
+  group: visual-regression-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  visual-regression:
+  visual-check:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       # ── Setup ──────────────────────────────────────────
-      - name: Checkout
+      - name: Checkout PR
         uses: actions/checkout@v4
 
-      # Garante que baselines vêm SEMPRE da branch base (main),
-      # não do merge ref que pode estar desatualizado.
-      - name: Carregar baselines da branch base (commit SHA do PR)
-        if: ${{ github.event_name == 'pull_request' }}
+      # Buscar baselines da main (branch base) para comparar
+      - name: Carregar baselines da main
         run: |
-          BASE_REF="${{ github.base_ref }}"
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          echo "🔍 Buscando baselines da branch ${BASE_REF} (commit ${BASE_SHA})..."
-          # Tenta garantir que o commit base esteja disponível localmente
-          git fetch origin "${BASE_REF}" --depth=50 || true
-          # Tenta extrair as baselines do commit exato; se falhar, usa o tip da branch
-          if git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
-            git checkout "${BASE_SHA}" -- baselines/ 2>/dev/null || true
+          git fetch origin main --depth=1
+          # Sobrescreve baselines/ com a versão da main
+          git checkout origin/main -- baselines/ 2>/dev/null || true
+          if [ -d baselines ] && ls baselines/*.png 1>/dev/null 2>&1; then
+            echo "has_baselines=true" >> "$GITHUB_ENV"
+            echo "📁 Baselines encontradas:"
+            ls -1 baselines/*.png
           else
-            git checkout FETCH_HEAD -- baselines/ 2>/dev/null || true
-          fi
-          if [ -d baselines ]; then
-            echo "📁 Baselines carregadas (lista):"
-            ls -1 baselines/*.png 2>/dev/null || echo "(nenhuma imagem)"
-          else
-            echo "⚠️ Nenhuma baseline disponível"
+            echo "has_baselines=false" >> "$GITHUB_ENV"
+            echo "⚠️ Nenhuma baseline encontrada — first run"
             mkdir -p baselines
           fi
 
@@ -70,69 +51,64 @@ jobs:
       - name: Instalar Chromium (Playwright)
         run: npx playwright install chromium --with-deps
 
-      # ── Captura + Comparacao ───────────────────────────
+      # ── Captura + Comparação ───────────────────────────
       - name: Capturar screenshots
         run: npm run capture
 
       - name: Comparar com baselines
         id: compare
         run: |
+          if [ "$has_baselines" = "false" ]; then
+            echo "has_diffs=false" >> $GITHUB_OUTPUT
+            echo "failed=0" >> $GITHUB_OUTPUT
+            echo "✅ Sem baselines — nada para comparar, check aprovado"
+            exit 0
+          fi
+
           npm run compare || true
+
           if [ -f results/results.json ]; then
             FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('results/results.json','utf-8')); console.log(r.summary.failed)")
             echo "failed=$FAILED" >> $GITHUB_OUTPUT
             if [ "$FAILED" -gt 0 ]; then
               echo "has_diffs=true" >> $GITHUB_OUTPUT
+              echo "🔍 $FAILED diferenças visuais encontradas"
             else
               echo "has_diffs=false" >> $GITHUB_OUTPUT
+              echo "✅ Nenhuma diferença visual"
             fi
           else
             echo "failed=0" >> $GITHUB_OUTPUT
             echo "has_diffs=false" >> $GITHUB_OUTPUT
           fi
 
-      # ── Evaluate (modo manual) ─────────────────────────
-      - name: Executar avaliacao completa
-        if: ${{ github.event.inputs.mode == 'evaluate' }}
-        run: npm run evaluate
-
-      # ── Gerar meta.json com info do commit/branch/PR ───
+      # ── Gerar meta.json ────────────────────────────────
       - name: Gerar meta.json
-        env:
-          META_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-          META_BRANCH: ${{ github.head_ref || github.ref_name }}
-          META_BASE_BRANCH: ${{ github.base_ref || 'main' }}
-          META_PR_NUMBER: ${{ github.event.pull_request.number || 0 }}
-          META_PR_TITLE: ${{ github.event.pull_request.title || '' }}
-          META_ACTOR: ${{ github.actor }}
-          META_RUN_ID: ${{ github.run_id }}
-          META_REPOSITORY: ${{ github.repository }}
-          META_HAS_DIFFS: ${{ steps.compare.outputs.has_diffs || 'false' }}
-          META_FAILED: ${{ steps.compare.outputs.failed || 0 }}
         run: |
           node -e "
           const fs = require('fs');
-          const meta = {
-            commitSha: process.env.META_COMMIT_SHA,
-            commitShort: process.env.META_COMMIT_SHA.slice(0, 7),
-            branch: process.env.META_BRANCH,
-            baseBranch: process.env.META_BASE_BRANCH,
-            prNumber: Number(process.env.META_PR_NUMBER),
-            prTitle: process.env.META_PR_TITLE,
-            actor: process.env.META_ACTOR,
-            runId: process.env.META_RUN_ID,
-            repository: process.env.META_REPOSITORY,
-            timestamp: new Date().toISOString(),
-            hasDiffs: process.env.META_HAS_DIFFS === 'true',
-            failedCount: Number(process.env.META_FAILED)
-          };
           fs.mkdirSync('results', { recursive: true });
-          fs.writeFileSync('results/meta.json', JSON.stringify(meta, null, 2));
+          fs.writeFileSync('results/meta.json', JSON.stringify({
+            commitSha: '${{ github.event.pull_request.head.sha }}',
+            commitShort: '${{ github.event.pull_request.head.sha }}'.slice(0, 7),
+            branch: '${{ github.head_ref }}',
+            baseBranch: '${{ github.base_ref }}',
+            prNumber: ${{ github.event.pull_request.number }},
+            prTitle: process.env.PR_TITLE,
+            actor: '${{ github.actor }}',
+            runId: '${{ github.run_id }}',
+            repository: '${{ github.repository }}',
+            timestamp: new Date().toISOString(),
+            hasDiffs: ${{ steps.compare.outputs.has_diffs || false }},
+            failedCount: ${{ steps.compare.outputs.failed || 0 }}
+          }, null, 2));
           "
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
 
       # ── Status check ───────────────────────────────────
-      - name: Status check — pendente (diffs encontrados)
-        if: ${{ steps.compare.outputs.has_diffs == 'true' && github.event_name == 'pull_request' }}
+      - name: Status — pendente (diffs encontrados)
+        if: steps.compare.outputs.has_diffs == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -141,13 +117,13 @@ jobs:
               repo: context.repo.repo,
               sha: context.payload.pull_request.head.sha,
               state: 'pending',
-              description: 'Aguardando review visual — diferenças encontradas',
+              description: 'Diferenças visuais encontradas — review necessário',
               context: 'visual-regression/review',
               target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.run_id }}`
             });
 
-      - name: Status check — sucesso (sem diffs)
-        if: ${{ steps.compare.outputs.has_diffs == 'false' && github.event_name == 'pull_request' }}
+      - name: Status — sucesso (sem diffs ou sem baselines)
+        if: steps.compare.outputs.has_diffs != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -161,7 +137,7 @@ jobs:
             });
 
       # ── Upload artefatos ───────────────────────────────
-      - name: Upload de resultados
+      - name: Upload resultados
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -171,43 +147,54 @@ jobs:
 
       # ── Comentar no PR ─────────────────────────────────
       - name: Comentar no PR
-        if: ${{ github.event_name == 'pull_request' && always() }}
+        if: always()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            if (!fs.existsSync('results/results.json')) return;
-
-            const data = JSON.parse(fs.readFileSync('results/results.json', 'utf-8'));
-            const s = data.summary;
-            const hasDiffs = s.failed > 0;
+            const hasDiffs = '${{ steps.compare.outputs.has_diffs }}' === 'true';
+            const hasBaselines = '${{ env.has_baselines }}' === 'true';
             const sha = '${{ github.event.pull_request.head.sha }}'.slice(0, 7);
             const branch = '${{ github.head_ref }}';
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.run_id }}`;
 
-            let body = `## ${ hasDiffs ? '🔍 Review Visual Necessário' : '✅ Regressão Visual OK' }\n\n`;
-            body += `**Commit:** \`${sha}\` · **Branch:** \`${branch}\`\n\n`;
-            body += `| Técnica | Resultado |\n|---------|----------|\n`;
+            let body = '';
 
-            for (const [tech, label] of [['pixel','Pixel'],['ssim','SSIM'],['region','Região']]) {
-              const t = s.techniques[tech];
-              const icon = t.failed > 0 ? '❌' : '✅';
-              body += `| ${label} | ${icon} ${t.passed} OK / ${t.failed} FAIL |\n`;
+            if (!hasBaselines) {
+              body = `## ✅ Regressão Visual — Primeiro Run\n\n`;
+              body += `**Commit:** \`${sha}\` · **Branch:** \`${branch}\`\n\n`;
+              body += `Nenhuma baseline encontrada. Screenshots foram capturados.\n`;
+              body += `Após o merge, as baselines serão criadas automaticamente.\n`;
+            } else if (!fs.existsSync('results/results.json')) {
+              body = `## ✅ Regressão Visual OK\n\n`;
+              body += `**Commit:** \`${sha}\` · **Branch:** \`${branch}\`\n`;
+            } else {
+              const data = JSON.parse(fs.readFileSync('results/results.json', 'utf-8'));
+              const s = data.summary;
+
+              body = `## ${ hasDiffs ? '🔍 Review Visual Necessário' : '✅ Regressão Visual OK' }\n\n`;
+              body += `**Commit:** \`${sha}\` · **Branch:** \`${branch}\`\n\n`;
+              body += `| Técnica | Resultado |\n|---------|----------|\n`;
+
+              for (const [tech, label] of [['pixel','Pixel'],['ssim','SSIM'],['region','Região']]) {
+                const t = s.techniques[tech];
+                const icon = t.failed > 0 ? '❌' : '✅';
+                body += `| ${label} | ${icon} ${t.passed} OK / ${t.failed} FAIL |\n`;
+              }
+
+              if (hasDiffs) {
+                body += `\n### ⏳ Merge bloqueado até review visual ser aprovado\n\n`;
+                body += `**Para revisar:**\n`;
+                body += `1. Baixe os artefatos do [workflow](${runUrl})\n`;
+                body += `2. Extraia a pasta \`results/\` na raiz do projeto\n`;
+                body += `3. Execute: \`npm run review\`\n`;
+                body += `4. Acesse: http://localhost:3060\n`;
+                body += `5. Ao aprovar, o status check será atualizado e o merge liberado\n`;
+              }
             }
 
-            if (hasDiffs) {
-              body += `\n### ⏳ Merge bloqueado até review visual ser aprovado\n\n`;
-              body += `**Para revisar localmente:**\n`;
-              body += `1. Baixe os artefatos do [workflow](${runUrl})\n`;
-              body += `2. Extraia a pasta \`results/\` na raiz do projeto\n`;
-              body += `3. Execute: \`npm run review\`\n`;
-              body += `4. Acesse: http://localhost:3060\n`;
-              body += `5. Ao aprovar todas as telas, o status da PR será atualizado automaticamente\n`;
-            }
+            body += `\n> 🤖 **PixelGuard** · [run \`${{ github.run_id }}\`](${runUrl})`;
 
-            body += `\n> 🤖 Gerado por **PixelGuard** · run [\`${{ github.run_id }}\`](${runUrl})`;
-
-            // Atualizar comentário existente ao invés de duplicar
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
