@@ -1,0 +1,574 @@
+{
+  "mode": "ci",
+  "timestamp": "2026-03-03T15:06:15.930Z",
+  "comparisons": [
+    {
+      "imageName": "dashboard-desktop-1366w",
+      "results": {
+        "pixel": {
+          "technique": "pixel",
+          "passed": false,
+          "score": 0.9993,
+          "diffPixels": 1292,
+          "totalPixels": 1740284,
+          "diffPercent": 0.074,
+          "diffImagePath": "/home/runner/work/TCC/TCC/results/diffs/pixel/dashboard-desktop-1366w.png",
+          "executionMs": 328
+        },
+        "ssim": {
+          "technique": "ssim",
+          "passed": true,
+          "score": 1,
+          "mssim": 0.9999771194163994,
+          "totalBlocks": 27030,
+          "lowBlocks": 66,
+          "diffPercent": 0.24,
+          "diffImagePath": "/home/runner/work/TCC/TCC/results/diffs/ssim/dashboard-desktop-1366w.png",
+          "executionMs": 292
+        },
+        "region": {
+          "technique": "region",
+          "passed": false,
+          "score": 0.9167,
+          "totalRegions": 24,
+          "activeRegions": 24,
+          "maskedRegions": 0,
+          "failedRegions": 2,
+          "regions": [
+            {
+              "row": 0,
+              "col": 0,
+              "status": "failed",
+              "diffPercent": 1.5
+            },
+            {
+              "row": 0,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 0,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 0,
+              "col": 3,
+              "status": "failed",
+              "diffPercent": 1.09
+            },
+            {
+              "row": 1,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 1,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 1,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 1,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            }
+          ],
+          "diffImagePath": "/home/runner/work/TCC/TCC/results/diffs/region/dashboard-desktop-1366w.png",
+          "executionMs": 288
+        }
+      }
+    },
+    {
+      "imageName": "dashboard-mobile-360w",
+      "results": {
+        "pixel": {
+          "technique": "pixel",
+          "passed": false,
+          "score": 0.9986,
+          "diffPixels": 1185,
+          "totalPixels": 821160,
+          "diffPercent": 0.144,
+          "diffImagePath": "/home/runner/work/TCC/TCC/results/diffs/pixel/dashboard-mobile-360w.png",
+          "executionMs": 135
+        },
+        "ssim": {
+          "technique": "ssim",
+          "passed": true,
+          "score": 1,
+          "mssim": 0.9999532677874378,
+          "totalBlocks": 12825,
+          "lowBlocks": 62,
+          "diffPercent": 0.48,
+          "diffImagePath": "/home/runner/work/TCC/TCC/results/diffs/ssim/dashboard-mobile-360w.png",
+          "executionMs": 134
+        },
+        "region": {
+          "technique": "region",
+          "passed": false,
+          "score": 0.9167,
+          "totalRegions": 24,
+          "activeRegions": 24,
+          "maskedRegions": 0,
+          "failedRegions": 2,
+          "regions": [
+            {
+              "row": 0,
+              "col": 0,
+              "status": "failed",
+              "diffPercent": 1.77
+            },
+            {
+              "row": 0,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0.86
+            },
+            {
+              "row": 0,
+              "col": 2,
+              "status": "failed",
+              "diffPercent": 2.3
+            },
+            {
+              "row": 0,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 1,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 1,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 1,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 1,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            }
+          ],
+          "diffImagePath": "/home/runner/work/TCC/TCC/results/diffs/region/dashboard-mobile-360w.png",
+          "executionMs": 130
+        }
+      }
+    },
+    {
+      "imageName": "dashboard-tablet-768w",
+      "results": {
+        "pixel": {
+          "technique": "pixel",
+          "passed": false,
+          "score": 0.9991,
+          "diffPixels": 1292,
+          "totalPixels": 1511424,
+          "diffPercent": 0.085,
+          "diffImagePath": "/home/runner/work/TCC/TCC/results/diffs/pixel/dashboard-tablet-768w.png",
+          "executionMs": 220
+        },
+        "ssim": {
+          "technique": "ssim",
+          "passed": true,
+          "score": 1,
+          "mssim": 0.999973855024826,
+          "totalBlocks": 23616,
+          "lowBlocks": 64,
+          "diffPercent": 0.27,
+          "diffImagePath": "/home/runner/work/TCC/TCC/results/diffs/ssim/dashboard-tablet-768w.png",
+          "executionMs": 235
+        },
+        "region": {
+          "technique": "region",
+          "passed": false,
+          "score": 0.9167,
+          "totalRegions": 24,
+          "activeRegions": 24,
+          "maskedRegions": 0,
+          "failedRegions": 2,
+          "regions": [
+            {
+              "row": 0,
+              "col": 0,
+              "status": "failed",
+              "diffPercent": 1.43
+            },
+            {
+              "row": 0,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0.3
+            },
+            {
+              "row": 0,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 0,
+              "col": 3,
+              "status": "failed",
+              "diffPercent": 1.25
+            },
+            {
+              "row": 1,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 1,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 1,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 1,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 2,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 3,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 4,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 0,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 1,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 2,
+              "status": "passed",
+              "diffPercent": 0
+            },
+            {
+              "row": 5,
+              "col": 3,
+              "status": "passed",
+              "diffPercent": 0
+            }
+          ],
+          "diffImagePath": "/home/runner/work/TCC/TCC/results/diffs/region/dashboard-tablet-768w.png",
+          "executionMs": 233
+        }
+      }
+    }
+  ],
+  "summary": {
+    "totalComparisons": 3,
+    "passed": 0,
+    "failed": 3,
+    "techniques": {
+      "pixel": {
+        "passed": 0,
+        "failed": 3
+      },
+      "ssim": {
+        "passed": 3,
+        "failed": 0
+      },
+      "region": {
+        "passed": 0,
+        "failed": 3
+      }
+    }
+  }
+}
