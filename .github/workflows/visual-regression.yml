@@ -14,6 +14,12 @@ on:
           - ci
           - evaluate
 
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+  actions: read
+
 jobs:
   visual-regression:
     runs-on: ubuntu-latest
@@ -36,42 +42,81 @@ jobs:
       - name: Instalar Chromium (Playwright)
         run: npx playwright install chromium --with-deps
 
-      # ── E2E Tests ─────────────────────────────────────
-      - name: Testes E2E (Playwright)
-        run: npx playwright test
-        continue-on-error: false
-
-      - name: Upload E2E report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 30
-
-      # ── CI: Captura + Comparacao ───────────────────────
+      # ── Captura + Comparacao ───────────────────────────
       - name: Capturar screenshots
-        if: ${{ github.event.inputs.mode != 'evaluate' }}
         run: npm run capture
 
       - name: Comparar com baselines
-        if: ${{ github.event.inputs.mode != 'evaluate' }}
-        run: npm run compare
+        id: compare
+        run: |
+          npm run compare || true
+          if [ -f results/results.json ]; then
+            FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('results/results.json','utf-8')); console.log(r.summary.failed)")
+            echo "failed=$FAILED" >> $GITHUB_OUTPUT
+            echo "has_diffs=$( [ "$FAILED" -gt 0 ] && echo true || echo false )" >> $GITHUB_OUTPUT
+          else
+            echo "failed=0" >> $GITHUB_OUTPUT
+            echo "has_diffs=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Gerar relatorio CI
-        if: ${{ github.event.inputs.mode != 'evaluate' }}
-        run: npm run report
-
-      # ── Evaluate: Avaliacao completa (manual) ──────────
+      # ── Evaluate (modo manual) ─────────────────────────
       - name: Executar avaliacao completa
         if: ${{ github.event.inputs.mode == 'evaluate' }}
         run: npm run evaluate
 
-      - name: Gerar relatorio de avaliacao
-        if: ${{ github.event.inputs.mode == 'evaluate' }}
-        run: node tests/report.js --evaluate
+      # ── Gerar meta.json com info do commit/branch/PR ───
+      - name: Gerar meta.json
+        run: |
+          node -e "
+            const fs = require('fs');
+            const meta = {
+              commitSha: '${{ github.event.pull_request.head.sha || github.sha }}',
+              commitShort: '${{ github.event.pull_request.head.sha || github.sha }}'.slice(0, 7),
+              branch: '${{ github.head_ref || github.ref_name }}',
+              baseBranch: '${{ github.base_ref || 'main' }}',
+              prNumber: ${{ github.event.pull_request.number || 0 }},
+              prTitle: $(JSON.stringify('${{ github.event.pull_request.title }}')),
+              actor: '${{ github.actor }}',
+              runId: '${{ github.run_id }}',
+              repository: '${{ github.repository }}',
+              timestamp: new Date().toISOString(),
+              hasDiffs: ${{ steps.compare.outputs.has_diffs || false }},
+              failedCount: ${{ steps.compare.outputs.failed || 0 }}
+            };
+            fs.writeFileSync('results/meta.json', JSON.stringify(meta, null, 2));
+          "
 
-      # ── Artefatos ──────────────────────────────────────
+      # ── Status check ───────────────────────────────────
+      - name: Status check — pendente (diffs encontrados)
+        if: ${{ steps.compare.outputs.has_diffs == 'true' && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: 'pending',
+              description: `Aguardando review visual — ${${{ steps.compare.outputs.failed }}} tela(s) com diferenças`,
+              context: 'visual-regression/review',
+              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.run_id }}`
+            });
+
+      - name: Status check — sucesso (sem diffs)
+        if: ${{ steps.compare.outputs.has_diffs == 'false' && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: 'success',
+              description: 'Nenhuma diferença visual encontrada',
+              context: 'visual-regression/review'
+            });
+
+      # ── Upload artefatos ───────────────────────────────
       - name: Upload de resultados
         if: always()
         uses: actions/upload-artifact@v4
@@ -80,37 +125,66 @@ jobs:
           path: results/
           retention-days: 30
 
-      # ── Comentario no PR ───────────────────────────────
+      # ── Comentar no PR ─────────────────────────────────
       - name: Comentar no PR
         if: ${{ github.event_name == 'pull_request' && always() }}
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const resultsPath = 'results/results.json';
+            if (!fs.existsSync('results/results.json')) return;
 
-            if (!fs.existsSync(resultsPath)) {
-              return;
-            }
-
-            const data = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
+            const data = JSON.parse(fs.readFileSync('results/results.json', 'utf-8'));
             const s = data.summary;
+            const hasDiffs = s.failed > 0;
+            const sha = '${{ github.event.pull_request.head.sha }}'.slice(0, 7);
+            const branch = '${{ github.head_ref }}';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.run_id }}`;
 
-            const status = s.failed > 0 ? '❌' : '✅';
-            let body = `## ${status} Regressao Visual\n\n`;
-            body += `| Tecnica | Resultado |\n|---------|----------|\n`;
+            let body = `## ${ hasDiffs ? '🔍 Review Visual Necessário' : '✅ Regressão Visual OK' }\n\n`;
+            body += `**Commit:** \`${sha}\` · **Branch:** \`${branch}\`\n\n`;
+            body += `| Técnica | Resultado |\n|---------|----------|\n`;
 
-            for (const tech of ['pixel', 'ssim', 'region']) {
+            for (const [tech, label] of [['pixel','Pixel'],['ssim','SSIM'],['region','Região']]) {
               const t = s.techniques[tech];
               const icon = t.failed > 0 ? '❌' : '✅';
-              body += `| ${tech} | ${icon} ${t.passed} OK / ${t.failed} FAIL |\n`;
+              body += `| ${label} | ${icon} ${t.passed} OK / ${t.failed} FAIL |\n`;
             }
 
-            body += `\n> Detalhes nos artefatos do workflow.`;
+            if (hasDiffs) {
+              body += `\n### ⏳ Merge bloqueado até review visual ser aprovado\n\n`;
+              body += `**Para revisar localmente:**\n`;
+              body += `1. Baixe os artefatos do [workflow](${runUrl})\n`;
+              body += `2. Extraia a pasta \`results/\` na raiz do projeto\n`;
+              body += `3. Execute: \`npm run review:ui\` e \`npm run dev\`\n`;
+              body += `4. Acesse: http://localhost:3050/review\n`;
+              body += `5. Ao aprovar todas as telas, o status da PR será atualizado automaticamente\n`;
+            }
 
-            await github.rest.issues.createComment({
+            body += `\n> 🤖 Gerado por **PixelGuard** · run [\`${{ github.run_id }}\`](${runUrl})`;
+
+            // Atualizar comentário existente ao invés de duplicar
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body,
             });
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Regressão Visual')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

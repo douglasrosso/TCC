@@ -20,6 +20,7 @@ export default function ReviewPage() {
   const [viewportFilter, setViewportFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [ciMeta, setCiMeta] = useState(null);
 
   /* ---- Responsive breakpoints ---- */
   const isCompact = useMediaQuery('(max-width:1199px)'); // TestRunPanel → Drawer
@@ -32,18 +33,21 @@ export default function ReviewPage() {
      ================================================================ */
   const fetchData = useCallback(async () => {
     try {
-      const [statusRes, resultsRes] = await Promise.all([
+      const [statusRes, resultsRes, metaRes] = await Promise.all([
         fetch(`${API_BASE}/api/status`),
         fetch(`${API_BASE}/api/results`),
+        fetch(`${API_BASE}/api/meta`),
       ]);
       const status = await statusRes.json();
       const results = await resultsRes.json();
+      const meta = await metaRes.json().catch(() => null);
+      if (meta) setCiMeta(meta);
 
       const run = {
         id: 'run-current',
-        branch: 'current',
-        commit: results?.timestamp ? results.timestamp.slice(0, 7) : 'local',
-        author: status[0]?.reviewedBy || 'local',
+        branch: meta?.branch || 'current',
+        commit: meta?.commitShort || (results?.timestamp ? results.timestamp.slice(0, 7) : 'local'),
+        author: meta?.actor || status[0]?.reviewedBy || 'local',
         timestamp: results?.timestamp || new Date().toISOString(),
         totalTests: (results?.comparisons?.length || 0) * 3,
         passed: 0,
@@ -155,6 +159,35 @@ export default function ReviewPage() {
   const totalRejected = allDiffs.filter((d) => d.status === 'rejected').length;
 
   /* ================================================================
+     Notify GitHub when all reviews are complete
+     ================================================================ */
+  const updateGitHubStatus = useCallback(
+    async (newPending, newApproved, newRejected) => {
+      if (!ciMeta || !ciMeta.repository || ciMeta.commitSha === 'local') return;
+
+      // Only update when no more pending items
+      if (newPending > 0) return;
+
+      const allApproved = newRejected === 0;
+      try {
+        await fetch(`${API_BASE}/api/github/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            state: allApproved ? 'success' : 'failure',
+            description: allApproved
+              ? `Review visual aprovado — ${newApproved} tela(s)`
+              : `Review visual rejeitado — ${newRejected} tela(s) rejeitada(s)`,
+          }),
+        });
+      } catch {
+        // silently fail — user still sees local status
+      }
+    },
+    [ciMeta],
+  );
+
+  /* ================================================================
      Review actions
      ================================================================ */
   const reviewAction = useCallback(
@@ -168,6 +201,13 @@ export default function ReviewPage() {
     },
     [fetchData],
   );
+
+  // After fetchData completes, check if we should update GitHub
+  useEffect(() => {
+    if (!loading && allDiffs.length > 0) {
+      updateGitHubStatus(totalPending, totalApproved, totalRejected);
+    }
+  }, [totalPending, totalApproved, totalRejected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApprove = useCallback(
     (diffId) => {
@@ -375,6 +415,14 @@ export default function ReviewPage() {
         onToggleDiffs={() => setDiffsOpen(true)}
         showRunsToggle={isCompact}
         showDiffsToggle={isMobile}
+        commitSha={ciMeta?.commitShort}
+        branch={ciMeta?.branch}
+        prNumber={ciMeta?.prNumber}
+        repoUrl={
+          ciMeta?.repository
+            ? `https://github.com/${ciMeta.repository}`
+            : undefined
+        }
       />
 
       {/* ---- Drawers (compact / mobile) ---- */}

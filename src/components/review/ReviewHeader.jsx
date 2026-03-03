@@ -20,6 +20,10 @@ export default function ReviewHeader({
   onToggleDiffs,
   showRunsToggle,
   showDiffsToggle,
+  commitSha,
+  branch,
+  prNumber,
+  repoUrl,
 }) {
   const navigate = useNavigate();
 
@@ -160,7 +164,70 @@ export default function ReviewHeader({
           }}
         >
           <AccountTreeRoundedIcon sx={{ fontSize: 14 }} />
-          <span>Execução atual</span>
+          {branch && (
+            <Chip
+              label={branch}
+              size="small"
+              variant="outlined"
+              sx={{
+                height: 20,
+                fontSize: '0.68rem',
+                fontWeight: 500,
+                fontFamily: 'monospace',
+                borderColor: 'rgba(139,92,246,.4)',
+                bgcolor: 'rgba(139,92,246,.08)',
+                color: '#a78bfa',
+                '& .MuiChip-label': { px: 0.75 },
+              }}
+            />
+          )}
+          {commitSha && (
+            <Chip
+              label={commitSha}
+              size="small"
+              variant="outlined"
+              component={repoUrl ? 'a' : 'span'}
+              href={repoUrl ? `${repoUrl}/commit/${commitSha}` : undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              clickable={!!repoUrl}
+              sx={{
+                height: 20,
+                fontSize: '0.68rem',
+                fontWeight: 500,
+                fontFamily: 'monospace',
+                borderColor: 'rgba(59,130,246,.4)',
+                bgcolor: 'rgba(59,130,246,.08)',
+                color: '#60a5fa',
+                '& .MuiChip-label': { px: 0.75 },
+                textDecoration: 'none',
+              }}
+            />
+          )}
+          {prNumber && (
+            <Chip
+              label={`PR #${prNumber}`}
+              size="small"
+              variant="outlined"
+              component={repoUrl ? 'a' : 'span'}
+              href={repoUrl ? `${repoUrl}/pull/${prNumber}` : undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              clickable={!!repoUrl}
+              sx={{
+                height: 20,
+                fontSize: '0.68rem',
+                fontWeight: 500,
+                fontFamily: 'monospace',
+                borderColor: 'rgba(34,197,94,.4)',
+                bgcolor: 'rgba(34,197,94,.08)',
+                color: '#4ade80',
+                '& .MuiChip-label': { px: 0.75 },
+                textDecoration: 'none',
+              }}
+            />
+          )}
+          {!branch && !commitSha && <span>Execução local</span>}
         </Box>
 
         <Tooltip title="Resetar todas as revisões">

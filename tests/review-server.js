@@ -154,6 +154,87 @@ async function handleRequest(req, res) {
     return;
   }
 
+  /* ===== API: Meta (CI info — commit, branch, PR) ===== */
+  if (pathname === '/api/meta' && req.method === 'GET') {
+    const metaPath = path.join(RESULTS_DIR, 'meta.json');
+    if (fs.existsSync(metaPath)) {
+      jsonResponse(res, JSON.parse(fs.readFileSync(metaPath, 'utf-8')));
+    } else {
+      jsonResponse(res, {
+        commitSha: 'local',
+        commitShort: 'local',
+        branch: 'local',
+        baseBranch: 'main',
+        prNumber: 0,
+        prTitle: '',
+        actor: 'local',
+        runId: '',
+        repository: '',
+        timestamp: new Date().toISOString(),
+        hasDiffs: false,
+        failedCount: 0,
+      });
+    }
+    return;
+  }
+
+  /* ===== API: Atualizar GitHub status check ===== */
+  if (pathname === '/api/github/status' && req.method === 'POST') {
+    const body = await parseBody(req);
+    const { state, description } = body;
+
+    // Carregar meta.json com info do CI
+    const metaPath = path.join(RESULTS_DIR, 'meta.json');
+    if (!fs.existsSync(metaPath)) {
+      jsonResponse(res, { error: 'meta.json não encontrado — este review não veio do CI' }, 400);
+      return;
+    }
+
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+    if (!meta.repository || !meta.commitSha || meta.commitSha === 'local') {
+      jsonResponse(res, { error: 'Review local — sem integração com GitHub' }, 400);
+      return;
+    }
+
+    // Usar GITHUB_TOKEN do ambiente (deve ser configurado)
+    const token = process.env.GITHUB_TOKEN;
+    if (!token) {
+      jsonResponse(res, { error: 'GITHUB_TOKEN não configurado. Execute: $env:GITHUB_TOKEN="ghp_..."' }, 401);
+      return;
+    }
+
+    const [owner, repo] = meta.repository.split('/');
+    try {
+      const apiRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/statuses/${meta.commitSha}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/vnd.github+json',
+        },
+        body: JSON.stringify({
+          state: state || 'success',
+          description: description || 'Review visual concluído',
+          context: 'visual-regression/review',
+          target_url: meta.runId
+            ? `https://github.com/${meta.repository}/actions/runs/${meta.runId}`
+            : undefined,
+        }),
+      });
+
+      if (!apiRes.ok) {
+        const err = await apiRes.json();
+        jsonResponse(res, { error: 'Erro na API do GitHub', details: err }, apiRes.status);
+        return;
+      }
+
+      jsonResponse(res, { ok: true, state, commitSha: meta.commitSha });
+    } catch (err) {
+      jsonResponse(res, { error: err.message }, 500);
+    }
+    return;
+  }
+
   /* 404 */
   res.writeHead(404, { 'Content-Type': 'text/plain' });
   res.end('Not Found');

@@ -53,24 +53,6 @@ export default function NavBar() {
         </Box>
 
         {/* Ações */}
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<VisibilityRoundedIcon sx={{ fontSize: 16 }} />}
-          onClick={() => navigate('/review')}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            fontSize: '0.78rem',
-            borderColor: 'primary.main',
-            color: 'primary.main',
-            mr: 1,
-            borderRadius: 2,
-            '&:hover': { bgcolor: 'rgba(30,64,175,.06)' },
-          }}
-        >
-          Review
-        </Button>
         <IconButton size="small" sx={{ color: 'text.secondary' }}>
           <NotificationsNoneRoundedIcon fontSize="small" />
         </IconButton>

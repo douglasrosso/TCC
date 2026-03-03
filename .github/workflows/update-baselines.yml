@@ -1,0 +1,60 @@
+name: Atualizar Baselines
+
+# Roda ao fazer merge na main — captura novas screenshots e commita como baselines
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  update-baselines:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar Chromium (Playwright)
+        run: npx playwright install chromium --with-deps
+
+      - name: Capturar screenshots atuais
+        run: npm run capture
+
+      - name: Atualizar baselines
+        run: npm run update-baselines
+
+      - name: Resetar reviews
+        run: |
+          if [ -f results/reviews.json ]; then
+            node -e "
+              const fs = require('fs');
+              fs.writeFileSync('results/reviews.json', JSON.stringify({ currentStatus: {}, history: [] }, null, 2));
+            "
+          fi
+
+      - name: Commitar baselines atualizadas
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add baselines/
+          git add results/reviews.json || true
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração nas baselines"
+          else
+            git commit -m "chore: atualizar baselines visuais [skip ci]"
+            git push
+          fi
