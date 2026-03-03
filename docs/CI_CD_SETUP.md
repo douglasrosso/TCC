@@ -116,11 +116,12 @@ O workflow `update-baselines` usa `VRT_TOKEN` (PAT) no `actions/checkout` com `t
 
 **O que faz:**
 1. Instala dependências e Chromium
-2. Captura screenshots de todas as telas/viewports
-3. Compara com baselines
-4. Gera `results/meta.json` com info do commit/branch/PR
-5. Se **sem diffs**: status check → ✅ success
-6. Se **com diffs**:
+2. **Busca baselines da branch base** (`main`) — garante que sempre compara contra as baselines aprovadas mais recentes, independentemente do estado do merge ref
+3. Captura screenshots de todas as telas/viewports com o código da PR
+4. Compara capturas atuais contra baselines de `main`
+5. Gera `results/meta.json` com info do commit/branch/PR
+6. Se **sem diffs**: status check → ✅ success
+7. Se **com diffs**:
    - Status check → ⏳ pending
    - Upload de artefatos (pasta `results/`)
    - Bot comenta no PR com tabela de resultados por técnica
@@ -131,10 +132,10 @@ O workflow `update-baselines` usa `VRT_TOKEN` (PAT) no `actions/checkout` com `t
 **Trigger:** push na `main` (após merge)
 
 **O que faz:**
-1. Captura screenshots atuais (do código merged)
-2. Executa `npm run update-baselines` (copia `current/` → `baselines/`)
-3. Reseta `reviews.json`
-4. Commita e pusha com `[skip ci]`
+1. Captura screenshots atuais (do código merged na `main`)
+2. Executa `npm run update-baselines` (copia `results/current/` → `baselines/`)
+3. Commita e pusha com `[skip ci]` (usando `VRT_TOKEN` para bypass de rulesets)
+4. As próximas PRs serão comparadas contra essas novas baselines
 
 ---
 

@@ -35,6 +35,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Garante que baselines vêm SEMPRE da branch base (main),
+      # não do merge ref que pode estar desatualizado.
+      - name: Carregar baselines da branch base
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          BASE="${{ github.base_ref }}"
+          echo "🔍 Buscando baselines de origin/${BASE}..."
+          git fetch origin "${BASE}" --depth=1
+          # Sobrescreve baselines/ com a versão da branch base
+          git checkout FETCH_HEAD -- baselines/ 2>/dev/null || {
+            echo "⚠️ Nenhuma baseline encontrada em ${BASE}"
+            mkdir -p baselines
+          }
+          echo "📁 Baselines carregadas de ${BASE}:"
+          ls -1 baselines/*.png 2>/dev/null || echo "(nenhuma imagem)"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
