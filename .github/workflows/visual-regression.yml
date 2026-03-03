@@ -8,6 +8,8 @@ permissions:
   contents: read
   pull-requests: write
   statuses: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: visual-regression-${{ github.event.pull_request.number }}
@@ -23,11 +25,9 @@ jobs:
       - name: Checkout PR
         uses: actions/checkout@v4
 
-      # Buscar baselines da main (branch base) para comparar
       - name: Carregar baselines da main
         run: |
           git fetch origin main --depth=1
-          # Sobrescreve baselines/ com a versão da main
           git checkout origin/main -- baselines/ 2>/dev/null || true
           if [ -d baselines ] && ls baselines/*.png 1>/dev/null 2>&1; then
             echo "has_baselines=true" >> "$GITHUB_ENV"
@@ -35,7 +35,7 @@ jobs:
             ls -1 baselines/*.png
           else
             echo "has_baselines=false" >> "$GITHUB_ENV"
-            echo "⚠️ Nenhuma baseline encontrada — first run"
+            echo "⚠️ Nenhuma baseline — first run"
             mkdir -p baselines
           fi
 
@@ -45,7 +45,7 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Instalar dependencias
+      - name: Instalar dependências
         run: npm ci
 
       - name: Instalar Chromium (Playwright)
@@ -61,28 +61,24 @@ jobs:
           if [ "$has_baselines" = "false" ]; then
             echo "has_diffs=false" >> $GITHUB_OUTPUT
             echo "failed=0" >> $GITHUB_OUTPUT
-            echo "✅ Sem baselines — nada para comparar, check aprovado"
+            echo "✅ Sem baselines — check aprovado"
             exit 0
           fi
-
           npm run compare || true
-
           if [ -f results/results.json ]; then
             FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('results/results.json','utf-8')); console.log(r.summary.failed)")
             echo "failed=$FAILED" >> $GITHUB_OUTPUT
             if [ "$FAILED" -gt 0 ]; then
               echo "has_diffs=true" >> $GITHUB_OUTPUT
-              echo "🔍 $FAILED diferenças visuais encontradas"
             else
               echo "has_diffs=false" >> $GITHUB_OUTPUT
-              echo "✅ Nenhuma diferença visual"
             fi
           else
             echo "failed=0" >> $GITHUB_OUTPUT
             echo "has_diffs=false" >> $GITHUB_OUTPUT
           fi
 
-      # ── Gerar meta.json ────────────────────────────────
+      # ── Meta + Report ─────────────────────────────────
       - name: Gerar meta.json
         run: |
           node -e "
@@ -106,6 +102,20 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
 
+      - name: Gerar relatório e montar deploy
+        if: env.has_baselines == 'true'
+        run: node tests/report.js --deploy --pr ${{ github.event.pull_request.number }}
+
+      # ── Deploy GitHub Pages ────────────────────────────
+      - name: Deploy review para GitHub Pages
+        if: env.has_baselines == 'true'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.VRT_TOKEN }}
+          publish_dir: ./deploy
+          destination_dir: .
+          keep_files: true
+
       # ── Status check ───────────────────────────────────
       - name: Status — pendente (diffs encontrados)
         if: steps.compare.outputs.has_diffs == 'true'
@@ -117,12 +127,12 @@ jobs:
               repo: context.repo.repo,
               sha: context.payload.pull_request.head.sha,
               state: 'pending',
-              description: 'Diferenças visuais encontradas — review necessário',
+              description: 'Diferenças visuais — review necessário',
               context: 'visual-regression/review',
               target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.run_id }}`
             });
 
-      - name: Status — sucesso (sem diffs ou sem baselines)
+      - name: Status — sucesso
         if: steps.compare.outputs.has_diffs != 'true'
         uses: actions/github-script@v7
         with:
@@ -132,7 +142,7 @@ jobs:
               repo: context.repo.repo,
               sha: context.payload.pull_request.head.sha,
               state: 'success',
-              description: 'Nenhuma diferença visual encontrada',
+              description: 'Nenhuma diferença visual',
               context: 'visual-regression/review'
             });
 
@@ -156,15 +166,16 @@ jobs:
             const hasBaselines = '${{ env.has_baselines }}' === 'true';
             const sha = '${{ github.event.pull_request.head.sha }}'.slice(0, 7);
             const branch = '${{ github.head_ref }}';
+            const prNumber = ${{ github.event.pull_request.number }};
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.run_id }}`;
+            const pagesUrl = `https://${{ github.repository_owner }}.github.io/${context.repo.repo}/pr-${prNumber}/`;
 
             let body = '';
 
             if (!hasBaselines) {
               body = `## ✅ Regressão Visual — Primeiro Run\n\n`;
               body += `**Commit:** \`${sha}\` · **Branch:** \`${branch}\`\n\n`;
-              body += `Nenhuma baseline encontrada. Screenshots foram capturados.\n`;
-              body += `Após o merge, as baselines serão criadas automaticamente.\n`;
+              body += `Nenhuma baseline encontrada. Após o merge, as baselines serão criadas automaticamente.\n`;
             } else if (!fs.existsSync('results/results.json')) {
               body = `## ✅ Regressão Visual OK\n\n`;
               body += `**Commit:** \`${sha}\` · **Branch:** \`${branch}\`\n`;
@@ -183,13 +194,10 @@ jobs:
               }
 
               if (hasDiffs) {
-                body += `\n### ⏳ Merge bloqueado até review visual ser aprovado\n\n`;
-                body += `**Para revisar:**\n`;
-                body += `1. Baixe os artefatos do [workflow](${runUrl})\n`;
-                body += `2. Extraia a pasta \`results/\` na raiz do projeto\n`;
-                body += `3. Execute: \`npm run review\`\n`;
-                body += `4. Acesse: http://localhost:3060\n`;
-                body += `5. Ao aprovar, o status check será atualizado e o merge liberado\n`;
+                body += `\n### ⏳ Merge bloqueado até review visual\n\n`;
+                body += `📊 **[Ver Review Visual Online](${pagesUrl})**\n\n`;
+                body += `Para aprovar, comente neste PR:\n`;
+                body += `\`\`\`\n/approve-visual\n\`\`\`\n`;
               }
             }
 
