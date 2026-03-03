@@ -7,8 +7,6 @@ import Avatar from '@mui/material/Avatar';
 import IconButton from '@mui/material/IconButton';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import NotificationsNoneRoundedIcon from '@mui/icons-material/NotificationsNoneRounded';
-import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
-import { useNavigate } from 'react-router-dom';
 
 const links = [
   { label: 'Início',         active: true  },
@@ -17,8 +15,6 @@ const links = [
 ];
 
 export default function NavBar() {
-  const navigate = useNavigate();
-
   return (
     <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#fff', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider' }}>
       <Toolbar sx={{ px: { xs: 2, sm: 3 }, gap: 1 }}>

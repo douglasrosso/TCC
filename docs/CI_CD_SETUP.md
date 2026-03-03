@@ -29,6 +29,44 @@ Merge na main → Workflow atualiza baselines automaticamente
 
 ---
 
+## Configuração necessária (tokens, permissões e secrets)
+
+Para garantir que o pipeline e o Review UI funcionem corretamente, configure o seguinte:
+
+- **Secrets no GitHub**
+  - `VRT_TOKEN` (recomendado): PAT usado pelo Review UI e pelo workflow `update-baselines` para postar status e commitar baselines. Adicione em **Settings → Secrets and variables → Actions**.
+  - O servidor também aceita `GITHUB_TOKEN`, `GH_TOKEN` ou `GITHUB_PAT` como alternativas locais.
+
+- **Escopos / Permissões do token**
+  - Use um PAT com escopo `repo` para permitir postar status (`statuses`), criar commits e pushar baselines.
+  - Se preferir restringir, certifique-se de pelo menos: `repo:status` (postar status checks) e `contents:write` (commitar arquivos).
+
+- **Permissões nos workflows**
+  - O workflow `visual-regression.yml` precisa declarar `statuses: write` (já configurado) para criar status checks.
+  - O workflow `update-baselines.yml` faz `actions/checkout` com `token: ${{ secrets.VRT_TOKEN }}` — esse secret deve possuir permissão para escrever no repositório (push).
+
+- **Branch protection**
+  - Em **Settings → Branches → Add rule** para `main`, exija o status check `visual-regression/review` (o check só aparece após o primeiro run do workflow).
+
+- **Variáveis/paths locais**
+  - `results/` — artefatos gerados pelo CI (baixe e extraia localmente para revisar).
+  - `baselines/` — imagens de referência atualizadas pelo workflow `update-baselines`.
+  - Portas locais: dashboard `3050`, review UI `3060`.
+
+Exemplo (PowerShell):
+
+```powershell
+$env:VRT_TOKEN = "ghp_SeuTokenAqui"
+npm run review
+```
+
+Exemplo (Linux/macOS):
+
+```bash
+VRT_TOKEN=ghp_SeuTokenAqui npm run review
+```
+
+
 ## 1. Configuração do Repositório GitHub
 
 ### 1.1 Branch Protection Rules (obrigatório)
@@ -107,17 +145,17 @@ unzip visual-regression-results.zip -d results/
 
 ```bash
 # Build + servidor (recomendado)
-npm run review:start
+npm run review
 ```
 
 Ou separadamente:
 
 ```bash
 npm run build
-npm run review:ui
+npm run review:start
 ```
 
-Acesse: **http://localhost:3060/review**
+Acesse: **http://localhost:3060**
 
 ### 3.3 Revisar telas
 
@@ -132,12 +170,12 @@ Para que a aprovação/rejeição reflita no PR, configure o token:
 **Windows (PowerShell):**
 ```powershell
 $env:VRT_TOKEN = "ghp_SeuTokenAqui"
-npm run review:ui
+npm run review:start
 ```
 
 **Linux/macOS:**
 ```bash
-VRT_TOKEN=ghp_SeuTokenAqui npm run review:ui
+VRT_TOKEN=ghp_SeuTokenAqui npm run review:start
 ```
 
 > O token precisa ter permissão `repo:status` (ou ser um PAT com escopo `repo`).
@@ -203,7 +241,7 @@ Exemplo de comentário automático:
 > **Para revisar localmente:**
 > 1. Baixe os artefatos do workflow
 > 2. Extraia a pasta `results/` na raiz do projeto
-> 3. Execute: `npm run review:ui` e `npm run dev`
+> 3. Execute: `npm run review` e `npm run dev`
 > 4. Acesse: http://localhost:3050/review
 > 5. Ao aprovar todas as telas, o status da PR será atualizado automaticamente
 
@@ -228,8 +266,9 @@ Quando rodando localmente sem `meta.json`, exibe "Execução local".
 | `npm run capture` | Captura screenshots de todas as telas |
 | `npm run compare` | Compara screenshots com baselines |
 | `npm run update-baselines` | Copia `current/` → `baselines/` |
-| `npm run review:ui` | Inicia servidor de review (porta 3060) |
-| `npm run review:start` | Build + review server em um comando |
+| `npm run review` | Build + start review UI (http://localhost:3060) |
+| `npm run review:start` | Start review server (serve packages/pixelguard-review/dist/) |
+| `npm run review:build` | Build da UI de review (packages/pixelguard-review) |
 | `npm run dev` | Inicia frontend do dashboard (porta 3050) |
 
 ---

@@ -7,7 +7,6 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
-import { useNavigate } from 'react-router-dom';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 
 export default function ReviewHeader({
@@ -21,9 +20,8 @@ export default function ReviewHeader({
   branch,
   prNumber,
   repoUrl,
+  onBack,
 }) {
-  const navigate = useNavigate();
-
   return (
     <Box
       component="header"
@@ -43,17 +41,18 @@ export default function ReviewHeader({
     >
       {/* Left — logo + drawer toggles */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Tooltip title="Voltar ao Dashboard">
-          <IconButton
-            size="small"
-            onClick={() => navigate('/')}
-            sx={{ color: '#a1a1aa', '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
-          >
-            <ArrowBackRoundedIcon sx={{ fontSize: 20 }} />
-          </IconButton>
-        </Tooltip>
+        {onBack && (
+          <Tooltip title="Voltar">
+            <IconButton
+              size="small"
+              onClick={onBack}
+              sx={{ color: '#a1a1aa', '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
+            >
+              <ArrowBackRoundedIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Tooltip>
+        )}
 
-        {/* Drawer toggle — single menu for compact/mobile */}
         {showMenuToggle && (
           <Tooltip title="Painéis">
             <IconButton
@@ -90,7 +89,6 @@ export default function ReviewHeader({
 
       {/* Right — status badges + reset */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
-        {/* Compact summary on mobile (xs only) */}
         <Chip
           label={`${totalPending}P / ${totalApproved}A / ${totalRejected}R`}
           size="small"
@@ -106,19 +104,14 @@ export default function ReviewHeader({
             display: { xs: 'flex', sm: 'none' },
           }}
         />
-        {/* Full badges on sm+ */}
         <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 0.5 }}>
           <Chip
             label={`${totalPending} pendentes`}
             size="small"
             variant="outlined"
             sx={{
-              height: 24,
-              fontSize: '0.72rem',
-              fontWeight: 500,
-              borderColor: 'rgba(234,179,8,.4)',
-              bgcolor: 'rgba(234,179,8,.1)',
-              color: '#eab308',
+              height: 24, fontSize: '0.72rem', fontWeight: 500,
+              borderColor: 'rgba(234,179,8,.4)', bgcolor: 'rgba(234,179,8,.1)', color: '#eab308',
               '& .MuiChip-label': { px: 1 },
             }}
           />
@@ -127,12 +120,8 @@ export default function ReviewHeader({
             size="small"
             variant="outlined"
             sx={{
-              height: 24,
-              fontSize: '0.72rem',
-              fontWeight: 500,
-              borderColor: 'rgba(34,197,94,.4)',
-              bgcolor: 'rgba(34,197,94,.1)',
-              color: '#22c55e',
+              height: 24, fontSize: '0.72rem', fontWeight: 500,
+              borderColor: 'rgba(34,197,94,.4)', bgcolor: 'rgba(34,197,94,.1)', color: '#22c55e',
               '& .MuiChip-label': { px: 1 },
             }}
           />
@@ -141,12 +130,8 @@ export default function ReviewHeader({
             size="small"
             variant="outlined"
             sx={{
-              height: 24,
-              fontSize: '0.72rem',
-              fontWeight: 500,
-              borderColor: 'rgba(239,68,68,.4)',
-              bgcolor: 'rgba(239,68,68,.1)',
-              color: '#ef4444',
+              height: 24, fontSize: '0.72rem', fontWeight: 500,
+              borderColor: 'rgba(239,68,68,.4)', bgcolor: 'rgba(239,68,68,.1)', color: '#ef4444',
               '& .MuiChip-label': { px: 1 },
             }}
           />
@@ -155,74 +140,38 @@ export default function ReviewHeader({
         <Box
           sx={{
             display: { xs: 'none', lg: 'flex' },
-            alignItems: 'center',
-            gap: 0.75,
-            color: '#71717a',
-            fontSize: '0.72rem',
-            fontFamily: 'monospace',
+            alignItems: 'center', gap: 0.75, color: '#71717a',
+            fontSize: '0.72rem', fontFamily: 'monospace',
           }}
         >
           <AccountTreeRoundedIcon sx={{ fontSize: 14 }} />
           {branch && (
-            <Chip
-              label={branch}
-              size="small"
-              variant="outlined"
-              sx={{
-                height: 20,
-                fontSize: '0.68rem',
-                fontWeight: 500,
-                fontFamily: 'monospace',
-                borderColor: 'rgba(139,92,246,.4)',
-                bgcolor: 'rgba(139,92,246,.08)',
-                color: '#a78bfa',
+            <Chip label={branch} size="small" variant="outlined"
+              sx={{ height: 20, fontSize: '0.68rem', fontWeight: 500, fontFamily: 'monospace',
+                borderColor: 'rgba(139,92,246,.4)', bgcolor: 'rgba(139,92,246,.08)', color: '#a78bfa',
                 '& .MuiChip-label': { px: 0.75 },
               }}
             />
           )}
           {commitSha && (
-            <Chip
-              label={commitSha}
-              size="small"
-              variant="outlined"
+            <Chip label={commitSha} size="small" variant="outlined"
               component={repoUrl ? 'a' : 'span'}
               href={repoUrl ? `${repoUrl}/commit/${commitSha}` : undefined}
-              target="_blank"
-              rel="noopener noreferrer"
-              clickable={!!repoUrl}
-              sx={{
-                height: 20,
-                fontSize: '0.68rem',
-                fontWeight: 500,
-                fontFamily: 'monospace',
-                borderColor: 'rgba(59,130,246,.4)',
-                bgcolor: 'rgba(59,130,246,.08)',
-                color: '#60a5fa',
-                '& .MuiChip-label': { px: 0.75 },
-                textDecoration: 'none',
+              target="_blank" rel="noopener noreferrer" clickable={!!repoUrl}
+              sx={{ height: 20, fontSize: '0.68rem', fontWeight: 500, fontFamily: 'monospace',
+                borderColor: 'rgba(59,130,246,.4)', bgcolor: 'rgba(59,130,246,.08)', color: '#60a5fa',
+                '& .MuiChip-label': { px: 0.75 }, textDecoration: 'none',
               }}
             />
           )}
-          {prNumber && (
-            <Chip
-              label={`PR #${prNumber}`}
-              size="small"
-              variant="outlined"
+          {prNumber > 0 && (
+            <Chip label={`PR #${prNumber}`} size="small" variant="outlined"
               component={repoUrl ? 'a' : 'span'}
               href={repoUrl ? `${repoUrl}/pull/${prNumber}` : undefined}
-              target="_blank"
-              rel="noopener noreferrer"
-              clickable={!!repoUrl}
-              sx={{
-                height: 20,
-                fontSize: '0.68rem',
-                fontWeight: 500,
-                fontFamily: 'monospace',
-                borderColor: 'rgba(34,197,94,.4)',
-                bgcolor: 'rgba(34,197,94,.08)',
-                color: '#4ade80',
-                '& .MuiChip-label': { px: 0.75 },
-                textDecoration: 'none',
+              target="_blank" rel="noopener noreferrer" clickable={!!repoUrl}
+              sx={{ height: 20, fontSize: '0.68rem', fontWeight: 500, fontFamily: 'monospace',
+                borderColor: 'rgba(34,197,94,.4)', bgcolor: 'rgba(34,197,94,.08)', color: '#4ade80',
+                '& .MuiChip-label': { px: 0.75 }, textDecoration: 'none',
               }}
             />
           )}
@@ -233,10 +182,7 @@ export default function ReviewHeader({
           <IconButton
             size="small"
             onClick={onReset}
-            sx={{
-              color: '#71717a',
-              '&:hover': { bgcolor: 'rgba(239,68,68,.1)', color: '#ef4444' },
-            }}
+            sx={{ color: '#71717a', '&:hover': { bgcolor: 'rgba(239,68,68,.1)', color: '#ef4444' } }}
           >
             <RestartAltRoundedIcon sx={{ fontSize: 20 }} />
           </IconButton>

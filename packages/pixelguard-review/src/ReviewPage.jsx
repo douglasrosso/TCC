@@ -10,20 +10,28 @@ import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
 import ListRoundedIcon from '@mui/icons-material/ListRounded';
-import ReviewHeader from './components/review/ReviewHeader';
-import TestRunPanel from './components/review/TestRunPanel';
-import DiffListPanel, { getDeviceLabel } from './components/review/DiffListPanel';
-import DiffViewer from './components/review/DiffViewer';
-import ReviewEmptyState from './components/review/ReviewEmptyState';
+import ReviewHeader from './components/ReviewHeader.jsx';
+import TestRunPanel from './components/TestRunPanel.jsx';
+import DiffListPanel, { getDeviceLabel } from './components/DiffListPanel.jsx';
+import DiffViewer from './components/DiffViewer.jsx';
+import ReviewEmptyState from './components/ReviewEmptyState.jsx';
 
-const API_BASE = '';
 const DRAWER_WIDTH = 340;
 const MIN_PANEL = 200;
 const MAX_PANEL = 500;
 const DEFAULT_RUNS_W = 280;
 const DEFAULT_DIFFS_W = 300;
 
-export default function ReviewPage() {
+/**
+ * Standalone Review UI for PixelGuard visual regression testing.
+ *
+ * @param {object}  props
+ * @param {string}  [props.apiBase='']  Base URL for the review server API.
+ * @param {function} [props.onBack]     Called when the user clicks the back button.
+ */
+export default function ReviewPage({ apiBase = '', onBack } = {}) {
+  const API_BASE = apiBase;
+
   const [testRuns, setTestRuns] = useState([]);
   const [selectedRunId, setSelectedRunId] = useState('');
   const [selectedDiffId, setSelectedDiffId] = useState('');
@@ -35,17 +43,17 @@ export default function ReviewPage() {
   const [ciMeta, setCiMeta] = useState(null);
 
   /* ---- Responsive breakpoints ---- */
-  const isCompact = useMediaQuery('(max-width:1199px)'); // TestRunPanel → Drawer
-  const isMobile = useMediaQuery('(max-width:899px)');   // DiffListPanel → Drawer too
+  const isCompact = useMediaQuery('(max-width:1199px)');
+  const isMobile = useMediaQuery('(max-width:899px)');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerTab, setDrawerTab] = useState(0); // 0 = Test Runs, 1 = Telas
+  const [drawerTab, setDrawerTab] = useState(0);
 
   /* ---- Collapsible + Resizable panels ---- */
   const [runsCollapsed, setRunsCollapsed] = useState(false);
   const [diffsCollapsed, setDiffsCollapsed] = useState(false);
   const [runsWidth, setRunsWidth] = useState(DEFAULT_RUNS_W);
   const [diffsWidth, setDiffsWidth] = useState(DEFAULT_DIFFS_W);
-  const dragging = useRef(null); // 'runs' | 'diffs' | null
+  const dragging = useRef(null);
 
   useEffect(() => {
     const onMove = (e) => {
@@ -53,16 +61,10 @@ export default function ReviewPage() {
       e.preventDefault();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       if (dragging.current === 'runs') {
-        setRunsWidth((prev) => {
-          const next = clientX;
-          return Math.max(MIN_PANEL, Math.min(MAX_PANEL, next));
-        });
+        setRunsWidth(() => Math.max(MIN_PANEL, Math.min(MAX_PANEL, clientX)));
       } else if (dragging.current === 'diffs') {
         const runsW = runsCollapsed || isCompact ? 0 : runsWidth;
-        setDiffsWidth((prev) => {
-          const next = clientX - runsW;
-          return Math.max(MIN_PANEL, Math.min(MAX_PANEL, next));
-        });
+        setDiffsWidth(() => Math.max(MIN_PANEL, Math.min(MAX_PANEL, clientX - runsW)));
       }
     };
     const onUp = () => { dragging.current = null; document.body.style.cursor = ''; document.body.style.userSelect = ''; };
@@ -171,44 +173,28 @@ export default function ReviewPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedRunId]);
+  }, [selectedRunId, API_BASE]);
 
-  useEffect(() => {
-    fetchData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ================================================================
      Derived state
      ================================================================ */
-  const selectedRun = useMemo(
-    () => testRuns.find((r) => r.id === selectedRunId),
-    [testRuns, selectedRunId],
-  );
+  const selectedRun = useMemo(() => testRuns.find((r) => r.id === selectedRunId), [testRuns, selectedRunId]);
 
   const filteredDiffs = useMemo(() => {
     if (!selectedRun) return [];
     return selectedRun.diffs.filter((d) => {
-      const matchesSearch =
-        search === '' ||
-        d.name.toLowerCase().includes(search.toLowerCase()) ||
-        d.techniques.some((t) => t.label.toLowerCase().includes(search.toLowerCase()));
+      const matchesSearch = search === '' || d.name.toLowerCase().includes(search.toLowerCase()) || d.techniques.some((t) => t.label.toLowerCase().includes(search.toLowerCase()));
       const matchesStatus = statusFilter === 'all' || d.status === statusFilter;
       const device = getDeviceLabel(d.viewport);
-      const matchesViewport =
-        viewportFilter === 'all' || device.toLowerCase() === viewportFilter;
+      const matchesViewport = viewportFilter === 'all' || device.toLowerCase() === viewportFilter;
       return matchesSearch && matchesStatus && matchesViewport;
     });
   }, [selectedRun, search, statusFilter, viewportFilter]);
 
-  const selectedDiff = useMemo(
-    () => filteredDiffs.find((d) => d.id === selectedDiffId),
-    [filteredDiffs, selectedDiffId],
-  );
-
-  const currentDiffIndex = useMemo(
-    () => filteredDiffs.findIndex((d) => d.id === selectedDiffId),
-    [filteredDiffs, selectedDiffId],
-  );
+  const selectedDiff = useMemo(() => filteredDiffs.find((d) => d.id === selectedDiffId), [filteredDiffs, selectedDiffId]);
+  const currentDiffIndex = useMemo(() => filteredDiffs.findIndex((d) => d.id === selectedDiffId), [filteredDiffs, selectedDiffId]);
 
   const allDiffs = useMemo(() => testRuns.flatMap((r) => r.diffs), [testRuns]);
   const totalPending = allDiffs.filter((d) => d.status === 'pending').length;
@@ -221,8 +207,6 @@ export default function ReviewPage() {
   const updateGitHubStatus = useCallback(
     async (newPending, newApproved, newRejected) => {
       if (!ciMeta || !ciMeta.repository || ciMeta.commitSha === 'local') return;
-
-      // Only update when no more pending items
       if (newPending > 0) return;
 
       const allApproved = newRejected === 0;
@@ -237,96 +221,68 @@ export default function ReviewPage() {
               : `Review visual rejeitado — ${newRejected} tela(s) rejeitada(s)`,
           }),
         });
-      } catch {
-        // silently fail — user still sees local status
-      }
+      } catch { /* silently fail */ }
     },
-    [ciMeta],
+    [ciMeta, API_BASE],
   );
 
   /* ================================================================
      Review actions
      ================================================================ */
-  const reviewAction = useCallback(
-    async (imageName, action, comment = '') => {
-      await fetch(`${API_BASE}/api/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, file: imageName, comment }),
-      });
-      await fetchData();
-    },
-    [fetchData],
-  );
+  const reviewAction = useCallback(async (imageName, action, comment = '') => {
+    await fetch(`${API_BASE}/api/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, file: imageName, comment }),
+    });
+    await fetchData();
+  }, [fetchData, API_BASE]);
 
-  // After fetchData completes, check if we should update GitHub
   useEffect(() => {
     if (!loading && allDiffs.length > 0) {
       updateGitHubStatus(totalPending, totalApproved, totalRejected);
     }
   }, [totalPending, totalApproved, totalRejected]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleApprove = useCallback(
-    (diffId) => {
-      const diff = allDiffs.find((d) => d.id === diffId);
-      if (diff) {
-        reviewAction(diff.imageName, 'approve');
-        const next = filteredDiffs.find(
-          (d, i) => i > currentDiffIndex && d.status === 'pending',
-        );
-        if (next) setSelectedDiffId(next.id);
-      }
-    },
-    [allDiffs, reviewAction, filteredDiffs, currentDiffIndex],
-  );
+  const handleApprove = useCallback((diffId) => {
+    const diff = allDiffs.find((d) => d.id === diffId);
+    if (diff) {
+      reviewAction(diff.imageName, 'approve');
+      const next = filteredDiffs.find((d, i) => i > currentDiffIndex && d.status === 'pending');
+      if (next) setSelectedDiffId(next.id);
+    }
+  }, [allDiffs, reviewAction, filteredDiffs, currentDiffIndex]);
 
-  const handleReject = useCallback(
-    (diffId) => {
-      const diff = allDiffs.find((d) => d.id === diffId);
-      if (diff) {
-        reviewAction(diff.imageName, 'reject');
-        const next = filteredDiffs.find(
-          (d, i) => i > currentDiffIndex && d.status === 'pending',
-        );
-        if (next) setSelectedDiffId(next.id);
-      }
-    },
-    [allDiffs, reviewAction, filteredDiffs, currentDiffIndex],
-  );
+  const handleReject = useCallback((diffId) => {
+    const diff = allDiffs.find((d) => d.id === diffId);
+    if (diff) {
+      reviewAction(diff.imageName, 'reject');
+      const next = filteredDiffs.find((d, i) => i > currentDiffIndex && d.status === 'pending');
+      if (next) setSelectedDiffId(next.id);
+    }
+  }, [allDiffs, reviewAction, filteredDiffs, currentDiffIndex]);
 
   const handleApproveAll = useCallback(async () => {
-    await fetch(`${API_BASE}/api/review/all`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'approve-all', comment: '' }),
-    });
+    await fetch(`${API_BASE}/api/review/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve-all', comment: '' }) });
     await fetchData();
-  }, [fetchData]);
+  }, [fetchData, API_BASE]);
 
   const handleRejectAll = useCallback(async () => {
-    await fetch(`${API_BASE}/api/review/all`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'reject-all', comment: '' }),
-    });
+    await fetch(`${API_BASE}/api/review/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reject-all', comment: '' }) });
     await fetchData();
-  }, [fetchData]);
+  }, [fetchData, API_BASE]);
 
   const handleReset = useCallback(async () => {
     await fetch(`${API_BASE}/api/review/reset`, { method: 'POST' });
     await fetchData();
-  }, [fetchData]);
+  }, [fetchData, API_BASE]);
 
   const handleNext = useCallback(() => {
-    if (currentDiffIndex < filteredDiffs.length - 1) {
-      setSelectedDiffId(filteredDiffs[currentDiffIndex + 1].id);
-    }
+    if (currentDiffIndex < filteredDiffs.length - 1) setSelectedDiffId(filteredDiffs[currentDiffIndex + 1].id);
   }, [currentDiffIndex, filteredDiffs]);
 
   const handlePrevious = useCallback(() => {
-    if (currentDiffIndex > 0) {
-      setSelectedDiffId(filteredDiffs[currentDiffIndex - 1].id);
-    }
+    if (currentDiffIndex > 0) setSelectedDiffId(filteredDiffs[currentDiffIndex - 1].id);
   }, [currentDiffIndex, filteredDiffs]);
 
   const handleSelectRun = useCallback((id) => {
@@ -337,16 +293,10 @@ export default function ReviewPage() {
     setViewportFilter('all');
   }, []);
 
-  /* ================================================================
-     Drawer-aware selection handlers
-     ================================================================ */
-  const handleSelectRunDrawer = useCallback(
-    (id) => {
-      handleSelectRun(id);
-      setDrawerTab(1); // switch to Telas tab after selecting a run
-    },
-    [handleSelectRun],
-  );
+  const handleSelectRunDrawer = useCallback((id) => {
+    handleSelectRun(id);
+    setDrawerTab(1);
+  }, [handleSelectRun]);
 
   const handleSelectDiffDrawer = useCallback((id) => {
     setSelectedDiffId(id);
@@ -354,38 +304,16 @@ export default function ReviewPage() {
   }, []);
 
   /* ================================================================
-     Keyboard shortcuts: ← → A R
+     Keyboard shortcuts
      ================================================================ */
   useEffect(() => {
     const handler = (e) => {
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        handlePrevious();
-      }
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        handleNext();
-      }
-      if (
-        (e.key === 'a' || e.key === 'A') &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        selectedDiff
-      ) {
-        e.preventDefault();
-        handleApprove(selectedDiff.id);
-      }
-      if (
-        (e.key === 'r' || e.key === 'R') &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        selectedDiff
-      ) {
-        e.preventDefault();
-        handleReject(selectedDiff.id);
-      }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); handlePrevious(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); handleNext(); }
+      if ((e.key === 'a' || e.key === 'A') && !e.ctrlKey && !e.metaKey && selectedDiff) { e.preventDefault(); handleApprove(selectedDiff.id); }
+      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && selectedDiff) { e.preventDefault(); handleReject(selectedDiff.id); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -396,16 +324,7 @@ export default function ReviewPage() {
      ================================================================ */
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          bgcolor: '#09090b',
-          color: '#fafafa',
-        }}
-      >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', bgcolor: '#09090b', color: '#fafafa' }}>
         Carregando...
       </Box>
     );
@@ -413,30 +332,16 @@ export default function ReviewPage() {
 
   if (error) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          bgcolor: '#09090b',
-          color: '#fca5a5',
-          flexDirection: 'column',
-          gap: 2,
-        }}
-      >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', bgcolor: '#09090b', color: '#fca5a5', flexDirection: 'column', gap: 2 }}>
         <Box sx={{ fontSize: '1.2rem', fontWeight: 600 }}>Erro ao conectar à API</Box>
         <Box sx={{ fontSize: '0.85rem' }}>{error}</Box>
         <Box sx={{ fontSize: '0.8rem', color: '#71717a' }}>
-          Execute: npm run build && npm run review:ui (porta 3060)
+          Execute: npx pixelguard-review (porta 3060)
         </Box>
       </Box>
     );
   }
 
-  /* ================================================================
-     Shared props for DiffListPanel (used in both inline and drawer)
-     ================================================================ */
   const diffListProps = {
     diffs: filteredDiffs,
     selectedDiffId,
@@ -454,15 +359,7 @@ export default function ReviewPage() {
      Render
      ================================================================ */
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        bgcolor: '#09090b',
-        color: '#fafafa',
-      }}
-    >
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: '#09090b', color: '#fafafa' }}>
       <ReviewHeader
         totalPending={totalPending}
         totalApproved={totalApproved}
@@ -473,26 +370,17 @@ export default function ReviewPage() {
         commitSha={ciMeta?.commitShort}
         branch={ciMeta?.branch}
         prNumber={ciMeta?.prNumber}
-        repoUrl={
-          ciMeta?.repository
-            ? `https://github.com/${ciMeta.repository}`
-            : undefined
-        }
+        repoUrl={ciMeta?.repository ? `https://github.com/${ciMeta.repository}` : undefined}
+        onBack={onBack}
       />
 
-      {/* ---- Unified Drawer with tabs (compact / mobile) ---- */}
+      {/* Unified Drawer (compact / mobile) */}
       <Drawer
         anchor="left"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         PaperProps={{
-          sx: {
-            bgcolor: '#09090b',
-            width: DRAWER_WIDTH,
-            borderRight: '1px solid hsl(240 3.7% 15.9%)',
-            display: 'flex',
-            flexDirection: 'column',
-          },
+          sx: { bgcolor: '#09090b', width: DRAWER_WIDTH, borderRight: '1px solid hsl(240 3.7% 15.9%)', display: 'flex', flexDirection: 'column' },
         }}
       >
         <Tabs
@@ -500,19 +388,9 @@ export default function ReviewPage() {
           onChange={(_, v) => setDrawerTab(v)}
           variant="fullWidth"
           sx={{
-            minHeight: 42,
-            borderBottom: '1px solid hsl(240 3.7% 15.9%)',
-            '& .MuiTab-root': {
-              minHeight: 42,
-              textTransform: 'none',
-              fontSize: '0.8rem',
-              fontWeight: 500,
-              color: '#71717a',
-              '&.Mui-selected': { color: '#fafafa' },
-            },
-            '& .MuiTabs-indicator': {
-              bgcolor: '#3b82f6',
-            },
+            minHeight: 42, borderBottom: '1px solid hsl(240 3.7% 15.9%)',
+            '& .MuiTab-root': { minHeight: 42, textTransform: 'none', fontSize: '0.8rem', fontWeight: 500, color: '#71717a', '&.Mui-selected': { color: '#fafafa' } },
+            '& .MuiTabs-indicator': { bgcolor: '#3b82f6' },
           }}
         >
           <Tab icon={<FolderOpenRoundedIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Test Runs" />
@@ -520,20 +398,16 @@ export default function ReviewPage() {
         </Tabs>
         <Box sx={{ flex: 1, overflow: 'auto' }}>
           {drawerTab === 0 ? (
-            <TestRunPanel
-              testRuns={testRuns}
-              selectedRunId={selectedRunId}
-              onSelectRun={handleSelectRunDrawer}
-            />
+            <TestRunPanel testRuns={testRuns} selectedRunId={selectedRunId} onSelectRun={handleSelectRunDrawer} />
           ) : (
             <DiffListPanel {...diffListProps} onSelectDiff={handleSelectDiffDrawer} />
           )}
         </Box>
       </Drawer>
 
-      {/* ---- Main layout ---- */}
+      {/* Main layout */}
       <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Test Runs sidebar — desktop (≥1200px) */}
+        {/* Test Runs sidebar — desktop */}
         {!isCompact && (
           <>
             {runsCollapsed ? (
@@ -541,34 +415,13 @@ export default function ReviewPage() {
                 <Box
                   onClick={() => setRunsCollapsed(false)}
                   sx={{
-                    width: 36,
-                    flexShrink: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    pt: 1.5,
-                    gap: 1,
-                    borderRight: '1px solid',
-                    borderColor: 'hsl(240 3.7% 15.9%)',
-                    bgcolor: 'hsl(240 10% 3.9%)',
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,.03)' },
-                    transition: 'background-color .15s',
+                    width: 36, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 1.5, gap: 1,
+                    borderRight: '1px solid', borderColor: 'hsl(240 3.7% 15.9%)', bgcolor: 'hsl(240 10% 3.9%)',
+                    cursor: 'pointer', '&:hover': { bgcolor: 'rgba(255,255,255,.03)' }, transition: 'background-color .15s',
                   }}
                 >
                   <ChevronRightRoundedIcon sx={{ fontSize: 16, color: '#71717a' }} />
-                  <Box
-                    sx={{
-                      writingMode: 'vertical-rl',
-                      textOrientation: 'mixed',
-                      fontSize: '0.65rem',
-                      fontWeight: 600,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: '#52525b',
-                      userSelect: 'none',
-                    }}
-                  >
+                  <Box sx={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#52525b', userSelect: 'none' }}>
                     Test Runs
                   </Box>
                 </Box>
@@ -576,33 +429,15 @@ export default function ReviewPage() {
             ) : (
               <Box sx={{ width: runsWidth, flexShrink: 0, position: 'relative', display: 'flex' }}>
                 <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                  <TestRunPanel
-                    testRuns={testRuns}
-                    selectedRunId={selectedRunId}
-                    onSelectRun={handleSelectRun}
-                    onCollapse={() => setRunsCollapsed(true)}
-                  />
+                  <TestRunPanel testRuns={testRuns} selectedRunId={selectedRunId} onSelectRun={handleSelectRun} onCollapse={() => setRunsCollapsed(true)} />
                 </Box>
-                {/* Drag handle */}
-                <Box
-                  onMouseDown={startDrag('runs')}
-                  onTouchStart={startDrag('runs')}
-                  sx={{
-                    width: 6,
-                    cursor: 'col-resize',
-                    flexShrink: 0,
-                    bgcolor: 'transparent',
-                    '&:hover': { bgcolor: 'rgba(59,130,246,.3)' },
-                    transition: 'background-color .15s',
-                    zIndex: 5,
-                  }}
-                />
+                <Box onMouseDown={startDrag('runs')} onTouchStart={startDrag('runs')} sx={{ width: 6, cursor: 'col-resize', flexShrink: 0, bgcolor: 'transparent', '&:hover': { bgcolor: 'rgba(59,130,246,.3)' }, transition: 'background-color .15s', zIndex: 5 }} />
               </Box>
             )}
           </>
         )}
 
-        {/* Diff list sidebar — tablet+ (≥900px) */}
+        {/* Diff list sidebar — tablet+ */}
         {!isMobile && (
           <>
             {diffsCollapsed ? (
@@ -610,34 +445,13 @@ export default function ReviewPage() {
                 <Box
                   onClick={() => setDiffsCollapsed(false)}
                   sx={{
-                    width: 36,
-                    flexShrink: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    pt: 1.5,
-                    gap: 1,
-                    borderRight: '1px solid',
-                    borderColor: 'hsl(240 3.7% 15.9%)',
-                    bgcolor: 'rgba(9,9,11,.5)',
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,.03)' },
-                    transition: 'background-color .15s',
+                    width: 36, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 1.5, gap: 1,
+                    borderRight: '1px solid', borderColor: 'hsl(240 3.7% 15.9%)', bgcolor: 'rgba(9,9,11,.5)',
+                    cursor: 'pointer', '&:hover': { bgcolor: 'rgba(255,255,255,.03)' }, transition: 'background-color .15s',
                   }}
                 >
                   <ChevronRightRoundedIcon sx={{ fontSize: 16, color: '#71717a' }} />
-                  <Box
-                    sx={{
-                      writingMode: 'vertical-rl',
-                      textOrientation: 'mixed',
-                      fontSize: '0.65rem',
-                      fontWeight: 600,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: '#52525b',
-                      userSelect: 'none',
-                    }}
-                  >
+                  <Box sx={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#52525b', userSelect: 'none' }}>
                     Telas
                   </Box>
                 </Box>
@@ -647,20 +461,7 @@ export default function ReviewPage() {
                 <Box sx={{ flex: 1, overflow: 'hidden' }}>
                   <DiffListPanel {...diffListProps} onSelectDiff={setSelectedDiffId} onCollapse={() => setDiffsCollapsed(true)} />
                 </Box>
-                {/* Drag handle */}
-                <Box
-                  onMouseDown={startDrag('diffs')}
-                  onTouchStart={startDrag('diffs')}
-                  sx={{
-                    width: 6,
-                    cursor: 'col-resize',
-                    flexShrink: 0,
-                    bgcolor: 'transparent',
-                    '&:hover': { bgcolor: 'rgba(59,130,246,.3)' },
-                    transition: 'background-color .15s',
-                    zIndex: 5,
-                  }}
-                />
+                <Box onMouseDown={startDrag('diffs')} onTouchStart={startDrag('diffs')} sx={{ width: 6, cursor: 'col-resize', flexShrink: 0, bgcolor: 'transparent', '&:hover': { bgcolor: 'rgba(59,130,246,.3)' }, transition: 'background-color .15s', zIndex: 5 }} />
               </Box>
             )}
           </>
