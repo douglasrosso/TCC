@@ -1,6 +1,6 @@
 name: Atualizar Baselines
 
-# Roda ao fazer merge na main — captura novas screenshots e commita como baselines
+# Roda ao fazer merge/push na main — captura screenshots e atualiza baselines
 on:
   push:
     branches: [main]
@@ -8,13 +8,14 @@ on:
 permissions:
   contents: write
 
-# Garante que apenas uma execução roda por vez (evita race condition)
 concurrency:
   group: update-baselines
   cancel-in-progress: false
 
 jobs:
   update-baselines:
+    # Não roda em commits do próprio bot (evita loop infinito)
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -23,16 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.VRT_TOKEN }}
-          fetch-depth: 0
-
-      - name: Skip if commit contains [skip ci]
-        run: |
-          MSG="${{ github.event.head_commit.message || '' }}"
-          echo "Commit message: $MSG"
-          echo "$MSG" | grep -iq "\[skip ci\]" && {
-            echo "[skip ci] found — skipping update-baselines";
-            exit 0;
-          } || echo "No [skip ci] present; continuing..."
+          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -58,8 +50,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add baselines/
           if git diff --cached --quiet; then
-            echo "Nenhuma alteração nas baselines"
+            echo "✅ Nenhuma alteração nas baselines"
           else
             git commit -m "chore: atualizar baselines visuais [skip ci]"
             git push
+            echo "📸 Baselines atualizadas e commitadas"
           fi
