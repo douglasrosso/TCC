@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.VRT_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -49,6 +51,5 @@ jobs:
             echo "Nenhuma alteração nas baselines"
           else
             git commit -m "chore: atualizar baselines visuais [skip ci]"
-            git remote set-url origin https://x-access-token:${{ secrets.VRT_TOKEN }}@github.com/${{ github.repository }}.git
             git push
           fi

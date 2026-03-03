@@ -34,17 +34,20 @@ Merge na main → Workflow atualiza baselines automaticamente
 Para garantir que o pipeline e o Review UI funcionem corretamente, configure o seguinte:
 
 - **Secrets no GitHub**
-  - `VRT_TOKEN`: PAT usado **exclusivamente** pelo workflow `update-baselines` para fazer `git push` na branch `main` (necessário para contornar Repository Rulesets). Adicione em **Settings → Secrets and variables → Actions**.
-  - Todos os demais acessos nos workflows (checkout, status checks, comentários em PRs, deploy de Pages) usam o `GITHUB_TOKEN` padrão do GitHub Actions — nenhum secret extra é necessário para eles.
+  - `VRT_TOKEN`: PAT usado pelo workflow `update-baselines` para checkout e push na branch `main`. Necessário porque o `GITHUB_TOKEN` padrão não consegue contornar Repository Rulesets. Adicione em **Settings → Secrets and variables → Actions**.
+  - Os demais workflows (`visual-regression`, `review-command`, `cleanup-pages`) usam apenas o `GITHUB_TOKEN` padrão.
   - Para uso **local** do Review UI, o servidor aceita `VRT_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` ou `GITHUB_PAT` para postar status checks via API.
 
 - **Escopos / Permissões do `VRT_TOKEN`**
-  - O token só precisa de permissão para **push** na `main`. Use um PAT com escopo `repo` (clássico) ou, para fine-grained, conceda `Contents: Read & write`.
-  - Se você usa **Repository Rulesets**, adicione o bot/app associado ao token como **bypass actor** na regra.
+  - Use um PAT clássico com escopo `repo`, ou um fine-grained token com `Contents: Read & write`.
+  - **Bypass de Rulesets**: como o PAT autentica como **você** (admin), adicione **Repository admin** como bypass actor na ruleset:
+    1. **Settings → Rules → Rulesets** → clique na regra da `main`
+    2. Em **Bypass list** → **+ Add bypass** → selecione **Repository admin**
+    3. Salve
 
 - **Permissões nos workflows**
   - O workflow `visual-regression.yml` declara `statuses: write`, `pull-requests: write` e `pages: write` (já configurado).
-  - O workflow `update-baselines.yml` faz checkout com `GITHUB_TOKEN` normal e usa `VRT_TOKEN` **apenas na hora do push** (via `git remote set-url`).
+  - O workflow `update-baselines.yml` usa `VRT_TOKEN` no checkout (`token: ${{ secrets.VRT_TOKEN }}`), que automaticamente persiste o token para o `git push` subsequente.
 
 - **Branch protection**
   - Em **Settings → Branches → Add rule** para `main`, exija o status check `visual-regression/review` (o check só aparece após o primeiro run do workflow).
@@ -101,7 +104,7 @@ permissions:
   contents: write       # ler código + commitar baselines
 ```
 
-O `VRT_TOKEN` (PAT) é usado **apenas** no step de `git push` do workflow `update-baselines`, para contornar Repository Rulesets que bloqueiam push direto na `main`.
+O workflow `update-baselines` usa `VRT_TOKEN` (PAT) no `actions/checkout` com `token:`, o que persiste o token para o `git push`. Isso é necessário para contornar Repository Rulesets — o `GITHUB_TOKEN` padrão não consegue fazer push em branches protegidas por rulesets.
 
 ---
 

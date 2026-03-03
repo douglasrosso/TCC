@@ -149,13 +149,16 @@ npm run e2e:ui           # Interface visual do Playwright
 Antes de usar o pipeline de Visual Regression e o Review UI, confirme as configurações abaixo:
 
 - **Segredos / Tokens (CI e local)**:
-  - `VRT_TOKEN`: PAT usado **exclusivamente** pelo workflow `update-baselines` para fazer `git push` na `main` (necessário para contornar Repository Rulesets). No GitHub Actions, crie um Secret `VRT_TOKEN` com um Personal Access Token (PAT) que tenha as permissões descritas abaixo.
-  - Todos os demais acessos nos workflows (checkout, status checks, comentários em PRs, deploy de Pages) usam o `GITHUB_TOKEN` padrão — nenhum secret extra é necessário.
+  - `VRT_TOKEN`: PAT usado pelo workflow `update-baselines` para checkout e push na `main`. Necessário porque o `GITHUB_TOKEN` padrão não consegue contornar Repository Rulesets. No GitHub Actions, crie um Secret `VRT_TOKEN` em **Settings → Secrets and variables → Actions**.
+  - Os demais workflows usam apenas o `GITHUB_TOKEN` padrão — nenhum secret extra é necessário.
   - Para uso **local** do Review UI, o servidor aceita `VRT_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` ou `GITHUB_PAT` para postar status checks via API.
 
 - **Permissões do PAT (`VRT_TOKEN`)**:
-  - O token só precisa de permissão para **push** na `main`. Use um PAT clássico com escopo `repo`, ou um fine-grained token com `Contents: Read & write`.
-  - Se você usa **Repository Rulesets**, adicione o bot/app associado ao token como **bypass actor** na regra.
+  - Use um PAT clássico com escopo `repo`, ou um fine-grained token com `Contents: Read & write`.
+  - **Bypass de Rulesets**: como o PAT autentica como **você** (admin do repo), adicione **Repository admin** como bypass actor:
+    1. **Settings → Rules → Rulesets** → clique na regra da `main`
+    2. Em **Bypass list** → **+ Add bypass** → selecione **Repository admin**
+    3. Salve
   - Para uso **local** do Review UI (postar status checks), o token também precisa de `repo:status`.
 
 - **Branch protection (recomendado)**:
