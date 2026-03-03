@@ -1,0 +1,14 @@
+{
+  "commitSha": "aff3755a80664a93d358daa87023f5de12dad4ca",
+  "commitShort": "aff3755",
+  "branch": "test/force-theme-diff",
+  "baseBranch": "main",
+  "prNumber": 11,
+  "prTitle": "ci: integrar review visual com GitHub Pages e aprovacao por comentario",
+  "actor": "douglasrosso",
+  "runId": "22628912398",
+  "repository": "douglasrosso/TCC",
+  "timestamp": "2026-03-03T15:02:47.274Z",
+  "hasDiffs": false,
+  "failedCount": 0
+}

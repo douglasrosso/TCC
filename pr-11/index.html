@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>✅ Visual OK — PixelGuard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;padding:0}
+header{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);padding:2rem 2rem 1.5rem;margin-bottom:2rem}
+header h1{color:#fff;font-size:1.6rem;margin-bottom:.25rem}
+header p{color:rgba(255,255,255,.7);font-size:.85rem}
+.container{max-width:1200px;margin:0 auto;padding:0 2rem 2rem}
+h2{margin:2rem 0 1rem;border-bottom:2px solid #2563eb;padding-bottom:.25rem;font-size:1.2rem}
+h3{margin:1.5rem 0 .75rem;font-size:1rem}
+table{border-collapse:collapse;width:100%;margin-bottom:1.5rem;background:#1e293b;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+th,td{padding:.6rem .75rem;text-align:left;border-bottom:1px solid #334155;font-size:.9rem}
+th{background:#0f172a;font-size:.8rem;text-transform:uppercase;color:#94a3b8}
+.pass{color:#4ade80;font-weight:600}
+.fail{color:#f87171;font-weight:600}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-bottom:2rem}
+.summary-card{background:#1e293b;border-radius:8px;padding:1.25rem;box-shadow:0 1px 3px rgba(0,0,0,.3);border:1px solid #334155}
+.summary-card h3{font-size:1rem;margin-bottom:.5rem;color:#94a3b8}
+.big-number{font-size:2rem;font-weight:700}
+.big-number.pass{color:#4ade80}.big-number.fail{color:#f87171}
+.comparison-block{background:#1e293b;border-radius:8px;padding:1.25rem;margin-bottom:1.5rem;border:1px solid #334155}
+.comparison-block h3{margin:0 0 1rem;display:flex;align-items:center;gap:.5rem}
+.badge{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:600}
+.badge.pass{background:rgba(74,222,128,.15);color:#4ade80}
+.badge.fail{background:rgba(248,113,113,.15);color:#f87171}
+.images{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:1rem}
+.images figure{text-align:center;background:#0f172a;border-radius:8px;padding:.75rem;border:1px solid #334155}
+.images img{max-width:100%;height:auto;border:1px solid #334155;border-radius:4px;cursor:pointer;transition:transform .2s}
+.images img:hover{transform:scale(1.02)}
+figcaption{font-size:.8rem;color:#94a3b8;margin-top:.5rem}
+.approve-banner{background:linear-gradient(135deg,#065f46,#047857);border:1px solid #10b981;border-radius:8px;padding:1.5rem;margin-bottom:2rem;text-align:center}
+.approve-banner.pending{background:linear-gradient(135deg,#78350f,#92400e);border-color:#f59e0b}
+.approve-banner h2{border:none;color:#fff;margin:0 0 .5rem;font-size:1.1rem}
+.approve-banner p{color:rgba(255,255,255,.8);font-size:.9rem;margin:.25rem 0}
+.approve-banner code{background:rgba(0,0,0,.3);padding:.15rem .4rem;border-radius:4px;font-size:.85rem;color:#fbbf24}
+.meta-info{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem}
+.meta-chip{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:.4rem .75rem;font-size:.8rem;color:#94a3b8}
+.meta-chip strong{color:#e2e8f0}
+.tabs{display:flex;gap:.5rem;margin-bottom:1rem}
+.tab{padding:.4rem .8rem;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#94a3b8;cursor:pointer;font-size:.8rem}
+.tab.active{background:#2563eb;border-color:#2563eb;color:#fff}
+footer{text-align:center;padding:2rem;color:#475569;font-size:.8rem;border-top:1px solid #1e293b;margin-top:2rem}
+</style>
+</head><body><header><h1>✅ Regressão Visual OK</h1><p>Gerado em 03/03/2026, 15:02:47</p></header><div class="container"><div class="meta-info"><div class="meta-chip">Commit: <strong>aff3755</strong></div><div class="meta-chip">Branch: <strong>test/force-theme-diff</strong></div><div class="meta-chip">Base: <strong>main</strong></div><div class="meta-chip">PR: <strong>#11</strong></div><div class="meta-chip">Autor: <strong>douglasrosso</strong></div></div><div class="approve-banner"><h2>✅ Nenhuma diferença visual — merge liberado</h2></div><div class="summary-grid"><div class="summary-card">
+      <h3>Pixel a Pixel</h3>
+      <span class="big-number pass">OK</span>
+      <p>3 aprovadas / 0 reprovadas</p>
+    </div><div class="summary-card">
+      <h3>SSIM (Perceptual)</h3>
+      <span class="big-number pass">OK</span>
+      <p>3 aprovadas / 0 reprovadas</p>
+    </div><div class="summary-card">
+      <h3>Regiões</h3>
+      <span class="big-number pass">OK</span>
+      <p>3 aprovadas / 0 reprovadas</p>
+    </div></div><h2>Resumo por Imagem</h2><table><thead><tr>
+    <th>Imagem</th>
+    <th>Pixel (%diff)</th><th>SSIM (score)</th><th>Região (falhas)</th>
+  </tr></thead><tbody><tr>
+      <td>dashboard-desktop-1366w</td>
+      <td class="pass">OK 0%</td>
+      <td class="pass">OK 1</td>
+      <td class="pass">OK 0/24</td>
+    </tr><tr>
+      <td>dashboard-mobile-360w</td>
+      <td class="pass">OK 0%</td>
+      <td class="pass">OK 1</td>
+      <td class="pass">OK 0/24</td>
+    </tr><tr>
+      <td>dashboard-tablet-768w</td>
+      <td class="pass">OK 0%</td>
+      <td class="pass">OK 1</td>
+      <td class="pass">OK 0/24</td>
+    </tr></tbody></table><h2>Comparações Visuais</h2><div class="comparison-block"><h3>dashboard-desktop-1366w <span class="badge pass">OK</span></h3><div class="images"><figure><img src="baselines/dashboard-desktop-1366w.png" alt="Baseline"><figcaption>📌 Baseline (main)</figcaption></figure><figure><img src="current/dashboard-desktop-1366w.png" alt="Atual"><figcaption>🆕 Captura Atual (PR)</figcaption></figure><figure><img src="diffs/pixel/dashboard-desktop-1366w.png" alt="Diff Pixel"><figcaption>🔍 Diff Pixel</figcaption></figure><figure><img src="diffs/ssim/dashboard-desktop-1366w.png" alt="Diff SSIM"><figcaption>🔍 Diff SSIM</figcaption></figure><figure><img src="diffs/region/dashboard-desktop-1366w.png" alt="Diff Região"><figcaption>🔍 Diff Região</figcaption></figure></div></div><div class="comparison-block"><h3>dashboard-mobile-360w <span class="badge pass">OK</span></h3><div class="images"><figure><img src="baselines/dashboard-mobile-360w.png" alt="Baseline"><figcaption>📌 Baseline (main)</figcaption></figure><figure><img src="current/dashboard-mobile-360w.png" alt="Atual"><figcaption>🆕 Captura Atual (PR)</figcaption></figure><figure><img src="diffs/pixel/dashboard-mobile-360w.png" alt="Diff Pixel"><figcaption>🔍 Diff Pixel</figcaption></figure><figure><img src="diffs/ssim/dashboard-mobile-360w.png" alt="Diff SSIM"><figcaption>🔍 Diff SSIM</figcaption></figure><figure><img src="diffs/region/dashboard-mobile-360w.png" alt="Diff Região"><figcaption>🔍 Diff Região</figcaption></figure></div></div><div class="comparison-block"><h3>dashboard-tablet-768w <span class="badge pass">OK</span></h3><div class="images"><figure><img src="baselines/dashboard-tablet-768w.png" alt="Baseline"><figcaption>📌 Baseline (main)</figcaption></figure><figure><img src="current/dashboard-tablet-768w.png" alt="Atual"><figcaption>🆕 Captura Atual (PR)</figcaption></figure><figure><img src="diffs/pixel/dashboard-tablet-768w.png" alt="Diff Pixel"><figcaption>🔍 Diff Pixel</figcaption></figure><figure><img src="diffs/ssim/dashboard-tablet-768w.png" alt="Diff SSIM"><figcaption>🔍 Diff SSIM</figcaption></figure><figure><img src="diffs/region/dashboard-tablet-768w.png" alt="Diff Região"><figcaption>🔍 Diff Região</figcaption></figure></div></div></div><footer>🤖 Gerado por <strong>PixelGuard</strong></footer></body></html>
