@@ -259,16 +259,10 @@ jobs:
                 body += `\n---\n\n`;
                 body += `<div align="center">\n\n`;
                 body += `### ⏳ Merge bloqueado — review visual necessário\n\n`;
-                body += `<a href="${pagesUrl}"><img src="https://img.shields.io/badge/🔍_Abrir_Review_Visual-4f46e5?style=for-the-badge&logoColor=white" alt="Abrir Review" /></a>\n\n`;
+                body += `<a href="${pagesUrl}" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/🔍_Abrir_Review_Visual-4f46e5?style=for-the-badge&logoColor=white" alt="Abrir Review" /></a>\n\n`;
                 body += `</div>\n\n`;
-                body += `> **Como aprovar:** Abra o review visual, analise as diferenças e clique em **Aprovar**.\n`;
-                body += `> O comando \`/approve-visual\` será copiado — basta colar como comentário neste PR.\n`;
-                body += `>\n`;
-                body += `> | Comando | Ação |\n`;
-                body += `> |---------|------|\n`;
-                body += `> | \`/approve-visual\` | ✅ Aprova e libera merge |\n`;
-                body += `> | \`/reject-visual\` | ❌ Rejeita e bloqueia merge |\n`;
-                body += `> | \`/reset-visual\` | 🔄 Reseta para pendente |\n`;
+                body += `> **Como aprovar:** Abra o review visual, analise as diferenças e clique em **Aprovar** ou **Rejeitar**.\n`;
+                body += `> O status do PR é atualizado **automaticamente** — nenhum comando manual necessário.\n`;
               }
             }
 

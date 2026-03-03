@@ -246,7 +246,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             Accept: 'application/vnd.github.v3+json',
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ state, description, context: 'PixelGuard / visual-regression' }),
+          body: JSON.stringify({ state, description, context: 'visual-regression/review' }),
         },
       );
       return res.ok;
