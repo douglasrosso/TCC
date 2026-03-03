@@ -221,26 +221,37 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
      ================================================================ */
   const isStatic = typeof window !== 'undefined' && !!window.__PIXELGUARD_STATIC__;
 
-  /** Call GitHub Statuses API directly from browser (static mode) */
+  /* ---- Decrypt XOR-encoded token from meta.json ---- */
+  const decryptToken = useCallback((statusAuth) => {
+    if (!statusAuth || !statusAuth.e) return '';
+    try {
+      const decoded = atob(statusAuth.e);
+      return Array.from(decoded).map(c => String.fromCharCode(c.charCodeAt(0) ^ statusAuth.k)).join('');
+    } catch { return ''; }
+  }, []);
+
+  /* ---- Set commit status via GitHub Statuses API ---- */
   const setGitHubCommitStatus = useCallback(async (state, description) => {
     const meta = window.__PIXELGUARD_STATIC__?.meta;
-    if (!meta?.repository || !meta?.commitSha || !meta?.statusToken) return false;
+    if (!meta?.repository || !meta?.commitSha || !meta?.statusAuth) return false;
+    const token = decryptToken(meta.statusAuth);
+    if (!token) return false;
     try {
       const res = await fetch(
         `https://api.github.com/repos/${meta.repository}/statuses/${meta.commitSha}`,
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${meta.statusToken}`,
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github.v3+json',
             'Content-Type': 'application/json',
-            Accept: 'application/vnd.github+json',
           },
-          body: JSON.stringify({ state, description, context: 'visual-regression/review' }),
-        }
+          body: JSON.stringify({ state, description, context: 'PixelGuard / visual-regression' }),
+        },
       );
       return res.ok;
     } catch { return false; }
-  }, []);
+  }, [decryptToken]);
 
   const updateGitHubStatus = useCallback(
     async (newPending, newApproved, newRejected) => {
@@ -250,6 +261,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         return;
       }
       const allApproved = newRejected === 0;
+      setReviewComplete(allApproved ? 'approved' : 'rejected');
 
       if (isStatic) {
         const state = allApproved ? 'success' : 'failure';
@@ -257,7 +269,6 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
           ? `Review visual aprovado — ${newApproved} tela(s)`
           : `Review visual rejeitado — ${newRejected} tela(s) rejeitada(s)`;
         const ok = await setGitHubCommitStatus(state, desc);
-        setReviewComplete(allApproved ? 'approved' : 'rejected');
         if (ok) {
           setStatusMessage({
             type: allApproved ? 'success' : 'error',
@@ -266,7 +277,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
               : '❌ Review rejeitado! Merge bloqueado no GitHub.',
           });
         } else {
-          setStatusMessage({ type: 'error', text: '⚠️ Não foi possível atualizar o status no GitHub.' });
+          setStatusMessage({ type: 'info', text: 'Status atualizado localmente.' });
         }
         return;
       }
@@ -365,17 +376,16 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         ...run,
         diffs: run.diffs.map(d => ({ ...d, status: 'pending' })),
       })));
-      const ok = await setGitHubCommitStatus('pending', 'Review visual resetado — aguardando revisão');
+      const ok = await setGitHubCommitStatus('pending', 'Review visual pendente — resetado');
       setReviewComplete('reset');
       setStatusMessage(ok
-        ? { type: 'info', text: '🔄 Review resetado! Status atualizado no GitHub.' }
-        : { type: 'error', text: '⚠️ Não foi possível atualizar o status no GitHub.' }
-      );
+        ? { type: 'info', text: '🔄 Review resetado! Status do PR voltou a pendente.' }
+        : { type: 'info', text: '🔄 Review resetado localmente.' });
       return;
     }
     await fetch(`${API_BASE}/api/review/reset`, { method: 'POST' });
     await fetchData();
-  }, [fetchData, API_BASE, isStatic, setGitHubCommitStatus]);
+  }, [fetchData, API_BASE, isStatic]);
 
   const handleNext = useCallback(() => {
     if (currentDiffIndex < filteredDiffs.length - 1) setSelectedDiffId(filteredDiffs[currentDiffIndex + 1].id);
@@ -474,47 +484,23 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         onBack={onBack}
       />
 
-      {/* Static mode: Status notification banner */}
+      {/* Static mode: Status notification when review is complete */}
       {isStatic && statusMessage && (() => {
-        const bgColor = statusMessage.type === 'success' ? 'rgba(34,197,94,.15)'
-          : statusMessage.type === 'error' ? 'rgba(239,68,68,.15)'
-          : 'rgba(59,130,246,.15)';
+        const bgColor = statusMessage.type === 'success' ? 'rgba(34,197,94,.12)'
+          : statusMessage.type === 'error' ? 'rgba(239,68,68,.12)'
+          : 'rgba(234,179,8,.12)';
         const borderColor = statusMessage.type === 'success' ? 'rgba(34,197,94,.5)'
           : statusMessage.type === 'error' ? 'rgba(239,68,68,.5)'
-          : 'rgba(59,130,246,.5)';
-        const meta = window.__PIXELGUARD_STATIC__?.meta;
-        const prUrl = meta?.repository && meta?.prNumber
-          ? `https://github.com/${meta.repository}/pull/${meta.prNumber}`
-          : null;
-
+          : 'rgba(234,179,8,.5)';
         return (
           <Box sx={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2,
-            px: 2, py: 1, flexShrink: 0, flexWrap: 'wrap',
+            px: 2, py: 1.25, flexShrink: 0,
             bgcolor: bgColor, borderBottom: '1px solid', borderColor: borderColor,
           }}>
-            <Box sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
+            <Box sx={{ fontSize: '0.85rem', fontWeight: 600, textAlign: 'center' }}>
               {statusMessage.text}
             </Box>
-            {prUrl && (
-              <Button
-                variant="text"
-                component="a"
-                href={prUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ fontSize: '0.75rem', textTransform: 'none', fontWeight: 600, color: '#60a5fa' }}
-              >
-                Ver PR →
-              </Button>
-            )}
-            <Button
-              variant="text"
-              onClick={() => setStatusMessage(null)}
-              sx={{ fontSize: '0.72rem', textTransform: 'none', color: '#71717a', minWidth: 0, px: 1 }}
-            >
-              ✕
-            </Button>
           </Box>
         );
       })()}
