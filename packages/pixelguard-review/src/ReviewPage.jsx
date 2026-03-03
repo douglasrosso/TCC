@@ -92,15 +92,27 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
      ================================================================ */
   const fetchData = useCallback(async () => {
     try {
-      const [statusRes, resultsRes, metaRes] = await Promise.all([
-        fetch(`${API_BASE}/api/status`),
-        fetch(`${API_BASE}/api/results`),
-        fetch(`${API_BASE}/api/meta`),
-      ]);
-      const status = await statusRes.json();
-      const results = await resultsRes.json();
-      const meta = await metaRes.json().catch(() => null);
+      let status, results, meta;
+      const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
+
+      if (isStatic) {
+        const s = window.__PIXELGUARD_STATIC__;
+        status = s.status || [];
+        results = s.results || { comparisons: [], timestamp: new Date().toISOString() };
+        meta = s.meta || null;
+      } else {
+        const [statusRes, resultsRes, metaRes] = await Promise.all([
+          fetch(`${API_BASE}/api/status`),
+          fetch(`${API_BASE}/api/results`),
+          fetch(`${API_BASE}/api/meta`),
+        ]);
+        status = await statusRes.json();
+        results = await resultsRes.json();
+        meta = await metaRes.json().catch(() => null);
+      }
+
       if (meta) setCiMeta(meta);
+      const IMG_BASE = isStatic ? '.' : API_BASE;
 
       const run = {
         id: 'run-current',
@@ -140,7 +152,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
               label: techLabels[tech],
               diffPercentage,
               passed: r.passed,
-              diffUrl: `${API_BASE}/img/diff/${tech}/${comp.imageName}.png`,
+              diffUrl: `${IMG_BASE}/img/diff/${tech}/${comp.imageName}.png`,
             });
             if (r.passed) run.passed++;
             else run.failed++;
@@ -156,8 +168,8 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
               : comp.imageName.includes('tablet')
                 ? '768×1024'
                 : '1366×768',
-            baselineUrl: `${API_BASE}/img/baseline/${comp.imageName}.png`,
-            currentUrl: `${API_BASE}/img/current/${comp.imageName}.png`,
+            baselineUrl: `${IMG_BASE}/img/baseline/${comp.imageName}.png`,
+            currentUrl: `${IMG_BASE}/img/current/${comp.imageName}.png`,
             techniques,
           });
 
@@ -206,10 +218,47 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
      ================================================================ */
   const updateGitHubStatus = useCallback(
     async (newPending, newApproved, newRejected) => {
-      if (!ciMeta || !ciMeta.repository || ciMeta.commitSha === 'local') return;
       if (newPending > 0) return;
-
       const allApproved = newRejected === 0;
+
+      const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
+      if (isStatic) {
+        if (!allApproved) return;
+        const meta = window.__PIXELGUARD_STATIC__.meta;
+        if (!meta?.repository || !meta?.commitSha) return;
+
+        let token = sessionStorage.getItem('pixelguard_token');
+        if (!token) {
+          token = prompt(
+            'Cole seu GitHub Personal Access Token (com permissão repo) para aprovar o review:'
+          );
+          if (!token) return;
+          sessionStorage.setItem('pixelguard_token', token);
+        }
+
+        try {
+          const res = await fetch(
+            `https://api.github.com/repos/${meta.repository}/statuses/${meta.commitSha}`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                Accept: 'application/vnd.github+json',
+              },
+              body: JSON.stringify({
+                state: 'success',
+                description: `Review visual aprovado — ${newApproved} tela(s)`,
+                context: 'visual-regression/review',
+              }),
+            }
+          );
+          if (!res.ok) sessionStorage.removeItem('pixelguard_token');
+        } catch { /* silently fail */ }
+        return;
+      }
+
+      if (!ciMeta || !ciMeta.repository || ciMeta.commitSha === 'local') return;
       try {
         await fetch(`${API_BASE}/api/github/status`, {
           method: 'POST',
@@ -230,6 +279,18 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
      Review actions
      ================================================================ */
   const reviewAction = useCallback(async (imageName, action, comment = '') => {
+    const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
+    if (isStatic) {
+      setTestRuns(prev => prev.map(run => ({
+        ...run,
+        diffs: run.diffs.map(d =>
+          d.imageName === imageName
+            ? { ...d, status: action === 'approve' ? 'approved' : 'rejected' }
+            : d
+        ),
+      })));
+      return;
+    }
     await fetch(`${API_BASE}/api/review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -263,16 +324,40 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
   }, [allDiffs, reviewAction, filteredDiffs, currentDiffIndex]);
 
   const handleApproveAll = useCallback(async () => {
+    const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
+    if (isStatic) {
+      setTestRuns(prev => prev.map(run => ({
+        ...run,
+        diffs: run.diffs.map(d => d.status === 'pending' ? { ...d, status: 'approved' } : d),
+      })));
+      return;
+    }
     await fetch(`${API_BASE}/api/review/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve-all', comment: '' }) });
     await fetchData();
   }, [fetchData, API_BASE]);
 
   const handleRejectAll = useCallback(async () => {
+    const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
+    if (isStatic) {
+      setTestRuns(prev => prev.map(run => ({
+        ...run,
+        diffs: run.diffs.map(d => d.status === 'pending' ? { ...d, status: 'rejected' } : d),
+      })));
+      return;
+    }
     await fetch(`${API_BASE}/api/review/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reject-all', comment: '' }) });
     await fetchData();
   }, [fetchData, API_BASE]);
 
   const handleReset = useCallback(async () => {
+    const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
+    if (isStatic) {
+      setTestRuns(prev => prev.map(run => ({
+        ...run,
+        diffs: run.diffs.map(d => ({ ...d, status: 'pending' })),
+      })));
+      return;
+    }
     await fetch(`${API_BASE}/api/review/reset`, { method: 'POST' });
     await fetchData();
   }, [fetchData, API_BASE]);

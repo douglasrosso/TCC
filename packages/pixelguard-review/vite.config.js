@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   root: __dirname,
+  base: process.env.STATIC_DEPLOY ? './' : '/',
   build: {
     outDir: 'dist',
     emptyOutDir: true,

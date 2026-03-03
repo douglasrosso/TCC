@@ -102,7 +102,7 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
 
-      - name: Gerar relatório e montar deploy
+      - name: Build review UI e montar deploy
         if: env.has_baselines == 'true'
         run: node tests/report.js --deploy --pr ${{ github.event.pull_request.number }}
 
@@ -195,9 +195,8 @@ jobs:
 
               if (hasDiffs) {
                 body += `\n### ⏳ Merge bloqueado até review visual\n\n`;
-                body += `📊 **[Ver Review Visual Online](${pagesUrl})**\n\n`;
-                body += `Para aprovar, comente neste PR:\n`;
-                body += `\`\`\`\n/approve-visual\n\`\`\`\n`;
+                body += `📊 **[Abrir Review Visual](${pagesUrl})**\n\n`;
+                body += `Aprove pelo botão na interface ou comente neste PR: \`/approve-visual\`\n`;
               }
             }
 
