@@ -18,6 +18,8 @@ import SmartphoneRoundedIcon from '@mui/icons-material/SmartphoneRounded';
 import TabletRoundedIcon from '@mui/icons-material/TabletRounded';
 import DevicesRoundedIcon from '@mui/icons-material/DevicesRounded';
 
+import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
+
 /* ---- Shared dark-theme border color ---- */
 const BORDER = 'hsl(240 3.7% 15.9%)';
 
@@ -145,6 +147,7 @@ export default function DiffListPanel({
   onViewportFilterChange,
   onApproveAll,
   onRejectAll,
+  onCollapse,
 }) {
   const pendingCount = diffs.filter((d) => d.status === 'pending').length;
 
@@ -167,20 +170,29 @@ export default function DiffListPanel({
         <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Telas ({diffs.length})
         </Typography>
-        {pendingCount > 0 && (
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Tooltip title="Aprovar todas pendentes">
-              <IconButton size="small" onClick={onApproveAll} sx={{ color: '#22c55e', width: 24, height: 24, '&:hover': { bgcolor: 'rgba(34,197,94,.1)' } }}>
-                <CheckRoundedIcon sx={{ fontSize: 14 }} />
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+          {pendingCount > 0 && (
+            <>
+              <Tooltip title="Aprovar todas pendentes">
+                <IconButton size="small" onClick={onApproveAll} sx={{ color: '#22c55e', width: 24, height: 24, '&:hover': { bgcolor: 'rgba(34,197,94,.1)' } }}>
+                  <CheckRoundedIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Rejeitar todas pendentes">
+                <IconButton size="small" onClick={onRejectAll} sx={{ color: '#ef4444', width: 24, height: 24, '&:hover': { bgcolor: 'rgba(239,68,68,.1)' } }}>
+                  <CloseRoundedIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
+          {onCollapse && (
+            <Tooltip title="Recolher painel">
+              <IconButton size="small" onClick={onCollapse} sx={{ color: '#71717a', width: 22, height: 22, '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}>
+                <ChevronLeftRoundedIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Rejeitar todas pendentes">
-              <IconButton size="small" onClick={onRejectAll} sx={{ color: '#ef4444', width: 24, height: 24, '&:hover': { bgcolor: 'rgba(239,68,68,.1)' } }}>
-                <CloseRoundedIcon sx={{ fontSize: 14 }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        )}
+          )}
+        </Box>
       </Box>
 
       {/* Filter bar — search + status */}

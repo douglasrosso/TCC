@@ -28,9 +28,51 @@ import {
 } from './review.js';
 
 const __dirname    = path.dirname(fileURLToPath(import.meta.url));
-const RESULTS_DIR  = path.resolve(__dirname, '..', 'results');
-const BASELINES    = path.resolve(__dirname, '..', 'baselines');
-const CURRENT_DIR  = path.resolve(__dirname, '..', 'results', 'current');
+const ROOT_DIR     = path.resolve(__dirname, '..');
+const DIST_DIR     = path.resolve(ROOT_DIR, 'dist');
+const RESULTS_DIR  = path.resolve(ROOT_DIR, 'results');
+const BASELINES    = path.resolve(ROOT_DIR, 'baselines');
+const CURRENT_DIR  = path.resolve(RESULTS_DIR, 'current');
+
+/* MIME types para servir arquivos estáticos */
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js':   'application/javascript; charset=utf-8',
+  '.css':  'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png':  'image/png',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg':  'image/svg+xml',
+  '.ico':  'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2':'font/woff2',
+  '.ttf':  'font/ttf',
+};
+
+function serveStatic(res, filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return false;
+    const stat = fs.statSync(filePath);
+    if (!stat.isFile()) return false;
+  } catch { return false; }
+  const ext = path.extname(filePath).toLowerCase();
+  const mime = MIME_TYPES[ext] || 'application/octet-stream';
+  res.writeHead(200, { 'Content-Type': mime });
+  fs.createReadStream(filePath).pipe(res);
+  return true;
+}
+
+function serveIndex(res) {
+  const indexPath = path.join(DIST_DIR, 'index.html');
+  if (!fs.existsSync(indexPath)) {
+    res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Build não encontrado. Execute: npm run build');
+    return;
+  }
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  fs.createReadStream(indexPath).pipe(res);
+}
 
 /* ===== Configuração ===== */
 const portIdx  = process.argv.indexOf('--port');
@@ -235,21 +277,31 @@ async function handleRequest(req, res) {
     return;
   }
 
-  /* 404 */
-  res.writeHead(404, { 'Content-Type': 'text/plain' });
-  res.end('Not Found');
+  /* ===== Servir arquivos estáticos do build (dist/) ===== */
+  // Tentar servir arquivo estático de dist/
+  const staticPath = path.join(DIST_DIR, pathname);
+  if (serveStatic(res, staticPath)) return;
+
+  // SPA fallback — qualquer rota não-API serve index.html
+  serveIndex(res);
 }
 
 /* ===== Start Server ===== */
 const server = http.createServer(handleRequest);
 server.listen(PORT, () => {
-  console.log(`\n🔍 Review API Server rodando em http://localhost:${PORT}`);
-  console.log(`   Use http://localhost:3050/review para a UI.\n`);
-  console.log(`API endpoints:`);
+  const hasBuild = fs.existsSync(path.join(DIST_DIR, 'index.html'));
+  console.log(`\n🔍 Review Server rodando em http://localhost:${PORT}`);
+  console.log(`   Review UI: http://localhost:${PORT}/review`);
+  if (!hasBuild) {
+    console.log(`\n   ⚠️  Build não encontrado em dist/ — execute: npm run build`);
+  }
+  console.log(`\nAPI endpoints:`);
   console.log(`  GET  /api/status       → Status de cada arquivo`);
   console.log(`  GET  /api/history      → Histórico de reviews`);
   console.log(`  GET  /api/results      → Resultados da comparação`);
+  console.log(`  GET  /api/meta         → Info do CI (commit, branch, PR)`);
   console.log(`  POST /api/review       → Aprovar/rejeitar arquivo {action, file, comment}`);
   console.log(`  POST /api/review/all   → Aprovar/rejeitar todos  {action, comment}`);
-  console.log(`  POST /api/review/reset → Resetar status\n`);
+  console.log(`  POST /api/review/reset → Resetar status`);
+  console.log(`  POST /api/github/status → Atualizar status check no GitHub\n`);
 });

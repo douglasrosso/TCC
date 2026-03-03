@@ -7,7 +7,6 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
-import ListRoundedIcon from '@mui/icons-material/ListRounded';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 
@@ -16,10 +15,8 @@ export default function ReviewHeader({
   totalApproved,
   totalRejected,
   onReset,
-  onToggleRuns,
-  onToggleDiffs,
-  showRunsToggle,
-  showDiffsToggle,
+  onToggleMenu,
+  showMenuToggle,
   commitSha,
   branch,
   prNumber,
@@ -56,28 +53,15 @@ export default function ReviewHeader({
           </IconButton>
         </Tooltip>
 
-        {/* Drawer toggle — Test Runs */}
-        {showRunsToggle && (
-          <Tooltip title="Test Runs">
+        {/* Drawer toggle — single menu for compact/mobile */}
+        {showMenuToggle && (
+          <Tooltip title="Painéis">
             <IconButton
               size="small"
-              onClick={onToggleRuns}
+              onClick={onToggleMenu}
               sx={{ color: '#a1a1aa', '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
             >
               <MenuRoundedIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Tooltip>
-        )}
-
-        {/* Drawer toggle — Diff List */}
-        {showDiffsToggle && (
-          <Tooltip title="Lista de Diffs">
-            <IconButton
-              size="small"
-              onClick={onToggleDiffs}
-              sx={{ color: '#a1a1aa', '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
-            >
-              <ListRoundedIcon sx={{ fontSize: 20 }} />
             </IconButton>
           </Tooltip>
         )}
@@ -106,7 +90,24 @@ export default function ReviewHeader({
 
       {/* Right — status badges + reset */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        {/* Compact summary on mobile (xs only) */}
+        <Chip
+          label={`${totalPending}P / ${totalApproved}A / ${totalRejected}R`}
+          size="small"
+          variant="outlined"
+          sx={{
+            height: 24,
+            fontSize: '0.68rem',
+            fontWeight: 500,
+            borderColor: totalPending > 0 ? 'rgba(234,179,8,.4)' : 'rgba(34,197,94,.4)',
+            bgcolor: totalPending > 0 ? 'rgba(234,179,8,.1)' : 'rgba(34,197,94,.1)',
+            color: totalPending > 0 ? '#eab308' : '#22c55e',
+            '& .MuiChip-label': { px: 1 },
+            display: { xs: 'flex', sm: 'none' },
+          }}
+        />
+        {/* Full badges on sm+ */}
+        <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 0.5 }}>
           <Chip
             label={`${totalPending} pendentes`}
             size="small"
@@ -133,7 +134,6 @@ export default function ReviewHeader({
               bgcolor: 'rgba(34,197,94,.1)',
               color: '#22c55e',
               '& .MuiChip-label': { px: 1 },
-              display: { xs: 'none', sm: 'flex' },
             }}
           />
           <Chip
@@ -148,7 +148,6 @@ export default function ReviewHeader({
               bgcolor: 'rgba(239,68,68,.1)',
               color: '#ef4444',
               '& .MuiChip-label': { px: 1 },
-              display: { xs: 'none', sm: 'flex' },
             }}
           />
         </Box>

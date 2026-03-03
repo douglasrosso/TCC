@@ -5,10 +5,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3050,
-    proxy: {
-      '/api': 'http://localhost:3060',
-      '/img': 'http://localhost:3060',
-    },
   },
   preview: { port: 3050 },
 });

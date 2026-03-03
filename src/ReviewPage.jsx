@@ -1,7 +1,15 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
+import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
+import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
+import ListRoundedIcon from '@mui/icons-material/ListRounded';
 import ReviewHeader from './components/review/ReviewHeader';
 import TestRunPanel from './components/review/TestRunPanel';
 import DiffListPanel, { getDeviceLabel } from './components/review/DiffListPanel';
@@ -10,6 +18,10 @@ import ReviewEmptyState from './components/review/ReviewEmptyState';
 
 const API_BASE = '';
 const DRAWER_WIDTH = 340;
+const MIN_PANEL = 200;
+const MAX_PANEL = 500;
+const DEFAULT_RUNS_W = 280;
+const DEFAULT_DIFFS_W = 300;
 
 export default function ReviewPage() {
   const [testRuns, setTestRuns] = useState([]);
@@ -25,8 +37,53 @@ export default function ReviewPage() {
   /* ---- Responsive breakpoints ---- */
   const isCompact = useMediaQuery('(max-width:1199px)'); // TestRunPanel → Drawer
   const isMobile = useMediaQuery('(max-width:899px)');   // DiffListPanel → Drawer too
-  const [runsOpen, setRunsOpen] = useState(false);
-  const [diffsOpen, setDiffsOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState(0); // 0 = Test Runs, 1 = Telas
+
+  /* ---- Collapsible + Resizable panels ---- */
+  const [runsCollapsed, setRunsCollapsed] = useState(false);
+  const [diffsCollapsed, setDiffsCollapsed] = useState(false);
+  const [runsWidth, setRunsWidth] = useState(DEFAULT_RUNS_W);
+  const [diffsWidth, setDiffsWidth] = useState(DEFAULT_DIFFS_W);
+  const dragging = useRef(null); // 'runs' | 'diffs' | null
+
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!dragging.current) return;
+      e.preventDefault();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      if (dragging.current === 'runs') {
+        setRunsWidth((prev) => {
+          const next = clientX;
+          return Math.max(MIN_PANEL, Math.min(MAX_PANEL, next));
+        });
+      } else if (dragging.current === 'diffs') {
+        const runsW = runsCollapsed || isCompact ? 0 : runsWidth;
+        setDiffsWidth((prev) => {
+          const next = clientX - runsW;
+          return Math.max(MIN_PANEL, Math.min(MAX_PANEL, next));
+        });
+      }
+    };
+    const onUp = () => { dragging.current = null; document.body.style.cursor = ''; document.body.style.userSelect = ''; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    };
+  }, [isCompact, runsCollapsed, runsWidth]);
+
+  const startDrag = useCallback((panel) => (e) => {
+    e.preventDefault();
+    dragging.current = panel;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
 
   /* ================================================================
      Data fetching
@@ -286,14 +343,14 @@ export default function ReviewPage() {
   const handleSelectRunDrawer = useCallback(
     (id) => {
       handleSelectRun(id);
-      setRunsOpen(false);
+      setDrawerTab(1); // switch to Telas tab after selecting a run
     },
     [handleSelectRun],
   );
 
   const handleSelectDiffDrawer = useCallback((id) => {
     setSelectedDiffId(id);
-    setDiffsOpen(false);
+    setDrawerOpen(false);
   }, []);
 
   /* ================================================================
@@ -371,7 +428,7 @@ export default function ReviewPage() {
         <Box sx={{ fontSize: '1.2rem', fontWeight: 600 }}>Erro ao conectar à API</Box>
         <Box sx={{ fontSize: '0.85rem' }}>{error}</Box>
         <Box sx={{ fontSize: '0.8rem', color: '#71717a' }}>
-          Execute: npm run review:ui (porta 3060)
+          Execute: npm run build && npm run review:ui (porta 3060)
         </Box>
       </Box>
     );
@@ -411,10 +468,8 @@ export default function ReviewPage() {
         totalApproved={totalApproved}
         totalRejected={totalRejected}
         onReset={handleReset}
-        onToggleRuns={() => setRunsOpen(true)}
-        onToggleDiffs={() => setDiffsOpen(true)}
-        showRunsToggle={isCompact}
-        showDiffsToggle={isMobile}
+        onToggleMenu={() => setDrawerOpen(true)}
+        showMenuToggle={isCompact}
         commitSha={ciMeta?.commitShort}
         branch={ciMeta?.branch}
         prNumber={ciMeta?.prNumber}
@@ -425,59 +480,190 @@ export default function ReviewPage() {
         }
       />
 
-      {/* ---- Drawers (compact / mobile) ---- */}
+      {/* ---- Unified Drawer with tabs (compact / mobile) ---- */}
       <Drawer
         anchor="left"
-        open={runsOpen}
-        onClose={() => setRunsOpen(false)}
-        PaperProps={{
-          sx: {
-            bgcolor: 'hsl(240 10% 3.9%)',
-            width: DRAWER_WIDTH,
-            borderRight: '1px solid hsl(240 3.7% 15.9%)',
-          },
-        }}
-      >
-        <TestRunPanel
-          testRuns={testRuns}
-          selectedRunId={selectedRunId}
-          onSelectRun={handleSelectRunDrawer}
-        />
-      </Drawer>
-
-      <Drawer
-        anchor="left"
-        open={diffsOpen}
-        onClose={() => setDiffsOpen(false)}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         PaperProps={{
           sx: {
             bgcolor: '#09090b',
             width: DRAWER_WIDTH,
             borderRight: '1px solid hsl(240 3.7% 15.9%)',
+            display: 'flex',
+            flexDirection: 'column',
           },
         }}
       >
-        <DiffListPanel {...diffListProps} onSelectDiff={handleSelectDiffDrawer} />
-      </Drawer>
-
-      {/* ---- Main 3-column layout ---- */}
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Test Runs sidebar — desktop (≥1200px) */}
-        {!isCompact && (
-          <Box sx={{ width: 300, flexShrink: 0 }}>
+        <Tabs
+          value={drawerTab}
+          onChange={(_, v) => setDrawerTab(v)}
+          variant="fullWidth"
+          sx={{
+            minHeight: 42,
+            borderBottom: '1px solid hsl(240 3.7% 15.9%)',
+            '& .MuiTab-root': {
+              minHeight: 42,
+              textTransform: 'none',
+              fontSize: '0.8rem',
+              fontWeight: 500,
+              color: '#71717a',
+              '&.Mui-selected': { color: '#fafafa' },
+            },
+            '& .MuiTabs-indicator': {
+              bgcolor: '#3b82f6',
+            },
+          }}
+        >
+          <Tab icon={<FolderOpenRoundedIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Test Runs" />
+          <Tab icon={<ListRoundedIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Telas" />
+        </Tabs>
+        <Box sx={{ flex: 1, overflow: 'auto' }}>
+          {drawerTab === 0 ? (
             <TestRunPanel
               testRuns={testRuns}
               selectedRunId={selectedRunId}
-              onSelectRun={handleSelectRun}
+              onSelectRun={handleSelectRunDrawer}
             />
-          </Box>
+          ) : (
+            <DiffListPanel {...diffListProps} onSelectDiff={handleSelectDiffDrawer} />
+          )}
+        </Box>
+      </Drawer>
+
+      {/* ---- Main layout ---- */}
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Test Runs sidebar — desktop (≥1200px) */}
+        {!isCompact && (
+          <>
+            {runsCollapsed ? (
+              <Tooltip title="Expandir Test Runs" placement="right">
+                <Box
+                  onClick={() => setRunsCollapsed(false)}
+                  sx={{
+                    width: 36,
+                    flexShrink: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    pt: 1.5,
+                    gap: 1,
+                    borderRight: '1px solid',
+                    borderColor: 'hsl(240 3.7% 15.9%)',
+                    bgcolor: 'hsl(240 10% 3.9%)',
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,.03)' },
+                    transition: 'background-color .15s',
+                  }}
+                >
+                  <ChevronRightRoundedIcon sx={{ fontSize: 16, color: '#71717a' }} />
+                  <Box
+                    sx={{
+                      writingMode: 'vertical-rl',
+                      textOrientation: 'mixed',
+                      fontSize: '0.65rem',
+                      fontWeight: 600,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: '#52525b',
+                      userSelect: 'none',
+                    }}
+                  >
+                    Test Runs
+                  </Box>
+                </Box>
+              </Tooltip>
+            ) : (
+              <Box sx={{ width: runsWidth, flexShrink: 0, position: 'relative', display: 'flex' }}>
+                <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                  <TestRunPanel
+                    testRuns={testRuns}
+                    selectedRunId={selectedRunId}
+                    onSelectRun={handleSelectRun}
+                    onCollapse={() => setRunsCollapsed(true)}
+                  />
+                </Box>
+                {/* Drag handle */}
+                <Box
+                  onMouseDown={startDrag('runs')}
+                  onTouchStart={startDrag('runs')}
+                  sx={{
+                    width: 6,
+                    cursor: 'col-resize',
+                    flexShrink: 0,
+                    bgcolor: 'transparent',
+                    '&:hover': { bgcolor: 'rgba(59,130,246,.3)' },
+                    transition: 'background-color .15s',
+                    zIndex: 5,
+                  }}
+                />
+              </Box>
+            )}
+          </>
         )}
 
         {/* Diff list sidebar — tablet+ (≥900px) */}
         {!isMobile && (
-          <Box sx={{ width: { xs: 280, xl: 300 }, flexShrink: 0 }}>
-            <DiffListPanel {...diffListProps} onSelectDiff={setSelectedDiffId} />
-          </Box>
+          <>
+            {diffsCollapsed ? (
+              <Tooltip title="Expandir Lista de Telas" placement="right">
+                <Box
+                  onClick={() => setDiffsCollapsed(false)}
+                  sx={{
+                    width: 36,
+                    flexShrink: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    pt: 1.5,
+                    gap: 1,
+                    borderRight: '1px solid',
+                    borderColor: 'hsl(240 3.7% 15.9%)',
+                    bgcolor: 'rgba(9,9,11,.5)',
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,.03)' },
+                    transition: 'background-color .15s',
+                  }}
+                >
+                  <ChevronRightRoundedIcon sx={{ fontSize: 16, color: '#71717a' }} />
+                  <Box
+                    sx={{
+                      writingMode: 'vertical-rl',
+                      textOrientation: 'mixed',
+                      fontSize: '0.65rem',
+                      fontWeight: 600,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: '#52525b',
+                      userSelect: 'none',
+                    }}
+                  >
+                    Telas
+                  </Box>
+                </Box>
+              </Tooltip>
+            ) : (
+              <Box sx={{ width: diffsWidth, flexShrink: 0, position: 'relative', display: 'flex' }}>
+                <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                  <DiffListPanel {...diffListProps} onSelectDiff={setSelectedDiffId} onCollapse={() => setDiffsCollapsed(true)} />
+                </Box>
+                {/* Drag handle */}
+                <Box
+                  onMouseDown={startDrag('diffs')}
+                  onTouchStart={startDrag('diffs')}
+                  sx={{
+                    width: 6,
+                    cursor: 'col-resize',
+                    flexShrink: 0,
+                    bgcolor: 'transparent',
+                    '&:hover': { bgcolor: 'rgba(59,130,246,.3)' },
+                    transition: 'background-color .15s',
+                    zIndex: 5,
+                  }}
+                />
+              </Box>
+            )}
+          </>
         )}
 
         {/* Main — Diff viewer or empty state */}
@@ -496,8 +682,8 @@ export default function ReviewPage() {
             />
           ) : (
             <ReviewEmptyState
-              onOpenDiffs={isMobile ? () => setDiffsOpen(true) : undefined}
-              onOpenRuns={isCompact ? () => setRunsOpen(true) : undefined}
+              onOpenDiffs={isMobile ? () => { setDrawerTab(1); setDrawerOpen(true); } : undefined}
+              onOpenRuns={isCompact ? () => { setDrawerTab(0); setDrawerOpen(true); } : undefined}
             />
           )}
         </Box>

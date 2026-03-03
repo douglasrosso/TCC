@@ -19,6 +19,7 @@
     "review:history": "node tests/review.js --history",
     "review:reset": "node tests/review.js --reset",
     "review:ui": "node tests/review-server.js",
+    "review:start": "npm run build && npm run review:ui",
     "e2e": "npx playwright test",
     "e2e:ui": "npx playwright test --ui"
   },

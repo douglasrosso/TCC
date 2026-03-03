@@ -53,7 +53,11 @@ jobs:
           if [ -f results/results.json ]; then
             FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('results/results.json','utf-8')); console.log(r.summary.failed)")
             echo "failed=$FAILED" >> $GITHUB_OUTPUT
-            echo "has_diffs=$( [ "$FAILED" -gt 0 ] && echo true || echo false )" >> $GITHUB_OUTPUT
+            if [ "$FAILED" -gt 0 ]; then
+              echo "has_diffs=true" >> $GITHUB_OUTPUT
+            else
+              echo "has_diffs=false" >> $GITHUB_OUTPUT
+            fi
           else
             echo "failed=0" >> $GITHUB_OUTPUT
             echo "has_diffs=false" >> $GITHUB_OUTPUT
@@ -66,24 +70,36 @@ jobs:
 
       # ── Gerar meta.json com info do commit/branch/PR ───
       - name: Gerar meta.json
+        env:
+          META_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          META_BRANCH: ${{ github.head_ref || github.ref_name }}
+          META_BASE_BRANCH: ${{ github.base_ref || 'main' }}
+          META_PR_NUMBER: ${{ github.event.pull_request.number || 0 }}
+          META_PR_TITLE: ${{ github.event.pull_request.title || '' }}
+          META_ACTOR: ${{ github.actor }}
+          META_RUN_ID: ${{ github.run_id }}
+          META_REPOSITORY: ${{ github.repository }}
+          META_HAS_DIFFS: ${{ steps.compare.outputs.has_diffs || 'false' }}
+          META_FAILED: ${{ steps.compare.outputs.failed || 0 }}
         run: |
           node -e "
-            const fs = require('fs');
-            const meta = {
-              commitSha: '${{ github.event.pull_request.head.sha || github.sha }}',
-              commitShort: '${{ github.event.pull_request.head.sha || github.sha }}'.slice(0, 7),
-              branch: '${{ github.head_ref || github.ref_name }}',
-              baseBranch: '${{ github.base_ref || 'main' }}',
-              prNumber: ${{ github.event.pull_request.number || 0 }},
-              prTitle: $(JSON.stringify('${{ github.event.pull_request.title }}')),
-              actor: '${{ github.actor }}',
-              runId: '${{ github.run_id }}',
-              repository: '${{ github.repository }}',
-              timestamp: new Date().toISOString(),
-              hasDiffs: ${{ steps.compare.outputs.has_diffs || false }},
-              failedCount: ${{ steps.compare.outputs.failed || 0 }}
-            };
-            fs.writeFileSync('results/meta.json', JSON.stringify(meta, null, 2));
+          const fs = require('fs');
+          const meta = {
+            commitSha: process.env.META_COMMIT_SHA,
+            commitShort: process.env.META_COMMIT_SHA.slice(0, 7),
+            branch: process.env.META_BRANCH,
+            baseBranch: process.env.META_BASE_BRANCH,
+            prNumber: Number(process.env.META_PR_NUMBER),
+            prTitle: process.env.META_PR_TITLE,
+            actor: process.env.META_ACTOR,
+            runId: process.env.META_RUN_ID,
+            repository: process.env.META_REPOSITORY,
+            timestamp: new Date().toISOString(),
+            hasDiffs: process.env.META_HAS_DIFFS === 'true',
+            failedCount: Number(process.env.META_FAILED)
+          };
+          fs.mkdirSync('results', { recursive: true });
+          fs.writeFileSync('results/meta.json', JSON.stringify(meta, null, 2));
           "
 
       # ── Status check ───────────────────────────────────
@@ -156,8 +172,8 @@ jobs:
               body += `**Para revisar localmente:**\n`;
               body += `1. Baixe os artefatos do [workflow](${runUrl})\n`;
               body += `2. Extraia a pasta \`results/\` na raiz do projeto\n`;
-              body += `3. Execute: \`npm run review:ui\` e \`npm run dev\`\n`;
-              body += `4. Acesse: http://localhost:3050/review\n`;
+              body += `3. Execute: \`npm run build\` e \`npm run review:ui\`\n`;
+              body += `4. Acesse: http://localhost:3060/review\n`;
               body += `5. Ao aprovar todas as telas, o status da PR será atualizado automaticamente\n`;
             }
 

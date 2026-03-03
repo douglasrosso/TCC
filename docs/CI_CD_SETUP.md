@@ -106,14 +106,18 @@ unzip visual-regression-results.zip -d results/
 ### 3.2 Iniciar Review UI
 
 ```bash
-# Terminal 1 — Servidor API (porta 3060)
-npm run review:ui
-
-# Terminal 2 — Frontend Vite (porta 3050)
-npm run dev
+# Build + servidor (recomendado)
+npm run review:start
 ```
 
-Acesse: **http://localhost:3050/review**
+Ou separadamente:
+
+```bash
+npm run build
+npm run review:ui
+```
+
+Acesse: **http://localhost:3060/review**
 
 ### 3.3 Revisar telas
 
@@ -225,7 +229,8 @@ Quando rodando localmente sem `meta.json`, exibe "Execução local".
 | `npm run compare` | Compara screenshots com baselines |
 | `npm run update-baselines` | Copia `current/` → `baselines/` |
 | `npm run review:ui` | Inicia servidor de review (porta 3060) |
-| `npm run dev` | Inicia frontend Vite (porta 3050) |
+| `npm run review:start` | Build + review server em um comando |
+| `npm run dev` | Inicia frontend do dashboard (porta 3050) |
 
 ---
 

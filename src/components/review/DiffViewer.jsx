@@ -294,8 +294,8 @@ export default function DiffViewer({
                   disabled={!hasPrevious}
                   sx={{
                     color: MUTED,
-                    width: 34,
-                    height: 34,
+                    width: { xs: 30, sm: 34 },
+                    height: { xs: 30, sm: 34 },
                     border: '1px solid',
                     borderColor: BORDER,
                     borderRadius: 1.5,
@@ -307,7 +307,7 @@ export default function DiffViewer({
                 </IconButton>
               </span>
             </Tooltip>
-            <Typography sx={{ fontFamily: 'monospace', color: '#71717a', minWidth: 48, textAlign: 'center', fontSize: '0.8rem', fontWeight: 500 }}>
+            <Typography sx={{ fontFamily: 'monospace', color: '#71717a', minWidth: { xs: 36, sm: 48 }, textAlign: 'center', fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 500 }}>
               {currentIndex + 1} / {totalCount}
             </Typography>
             <Tooltip title="Próximo (→)">
@@ -318,8 +318,8 @@ export default function DiffViewer({
                   disabled={!hasNext}
                   sx={{
                     color: MUTED,
-                    width: 34,
-                    height: 34,
+                    width: { xs: 30, sm: 34 },
+                    height: { xs: 30, sm: 34 },
                     border: '1px solid',
                     borderColor: BORDER,
                     borderRadius: 1.5,
@@ -350,46 +350,50 @@ export default function DiffViewer({
         </Box>
 
         {/* Right: action buttons */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 }}>
           <Tooltip title="Rejeitar esta tela (R)" arrow>
             <Button
               variant="outlined"
-              startIcon={<CloseRoundedIcon sx={{ fontSize: 16 }} />}
+              startIcon={<CloseRoundedIcon sx={{ fontSize: { xs: 14, sm: 16 } }} />}
               onClick={() => onReject(diff.id)}
               sx={{
-                fontSize: '0.82rem',
+                fontSize: { xs: '0.72rem', sm: '0.82rem' },
                 textTransform: 'none',
                 fontWeight: 600,
                 borderColor: 'rgba(239,68,68,.4)',
                 color: '#ef4444',
                 '&:hover': { bgcolor: 'rgba(239,68,68,.15)', borderColor: '#ef4444' },
-                height: 38,
-                px: 2,
+                height: { xs: 32, sm: 38 },
+                px: { xs: 1.25, sm: 2 },
                 borderRadius: 1.5,
+                minWidth: 0,
+                '& .MuiButton-startIcon': { mr: { xs: 0.25, sm: 0.5 } },
               }}
             >
-              Rejeitar
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Rejeitar</Box>
             </Button>
           </Tooltip>
           <Tooltip title="Aprovar esta tela (A)" arrow>
             <Button
               variant="contained"
-              startIcon={<CheckRoundedIcon sx={{ fontSize: 16 }} />}
+              startIcon={<CheckRoundedIcon sx={{ fontSize: { xs: 14, sm: 16 } }} />}
               onClick={() => onApprove(diff.id)}
               sx={{
-                fontSize: '0.82rem',
+                fontSize: { xs: '0.72rem', sm: '0.82rem' },
                 textTransform: 'none',
                 fontWeight: 600,
                 bgcolor: '#22c55e',
                 color: '#fff',
                 boxShadow: 'none',
                 '&:hover': { bgcolor: '#16a34a', boxShadow: 'none' },
-                height: 38,
-                px: 2.5,
+                height: { xs: 32, sm: 38 },
+                px: { xs: 1.25, sm: 2.5 },
                 borderRadius: 1.5,
+                minWidth: 0,
+                '& .MuiButton-startIcon': { mr: { xs: 0.25, sm: 0.5 } },
               }}
             >
-              Aprovar
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Aprovar</Box>
             </Button>
           </Tooltip>
         </Box>
