@@ -67,22 +67,6 @@ function serveImage(res, filePath) {
   fs.createReadStream(filePath).pipe(res);
 }
 
-/* ===== Redirect to React UI (old embedded HTML removed) ===== */
-
-function getReviewHTML() {
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta http-equiv="refresh" content="0;url=http://localhost:3050/review">
-<title>Redirecionando...</title>
-</head>
-<body style="background:#09090b;color:#fafafa;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
-<p>Redirecionando para <a href="http://localhost:3050/review" style="color:#3b82f6">http://localhost:3050/review</a>...</p>
-</body>
-</html>`;
-}
-
 
 /* ===== Roteador ===== */
 
@@ -95,13 +79,6 @@ async function handleRequest(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-
-  /* ===== HTML page ===== */
-  if (pathname === '/' || pathname === '/index.html') {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(getReviewHTML());
-    return;
-  }
 
   /* ===== Serve images ===== */
   if (pathname.startsWith('/img/baseline/')) {
@@ -185,8 +162,8 @@ async function handleRequest(req, res) {
 /* ===== Start Server ===== */
 const server = http.createServer(handleRequest);
 server.listen(PORT, () => {
-  console.log(`\n🔍 Review Server rodando em http://localhost:${PORT}`);
-  console.log(`   Abra no navegador para revisar as diffs visuais.\n`);
+  console.log(`\n🔍 Review API Server rodando em http://localhost:${PORT}`);
+  console.log(`   Use http://localhost:3050/review para a UI.\n`);
   console.log(`API endpoints:`);
   console.log(`  GET  /api/status       → Status de cada arquivo`);
   console.log(`  GET  /api/history      → Histórico de reviews`);
