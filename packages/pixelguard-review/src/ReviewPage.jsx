@@ -6,6 +6,7 @@ import Tab from '@mui/material/Tab';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
+import Button from '@mui/material/Button';
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
@@ -41,6 +42,8 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [ciMeta, setCiMeta] = useState(null);
+  const [reviewComplete, setReviewComplete] = useState(null); // null | 'approved' | 'rejected' | 'reset'
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   /* ---- Responsive breakpoints ---- */
   const isCompact = useMediaQuery('(max-width:1199px)');
@@ -216,24 +219,20 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
   /* ================================================================
      Notify GitHub when all reviews are complete
      ================================================================ */
-  /** Copia o comando e abre o PR no GitHub (static mode) */
-  const openPrWithCommand = useCallback(async (command) => {
-    const meta = window.__PIXELGUARD_STATIC__?.meta;
-    if (!meta?.repository || !meta?.prNumber) return;
-    try { await navigator.clipboard.writeText(command); } catch { /* ok */ }
-    const prUrl = `https://github.com/${meta.repository}/pull/${meta.prNumber}`;
-    window.open(prUrl, '_blank');
-  }, []);
+  const isStatic = typeof window !== 'undefined' && !!window.__PIXELGUARD_STATIC__;
 
   const updateGitHubStatus = useCallback(
     async (newPending, newApproved, newRejected) => {
-      if (newPending > 0) return;
+      if (newPending > 0) {
+        setReviewComplete(null);
+        setBannerDismissed(false);
+        return;
+      }
       const allApproved = newRejected === 0;
 
-      const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
       if (isStatic) {
-        const cmd = allApproved ? '/approve-visual' : '/reject-visual';
-        await openPrWithCommand(cmd);
+        setReviewComplete(allApproved ? 'approved' : 'rejected');
+        setBannerDismissed(false);
         return;
       }
 
@@ -251,14 +250,13 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         });
       } catch { /* silently fail */ }
     },
-    [ciMeta, API_BASE, openPrWithCommand],
+    [ciMeta, API_BASE, isStatic],
   );
 
   /* ================================================================
      Review actions
      ================================================================ */
   const reviewAction = useCallback(async (imageName, action, comment = '') => {
-    const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
     if (isStatic) {
       setTestRuns(prev => prev.map(run => ({
         ...run,
@@ -303,46 +301,42 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
   }, [allDiffs, reviewAction, filteredDiffs, currentDiffIndex]);
 
   const handleApproveAll = useCallback(async () => {
-    const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
     if (isStatic) {
       setTestRuns(prev => prev.map(run => ({
         ...run,
         diffs: run.diffs.map(d => d.status === 'pending' ? { ...d, status: 'approved' } : d),
       })));
-      // updateGitHubStatus será chamado via useEffect
       return;
     }
     await fetch(`${API_BASE}/api/review/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve-all', comment: '' }) });
     await fetchData();
-  }, [fetchData, API_BASE]);
+  }, [fetchData, API_BASE, isStatic]);
 
   const handleRejectAll = useCallback(async () => {
-    const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
     if (isStatic) {
       setTestRuns(prev => prev.map(run => ({
         ...run,
         diffs: run.diffs.map(d => d.status === 'pending' ? { ...d, status: 'rejected' } : d),
       })));
-      // updateGitHubStatus será chamado via useEffect
       return;
     }
     await fetch(`${API_BASE}/api/review/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reject-all', comment: '' }) });
     await fetchData();
-  }, [fetchData, API_BASE]);
+  }, [fetchData, API_BASE, isStatic]);
 
   const handleReset = useCallback(async () => {
-    const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
     if (isStatic) {
       setTestRuns(prev => prev.map(run => ({
         ...run,
         diffs: run.diffs.map(d => ({ ...d, status: 'pending' })),
       })));
-      await openPrWithCommand('/reset-visual');
+      setReviewComplete('reset');
+      setBannerDismissed(false);
       return;
     }
     await fetch(`${API_BASE}/api/review/reset`, { method: 'POST' });
     await fetchData();
-  }, [fetchData, API_BASE, openPrWithCommand]);
+  }, [fetchData, API_BASE, isStatic]);
 
   const handleNext = useCallback(() => {
     if (currentDiffIndex < filteredDiffs.length - 1) setSelectedDiffId(filteredDiffs[currentDiffIndex + 1].id);
@@ -440,6 +434,67 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         repoUrl={ciMeta?.repository ? `https://github.com/${ciMeta.repository}` : undefined}
         onBack={onBack}
       />
+
+      {/* Static mode: Action banner when review is complete */}
+      {isStatic && reviewComplete && !bannerDismissed && (() => {
+        const meta = window.__PIXELGUARD_STATIC__?.meta;
+        const prUrl = meta?.repository && meta?.prNumber
+          ? `https://github.com/${meta.repository}/pull/${meta.prNumber}`
+          : null;
+        const cmd = reviewComplete === 'approved' ? '/approve-visual'
+          : reviewComplete === 'rejected' ? '/reject-visual'
+          : '/reset-visual';
+        const bgColor = reviewComplete === 'approved' ? 'rgba(34,197,94,.12)'
+          : reviewComplete === 'rejected' ? 'rgba(239,68,68,.12)'
+          : 'rgba(234,179,8,.12)';
+        const borderColor = reviewComplete === 'approved' ? 'rgba(34,197,94,.5)'
+          : reviewComplete === 'rejected' ? 'rgba(239,68,68,.5)'
+          : 'rgba(234,179,8,.5)';
+        const icon = reviewComplete === 'approved' ? '✅'
+          : reviewComplete === 'rejected' ? '❌'
+          : '🔄';
+        const msg = reviewComplete === 'approved' ? 'Todas as telas foram aprovadas!'
+          : reviewComplete === 'rejected' ? 'Telas rejeitadas!'
+          : 'Review resetado para pendente!';
+
+        const handleCopyAndOpen = async () => {
+          try { await navigator.clipboard.writeText(cmd); } catch { /* ok */ }
+          if (prUrl) window.open(prUrl, '_blank');
+        };
+
+        return (
+          <Box sx={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2,
+            px: 2, py: 1.25, flexShrink: 0, flexWrap: 'wrap',
+            bgcolor: bgColor, borderBottom: '1px solid', borderColor: borderColor,
+          }}>
+            <Box sx={{ fontSize: '0.88rem', fontWeight: 600 }}>
+              {icon} {msg}
+            </Box>
+            {prUrl && (
+              <Button
+                variant="contained"
+                onClick={handleCopyAndOpen}
+                sx={{
+                  fontSize: '0.78rem', textTransform: 'none', fontWeight: 600,
+                  bgcolor: reviewComplete === 'approved' ? '#22c55e' : reviewComplete === 'rejected' ? '#ef4444' : '#eab308',
+                  '&:hover': { bgcolor: reviewComplete === 'approved' ? '#16a34a' : reviewComplete === 'rejected' ? '#dc2626' : '#ca8a04' },
+                  color: '#fff', boxShadow: 'none', height: 34, px: 2.5, borderRadius: 1.5,
+                }}
+              >
+                Abrir PR e colar {cmd}
+              </Button>
+            )}
+            <Button
+              variant="text"
+              onClick={() => setBannerDismissed(true)}
+              sx={{ fontSize: '0.72rem', textTransform: 'none', color: '#71717a', minWidth: 0, px: 1 }}
+            >
+              Fechar
+            </Button>
+          </Box>
+        );
+      })()}
 
       {/* Unified Drawer (compact / mobile) */}
       <Drawer
