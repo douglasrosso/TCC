@@ -6,22 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
     "capture": "node tests/capture.js",
     "compare": "node tests/compare.js",
     "evaluate": "node tests/evaluate.js",
     "report": "node tests/report.js",
     "update-baselines": "node scripts/update-baselines.js",
     "ci": "node tests/capture.js && node tests/compare.js && node tests/report.js",
-    "review": "node tests/review.js --status",
-    "review:approve-all": "node tests/review.js --approve-all",
-    "review:reject-all": "node tests/review.js --reject-all",
-    "review:history": "node tests/review.js --history",
-    "review:reset": "node tests/review.js --reset",
     "review:ui": "node tests/review-server.js",
-    "review:start": "npm run build && npm run review:ui",
-    "e2e": "npx playwright test",
-    "e2e:ui": "npx playwright test --ui"
+    "review:start": "npm run build && npm run review:ui"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",
@@ -33,7 +25,6 @@
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.0",
     "@vitejs/plugin-react": "^4.3.0",
     "pixelmatch": "^6.0.0",
     "playwright": "^1.49.0",
