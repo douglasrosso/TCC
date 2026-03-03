@@ -1,6 +1,6 @@
-name: Aprovar Review Visual
+name: Review Visual — Ações via Comentário
 
-# Triggered when someone comments "/approve-visual" on a PR
+# Triggered when someone comments /approve-visual, /reject-visual, or /reset-visual
 on:
   issue_comment:
     types: [created]
@@ -11,14 +11,13 @@ permissions:
   statuses: write
 
 jobs:
+  # ── Aprovar ────────────────────────────────────────────
   approve:
-    # Only run on PR comments containing /approve-visual
     if: >-
       github.event.issue.pull_request &&
       contains(github.event.comment.body, '/approve-visual')
     runs-on: ubuntu-latest
     timeout-minutes: 2
-
     steps:
       - name: Obter SHA do PR
         id: pr
@@ -31,23 +30,21 @@ jobs:
               pull_number: context.issue.number,
             });
             core.setOutput('sha', pr.head.sha);
-            core.setOutput('branch', pr.head.ref);
 
       - name: Atualizar status para sucesso
         uses: actions/github-script@v7
         with:
           script: |
-            const sha = '${{ steps.pr.outputs.sha }}';
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha,
+              sha: '${{ steps.pr.outputs.sha }}',
               state: 'success',
               description: 'Review visual aprovado por @${{ github.event.comment.user.login }}',
               context: 'visual-regression/review'
             });
 
-      - name: Reagir ao comentário
+      - name: Reagir e comentar
         uses: actions/github-script@v7
         with:
           script: |
@@ -57,10 +54,109 @@ jobs:
               comment_id: ${{ github.event.comment.id }},
               content: 'rocket'
             });
-
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: `## ✅ Review Visual Aprovado\n\nAprovado por @${{ github.event.comment.user.login }}. Merge liberado.\n\n> 🤖 **PixelGuard**`
+            });
+
+  # ── Rejeitar ───────────────────────────────────────────
+  reject:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/reject-visual')
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Obter SHA do PR
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            core.setOutput('sha', pr.head.sha);
+
+      - name: Atualizar status para falha
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ steps.pr.outputs.sha }}',
+              state: 'failure',
+              description: 'Review visual rejeitado por @${{ github.event.comment.user.login }}',
+              context: 'visual-regression/review'
+            });
+
+      - name: Reagir e comentar
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: ${{ github.event.comment.id }},
+              content: 'thumbs_down'
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ❌ Review Visual Rejeitado\n\nRejeitado por @${{ github.event.comment.user.login }}. Corrija as diferenças visuais antes de fazer merge.\n\n> 🤖 **PixelGuard**`
+            });
+
+  # ── Resetar ────────────────────────────────────────────
+  reset:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/reset-visual')
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Obter SHA do PR
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            core.setOutput('sha', pr.head.sha);
+
+      - name: Atualizar status para pendente
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: '${{ steps.pr.outputs.sha }}',
+              state: 'pending',
+              description: 'Review visual resetado por @${{ github.event.comment.user.login }}',
+              context: 'visual-regression/review'
+            });
+
+      - name: Reagir e comentar
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: ${{ github.event.comment.id }},
+              content: 'eyes'
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🔄 Review Visual Resetado\n\nResetado por @${{ github.event.comment.user.login }}. Review necessário novamente.\n\n> 🤖 **PixelGuard**`
             });

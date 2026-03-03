@@ -12,6 +12,7 @@
  */
 import fs   from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname   = path.dirname(fileURLToPath(import.meta.url));
@@ -285,30 +286,59 @@ export function generateReport(mode = 'ci') {
 
 /**
  * Monta a pasta deploy/ pronta para upload ao GitHub Pages.
- * Copia: index.html + baselines/ + current/ + diffs/
+ * Builda o app React PixelGuard Review, injeta dados estáticos
+ * e copia imagens.
  */
 export function buildDeploy(prNumber) {
   const deployDir = path.resolve(__dirname, '..', 'deploy', `pr-${prNumber}`);
   fs.mkdirSync(deployDir, { recursive: true });
 
-  // Gerar o relatório
-  const reportPath = generateReport('ci');
+  // 1. Build do app React (PixelGuard Review)
+  const rootDir = path.resolve(__dirname, '..');
+  const reviewDir = path.resolve(rootDir, 'packages', 'pixelguard-review');
+  console.log('Building PixelGuard Review app...');
+  execSync('npm run review:build', {
+    cwd: rootDir,
+    stdio: 'inherit',
+    env: { ...process.env, STATIC_DEPLOY: 'true' },
+  });
 
-  // Copiar report como index.html
-  fs.copyFileSync(reportPath, path.join(deployDir, 'index.html'));
+  // 2. Copiar build do Vite para deploy
+  const distDir = path.join(reviewDir, 'dist');
+  fs.cpSync(distDir, deployDir, { recursive: true });
 
-  // Copiar baselines
-  const blDir = path.join(deployDir, 'baselines');
-  fs.mkdirSync(blDir, { recursive: true });
+  // 3. Ler results.json e meta.json
+  const resultsJson = path.join(RESULTS_DIR, 'results.json');
+  const metaJson = path.join(RESULTS_DIR, 'meta.json');
+  const results = fs.existsSync(resultsJson)
+    ? JSON.parse(fs.readFileSync(resultsJson, 'utf-8'))
+    : {};
+  const meta = fs.existsSync(metaJson)
+    ? JSON.parse(fs.readFileSync(metaJson, 'utf-8'))
+    : {};
+
+  // 4. Injetar dados estáticos no index.html
+  const indexPath = path.join(deployDir, 'index.html');
+  let html = fs.readFileSync(indexPath, 'utf-8');
+  const staticData = JSON.stringify({ results, meta, status: [] });
+  html = html.replace(
+    '</head>',
+    `<script>window.__PIXELGUARD_STATIC__=${staticData};</script>\n</head>`
+  );
+  fs.writeFileSync(indexPath, html);
+
+  // 5. Copiar baselines → img/baseline/
+  const blDst = path.join(deployDir, 'img', 'baseline');
+  fs.mkdirSync(blDst, { recursive: true });
   if (fs.existsSync(BASELINES)) {
     for (const f of fs.readdirSync(BASELINES).filter(f => f.endsWith('.png'))) {
-      fs.copyFileSync(path.join(BASELINES, f), path.join(blDir, f));
+      fs.copyFileSync(path.join(BASELINES, f), path.join(blDst, f));
     }
   }
 
-  // Copiar current
+  // 6. Copiar current → img/current/
   const curSrc = path.join(RESULTS_DIR, 'current');
-  const curDst = path.join(deployDir, 'current');
+  const curDst = path.join(deployDir, 'img', 'current');
   fs.mkdirSync(curDst, { recursive: true });
   if (fs.existsSync(curSrc)) {
     for (const f of fs.readdirSync(curSrc).filter(f => f.endsWith('.png'))) {
@@ -316,10 +346,10 @@ export function buildDeploy(prNumber) {
     }
   }
 
-  // Copiar diffs
+  // 7. Copiar diffs → img/diff/{tech}/
   for (const tech of ['pixel', 'ssim', 'region']) {
     const diffSrc = path.join(RESULTS_DIR, 'diffs', tech);
-    const diffDst = path.join(deployDir, 'diffs', tech);
+    const diffDst = path.join(deployDir, 'img', 'diff', tech);
     fs.mkdirSync(diffDst, { recursive: true });
     if (fs.existsSync(diffSrc)) {
       for (const f of fs.readdirSync(diffSrc).filter(f => f.endsWith('.png'))) {
@@ -327,12 +357,6 @@ export function buildDeploy(prNumber) {
       }
     }
   }
-
-  // Copiar results.json e meta.json
-  const resultsJson = path.join(RESULTS_DIR, 'results.json');
-  if (fs.existsSync(resultsJson)) fs.copyFileSync(resultsJson, path.join(deployDir, 'results.json'));
-  const metaJson = path.join(RESULTS_DIR, 'meta.json');
-  if (fs.existsSync(metaJson)) fs.copyFileSync(metaJson, path.join(deployDir, 'meta.json'));
 
   console.log(`Deploy montado em: ${deployDir}`);
   return deployDir;

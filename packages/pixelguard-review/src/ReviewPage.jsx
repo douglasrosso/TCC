@@ -6,6 +6,7 @@ import Tab from '@mui/material/Tab';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
+import Button from '@mui/material/Button';
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
@@ -41,6 +42,8 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [ciMeta, setCiMeta] = useState(null);
+  const [reviewComplete, setReviewComplete] = useState(null); // null | 'approved' | 'rejected' | 'reset'
+  const [statusMessage, setStatusMessage] = useState(null); // { type: 'success'|'error'|'info', text }
 
   /* ---- Responsive breakpoints ---- */
   const isCompact = useMediaQuery('(max-width:1199px)');
@@ -92,15 +95,27 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
      ================================================================ */
   const fetchData = useCallback(async () => {
     try {
-      const [statusRes, resultsRes, metaRes] = await Promise.all([
-        fetch(`${API_BASE}/api/status`),
-        fetch(`${API_BASE}/api/results`),
-        fetch(`${API_BASE}/api/meta`),
-      ]);
-      const status = await statusRes.json();
-      const results = await resultsRes.json();
-      const meta = await metaRes.json().catch(() => null);
+      let status, results, meta;
+      const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
+
+      if (isStatic) {
+        const s = window.__PIXELGUARD_STATIC__;
+        status = s.status || [];
+        results = s.results || { comparisons: [], timestamp: new Date().toISOString() };
+        meta = s.meta || null;
+      } else {
+        const [statusRes, resultsRes, metaRes] = await Promise.all([
+          fetch(`${API_BASE}/api/status`),
+          fetch(`${API_BASE}/api/results`),
+          fetch(`${API_BASE}/api/meta`),
+        ]);
+        status = await statusRes.json();
+        results = await resultsRes.json();
+        meta = await metaRes.json().catch(() => null);
+      }
+
       if (meta) setCiMeta(meta);
+      const IMG_BASE = isStatic ? '.' : API_BASE;
 
       const run = {
         id: 'run-current',
@@ -140,7 +155,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
               label: techLabels[tech],
               diffPercentage,
               passed: r.passed,
-              diffUrl: `${API_BASE}/img/diff/${tech}/${comp.imageName}.png`,
+              diffUrl: `${IMG_BASE}/img/diff/${tech}/${comp.imageName}.png`,
             });
             if (r.passed) run.passed++;
             else run.failed++;
@@ -156,8 +171,8 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
               : comp.imageName.includes('tablet')
                 ? '768×1024'
                 : '1366×768',
-            baselineUrl: `${API_BASE}/img/baseline/${comp.imageName}.png`,
-            currentUrl: `${API_BASE}/img/current/${comp.imageName}.png`,
+            baselineUrl: `${IMG_BASE}/img/baseline/${comp.imageName}.png`,
+            currentUrl: `${IMG_BASE}/img/current/${comp.imageName}.png`,
             techniques,
           });
 
@@ -204,12 +219,70 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
   /* ================================================================
      Notify GitHub when all reviews are complete
      ================================================================ */
+  const isStatic = typeof window !== 'undefined' && !!window.__PIXELGUARD_STATIC__;
+
+  /* ---- Decrypt XOR-encoded token from meta.json ---- */
+  const decryptToken = useCallback((statusAuth) => {
+    if (!statusAuth || !statusAuth.e) return '';
+    try {
+      const decoded = atob(statusAuth.e);
+      return Array.from(decoded).map(c => String.fromCharCode(c.charCodeAt(0) ^ statusAuth.k)).join('');
+    } catch { return ''; }
+  }, []);
+
+  /* ---- Set commit status via GitHub Statuses API ---- */
+  const setGitHubCommitStatus = useCallback(async (state, description) => {
+    const meta = window.__PIXELGUARD_STATIC__?.meta;
+    if (!meta?.repository || !meta?.commitSha || !meta?.statusAuth) return false;
+    const token = decryptToken(meta.statusAuth);
+    if (!token) return false;
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${meta.repository}/statuses/${meta.commitSha}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ state, description, context: 'visual-regression/review' }),
+        },
+      );
+      return res.ok;
+    } catch { return false; }
+  }, [decryptToken]);
+
   const updateGitHubStatus = useCallback(
     async (newPending, newApproved, newRejected) => {
-      if (!ciMeta || !ciMeta.repository || ciMeta.commitSha === 'local') return;
-      if (newPending > 0) return;
-
+      if (newPending > 0) {
+        setReviewComplete(null);
+        setStatusMessage(null);
+        return;
+      }
       const allApproved = newRejected === 0;
+      setReviewComplete(allApproved ? 'approved' : 'rejected');
+
+      if (isStatic) {
+        const state = allApproved ? 'success' : 'failure';
+        const desc = allApproved
+          ? `Review visual aprovado — ${newApproved} tela(s)`
+          : `Review visual rejeitado — ${newRejected} tela(s) rejeitada(s)`;
+        const ok = await setGitHubCommitStatus(state, desc);
+        if (ok) {
+          setStatusMessage({
+            type: allApproved ? 'success' : 'error',
+            text: allApproved
+              ? '✅ Review aprovado! Merge liberado no GitHub.'
+              : '❌ Review rejeitado! Merge bloqueado no GitHub.',
+          });
+        } else {
+          setStatusMessage({ type: 'info', text: 'Status atualizado localmente.' });
+        }
+        return;
+      }
+
+      if (!ciMeta || !ciMeta.repository || ciMeta.commitSha === 'local') return;
       try {
         await fetch(`${API_BASE}/api/github/status`, {
           method: 'POST',
@@ -223,13 +296,24 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         });
       } catch { /* silently fail */ }
     },
-    [ciMeta, API_BASE],
+    [ciMeta, API_BASE, isStatic, setGitHubCommitStatus],
   );
 
   /* ================================================================
      Review actions
      ================================================================ */
   const reviewAction = useCallback(async (imageName, action, comment = '') => {
+    if (isStatic) {
+      setTestRuns(prev => prev.map(run => ({
+        ...run,
+        diffs: run.diffs.map(d =>
+          d.imageName === imageName
+            ? { ...d, status: action === 'approve' ? 'approved' : 'rejected' }
+            : d
+        ),
+      })));
+      return;
+    }
     await fetch(`${API_BASE}/api/review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -263,19 +347,45 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
   }, [allDiffs, reviewAction, filteredDiffs, currentDiffIndex]);
 
   const handleApproveAll = useCallback(async () => {
+    if (isStatic) {
+      setTestRuns(prev => prev.map(run => ({
+        ...run,
+        diffs: run.diffs.map(d => d.status === 'pending' ? { ...d, status: 'approved' } : d),
+      })));
+      return;
+    }
     await fetch(`${API_BASE}/api/review/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve-all', comment: '' }) });
     await fetchData();
-  }, [fetchData, API_BASE]);
+  }, [fetchData, API_BASE, isStatic]);
 
   const handleRejectAll = useCallback(async () => {
+    if (isStatic) {
+      setTestRuns(prev => prev.map(run => ({
+        ...run,
+        diffs: run.diffs.map(d => d.status === 'pending' ? { ...d, status: 'rejected' } : d),
+      })));
+      return;
+    }
     await fetch(`${API_BASE}/api/review/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reject-all', comment: '' }) });
     await fetchData();
-  }, [fetchData, API_BASE]);
+  }, [fetchData, API_BASE, isStatic]);
 
   const handleReset = useCallback(async () => {
+    if (isStatic) {
+      setTestRuns(prev => prev.map(run => ({
+        ...run,
+        diffs: run.diffs.map(d => ({ ...d, status: 'pending' })),
+      })));
+      const ok = await setGitHubCommitStatus('pending', 'Review visual pendente — resetado');
+      setReviewComplete('reset');
+      setStatusMessage(ok
+        ? { type: 'info', text: '🔄 Review resetado! Status do PR voltou a pendente.' }
+        : { type: 'info', text: '🔄 Review resetado localmente.' });
+      return;
+    }
     await fetch(`${API_BASE}/api/review/reset`, { method: 'POST' });
     await fetchData();
-  }, [fetchData, API_BASE]);
+  }, [fetchData, API_BASE, isStatic]);
 
   const handleNext = useCallback(() => {
     if (currentDiffIndex < filteredDiffs.length - 1) setSelectedDiffId(filteredDiffs[currentDiffIndex + 1].id);
@@ -373,6 +483,27 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         repoUrl={ciMeta?.repository ? `https://github.com/${ciMeta.repository}` : undefined}
         onBack={onBack}
       />
+
+      {/* Static mode: Status notification when review is complete */}
+      {isStatic && statusMessage && (() => {
+        const bgColor = statusMessage.type === 'success' ? 'rgba(34,197,94,.12)'
+          : statusMessage.type === 'error' ? 'rgba(239,68,68,.12)'
+          : 'rgba(234,179,8,.12)';
+        const borderColor = statusMessage.type === 'success' ? 'rgba(34,197,94,.5)'
+          : statusMessage.type === 'error' ? 'rgba(239,68,68,.5)'
+          : 'rgba(234,179,8,.5)';
+        return (
+          <Box sx={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2,
+            px: 2, py: 1.25, flexShrink: 0,
+            bgcolor: bgColor, borderBottom: '1px solid', borderColor: borderColor,
+          }}>
+            <Box sx={{ fontSize: '0.85rem', fontWeight: 600, textAlign: 'center' }}>
+              {statusMessage.text}
+            </Box>
+          </Box>
+        );
+      })()}
 
       {/* Unified Drawer (compact / mobile) */}
       <Drawer
