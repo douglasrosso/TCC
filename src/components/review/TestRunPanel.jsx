@@ -22,8 +22,8 @@ function getTimeAgo(timestamp) {
 
 function TestRunCard({ run, isSelected, onSelect }) {
   const pendingCount = run.diffs.filter((d) => d.status === 'pending').length;
-  const approvedCount = run.diffs.filter((d) => d.status === 'approved').length;
-  const progressValue = ((run.passed + approvedCount) / Math.max(run.totalTests, 1)) * 100;
+  const reviewedCount = run.diffs.filter((d) => d.status !== 'pending').length;
+  const progressValue = (reviewedCount / Math.max(run.diffs.length, 1)) * 100;
 
   return (
     <Box
@@ -96,7 +96,7 @@ function TestRunCard({ run, isSelected, onSelect }) {
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
           <Typography sx={{ fontSize: '0.72rem', color: '#a1a1aa' }}>
-            {run.passed} de {run.totalTests} testes passaram
+            {reviewedCount} de {run.diffs.length} telas revisadas
           </Typography>
           <Typography sx={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#fafafa' }}>
             {Math.round(progressValue)}%

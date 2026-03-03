@@ -53,43 +53,50 @@ export default function ReviewPage() {
       };
 
       if (results?.comparisons) {
+        const techLabels = { pixel: 'Pixel', ssim: 'SSIM', region: 'Região' };
+
         for (const comp of results.comparisons) {
           const reviewInfo = status.find((s) => s.imageName === comp.imageName);
           const reviewStatus = reviewInfo?.reviewStatus || 'pending';
 
+          const techniques = [];
           for (const tech of ['pixel', 'ssim', 'region']) {
             const r = comp.results[tech];
-            const diffId = `${comp.imageName}-${tech}`;
-            const techLabels = { pixel: 'Pixel', ssim: 'SSIM', region: 'Região' };
-
-            run.diffs.push({
-              id: diffId,
-              name: `${comp.imageName} — ${techLabels[tech]}`,
-              component: techLabels[tech],
-              imageName: comp.imageName,
+            let diffPercentage;
+            if (tech === 'ssim') {
+              diffPercentage = parseFloat(((1 - r.score) * 100).toFixed(2));
+            } else if (tech === 'region') {
+              diffPercentage = r.totalRegions
+                ? parseFloat(((r.failedRegions / r.totalRegions) * 100).toFixed(2))
+                : 0;
+            } else {
+              diffPercentage = parseFloat((r.diffPercent || 0).toFixed(2));
+            }
+            techniques.push({
               technique: tech,
-              branch: 'current',
-              commit: run.commit,
-              author: run.author,
-              timestamp: run.timestamp,
-              status: reviewStatus,
-              diffPercentage: tech === 'ssim'
-                ? parseFloat(((1 - r.score) * 100).toFixed(2))
-                : parseFloat((r.diffPercent || 0).toFixed(2)),
+              label: techLabels[tech],
+              diffPercentage,
               passed: r.passed,
-              viewport: comp.imageName.includes('mobile')
-                ? '360×640'
-                : comp.imageName.includes('tablet')
-                  ? '768×1024'
-                  : '1366×768',
-              baselineUrl: `${API_BASE}/img/baseline/${comp.imageName}.png`,
-              currentUrl: `${API_BASE}/img/current/${comp.imageName}.png`,
               diffUrl: `${API_BASE}/img/diff/${tech}/${comp.imageName}.png`,
             });
-
             if (r.passed) run.passed++;
             else run.failed++;
           }
+
+          run.diffs.push({
+            id: comp.imageName,
+            name: comp.imageName,
+            imageName: comp.imageName,
+            status: reviewStatus,
+            viewport: comp.imageName.includes('mobile')
+              ? '360×640'
+              : comp.imageName.includes('tablet')
+                ? '768×1024'
+                : '1366×768',
+            baselineUrl: `${API_BASE}/img/baseline/${comp.imageName}.png`,
+            currentUrl: `${API_BASE}/img/current/${comp.imageName}.png`,
+            techniques,
+          });
 
           if (reviewStatus === 'pending') run.pending++;
         }
@@ -123,7 +130,7 @@ export default function ReviewPage() {
       const matchesSearch =
         search === '' ||
         d.name.toLowerCase().includes(search.toLowerCase()) ||
-        d.component.toLowerCase().includes(search.toLowerCase());
+        d.techniques.some((t) => t.label.toLowerCase().includes(search.toLowerCase()));
       const matchesStatus = statusFilter === 'all' || d.status === statusFilter;
       const device = getDeviceLabel(d.viewport);
       const matchesViewport =

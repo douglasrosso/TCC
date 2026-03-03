@@ -36,10 +36,10 @@ export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns }) {
 
       <Box>
         <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#fafafa', mb: 0.75 }}>
-          Nenhum diff selecionado
+          Nenhuma tela selecionada
         </Typography>
         <Typography sx={{ fontSize: '0.82rem', color: '#71717a', maxWidth: 320, lineHeight: 1.6 }}>
-          Selecione um test run e depois um diff para começar a revisão.
+          Selecione um test run e depois uma tela para começar a revisão.
         </Typography>
       </Box>
 
@@ -79,7 +79,7 @@ export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns }) {
                 '&:hover': { bgcolor: 'rgba(255,255,255,.04)', borderColor: '#a1a1aa' },
               }}
             >
-              Lista de Diffs
+              Lista de Telas
             </Button>
           )}
         </Box>

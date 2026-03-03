@@ -18,6 +18,8 @@ import LayersRoundedIcon from '@mui/icons-material/LayersRounded';
 import ViewCarouselRoundedIcon from '@mui/icons-material/ViewCarouselRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 const BORDER = 'hsl(240 3.7% 15.9%)';
 const CARD = 'hsl(240 10% 3.9%)';
@@ -25,13 +27,13 @@ const FG = '#fafafa';
 const MUTED = '#a1a1aa';
 
 /* ---------- helpers ---------- */
-function DiffPercentageBadge({ percentage }) {
-  const color = percentage > 15 ? '#ef4444' : percentage > 5 ? '#eab308' : '#22c55e';
-  const bc = percentage > 15 ? 'rgba(239,68,68,.4)' : percentage > 5 ? 'rgba(234,179,8,.4)' : 'rgba(34,197,94,.4)';
-  const bg = percentage > 15 ? 'rgba(239,68,68,.1)' : percentage > 5 ? 'rgba(234,179,8,.1)' : 'rgba(34,197,94,.1)';
+function TechPercentageBadge({ label, percentage, passed }) {
+  const color = passed ? '#22c55e' : percentage > 15 ? '#ef4444' : percentage > 5 ? '#eab308' : '#f97316';
+  const bc = passed ? 'rgba(34,197,94,.4)' : percentage > 15 ? 'rgba(239,68,68,.4)' : percentage > 5 ? 'rgba(234,179,8,.4)' : 'rgba(249,115,22,.4)';
+  const bg = passed ? 'rgba(34,197,94,.1)' : percentage > 15 ? 'rgba(239,68,68,.1)' : percentage > 5 ? 'rgba(234,179,8,.1)' : 'rgba(249,115,22,.1)';
   return (
     <Chip
-      label={`${percentage.toFixed(1)}% diff`}
+      label={`${label} ${percentage.toFixed(1)}%`}
       size="small"
       variant="outlined"
       sx={{ height: 20, fontSize: '0.65rem', fontWeight: 500, borderColor: bc, bgcolor: bg, color, '& .MuiChip-label': { px: 0.75 } }}
@@ -120,11 +122,11 @@ function ScreenshotImage({ src, label, zoom }) {
 }
 
 /* ---------- Side-by-side view ---------- */
-function SideBySideView({ diff, zoom }) {
+function SideBySideView({ diff, zoom, diffUrl, techniqueLabel }) {
   const panels = [
     { label: 'Baseline', src: diff.baselineUrl },
     { label: 'Atual', src: diff.currentUrl },
-    { label: 'Diferença', src: diff.diffUrl },
+    { label: `Diff ${techniqueLabel}`, src: diffUrl },
   ];
 
   return (
@@ -147,13 +149,13 @@ function SideBySideView({ diff, zoom }) {
 }
 
 /* ---------- Overlay view ---------- */
-function OverlayView({ diff, zoom, opacity }) {
+function OverlayView({ diff, zoom, opacity, diffUrl }) {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center' }}>
       <Box sx={{ position: 'relative' }}>
         <ScreenshotImage src={diff.baselineUrl} label="Baseline" zoom={zoom} />
         <Box sx={{ position: 'absolute', inset: 0, opacity: opacity / 100 }}>
-          <ScreenshotImage src={diff.currentUrl} label="Atual" zoom={zoom} />
+          <ScreenshotImage src={diffUrl || diff.currentUrl} label="Diff" zoom={zoom} />
         </Box>
       </Box>
     </Box>
@@ -246,8 +248,12 @@ export default function DiffViewer({
   const [zoom, setZoom] = useState(100);
   const [overlayOpacity, setOverlayOpacity] = useState(50);
   const [sliderPosition, setSliderPosition] = useState(50);
+  const [selectedTechnique, setSelectedTechnique] = useState('pixel');
   const sliderRef = useRef(null);
   const isDragging = useRef(false);
+
+  const activeTech = diff.techniques?.find((t) => t.technique === selectedTechnique) || diff.techniques?.[0];
+  const diffUrl = activeTech?.diffUrl || '';
 
   const handleMouseDown = useCallback(() => { isDragging.current = true; }, []);
   const handleMouseUp = useCallback(() => { isDragging.current = false; }, []);
@@ -334,8 +340,10 @@ export default function DiffViewer({
             <Typography noWrap sx={{ fontSize: '0.9rem', fontWeight: 600, color: FG, lineHeight: 1.3 }}>
               {diff.name}
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.25, flexWrap: 'wrap' }}>
-              <DiffPercentageBadge percentage={diff.diffPercentage} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25, flexWrap: 'wrap' }}>
+              {diff.techniques?.map((t) => (
+                <TechPercentageBadge key={t.technique} label={t.label} percentage={t.diffPercentage} passed={t.passed} />
+              ))}
               <StatusBadge status={diff.status} />
             </Box>
           </Box>
@@ -343,7 +351,7 @@ export default function DiffViewer({
 
         {/* Right: action buttons */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-          <Tooltip title="Rejeitar este diff (R)" arrow>
+          <Tooltip title="Rejeitar esta tela (R)" arrow>
             <Button
               variant="outlined"
               startIcon={<CloseRoundedIcon sx={{ fontSize: 16 }} />}
@@ -363,7 +371,7 @@ export default function DiffViewer({
               Rejeitar
             </Button>
           </Tooltip>
-          <Tooltip title="Aprovar este diff (A)" arrow>
+          <Tooltip title="Aprovar esta tela (A)" arrow>
             <Button
               variant="contained"
               startIcon={<CheckRoundedIcon sx={{ fontSize: 16 }} />}
@@ -445,6 +453,37 @@ export default function DiffViewer({
 
         {/* Right: controls cluster */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+          {/* Technique selector */}
+          <ToggleButtonGroup
+                value={selectedTechnique}
+                exclusive
+                onChange={(_, v) => { if (v !== null) setSelectedTechnique(v); }}
+                size="small"
+                sx={{
+                  height: 28,
+                  '& .MuiToggleButton-root': {
+                    fontSize: '0.68rem',
+                    textTransform: 'none',
+                    color: '#71717a',
+                    borderColor: BORDER,
+                    py: 0,
+                    px: 1,
+                    '&.Mui-selected': {
+                      bgcolor: 'rgba(59,130,246,.12)',
+                      color: '#60a5fa',
+                      borderColor: 'rgba(59,130,246,.3)',
+                      '&:hover': { bgcolor: 'rgba(59,130,246,.18)' },
+                    },
+                    '&:hover': { bgcolor: 'rgba(255,255,255,.04)' },
+                  },
+                }}
+              >
+                <ToggleButton value="pixel">Pixel</ToggleButton>
+                <ToggleButton value="ssim">SSIM</ToggleButton>
+                <ToggleButton value="region">Região</ToggleButton>
+          </ToggleButtonGroup>
+          <Box sx={{ width: '1px', height: 16, bgcolor: BORDER }} />
+
           {/* Overlay opacity (only in overlay mode) */}
           {viewMode === 1 && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -511,8 +550,8 @@ export default function DiffViewer({
 
       {/* =============== Image comparison area =============== */}
       <Box sx={{ flex: 1, overflow: 'auto', bgcolor: '#09090b', p: { xs: 1, sm: 2 } }}>
-        {viewMode === 0 && <SideBySideView diff={diff} zoom={zoom} />}
-        {viewMode === 1 && <OverlayView diff={diff} zoom={zoom} opacity={overlayOpacity} />}
+        {viewMode === 0 && <SideBySideView diff={diff} zoom={zoom} diffUrl={diffUrl} techniqueLabel={activeTech?.label || 'Pixel'} />}
+        {viewMode === 1 && <OverlayView diff={diff} zoom={zoom} opacity={overlayOpacity} diffUrl={diffUrl} />}
         {viewMode === 2 && (
           <SliderView
             diff={diff}

@@ -43,20 +43,20 @@ function StatusIcon({ status }) {
   );
 }
 
-function DiffBadge({ percentage }) {
-  const color = percentage > 15 ? '#ef4444' : percentage > 5 ? '#eab308' : '#22c55e';
+function TechBadge({ label, percentage, passed }) {
+  const color = passed ? '#22c55e' : percentage > 15 ? '#ef4444' : percentage > 5 ? '#eab308' : '#f97316';
   return (
     <Chip
-      label={`${percentage.toFixed(1)}% diff`}
+      label={`${label} ${percentage.toFixed(1)}%`}
       size="small"
       variant="outlined"
       sx={{
         height: 16,
-        fontSize: '0.6rem',
+        fontSize: '0.55rem',
         fontWeight: 500,
         borderColor: BORDER,
         color,
-        '& .MuiChip-label': { px: 0.75 },
+        '& .MuiChip-label': { px: 0.5 },
       }}
     />
   );
@@ -97,7 +97,7 @@ function DiffListItem({ diff, isSelected, onSelect }) {
         color: 'inherit',
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.75 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
         <Typography
           sx={{
             fontSize: '0.82rem',
@@ -113,18 +113,21 @@ function DiffListItem({ diff, isSelected, onSelect }) {
         <StatusIcon status={diff.status} />
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#a1a1aa' }}>
-          {device === 'Mobile' ? (
-            <SmartphoneRoundedIcon sx={{ fontSize: 12 }} />
-          ) : device === 'Tablet' ? (
-            <TabletRoundedIcon sx={{ fontSize: 12 }} />
-          ) : (
-            <MonitorRoundedIcon sx={{ fontSize: 12 }} />
-          )}
-          <Typography sx={{ fontSize: '0.7rem' }}>{device}</Typography>
-        </Box>
-        <DiffBadge percentage={diff.diffPercentage} />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#a1a1aa', mb: 0.5 }}>
+        {device === 'Mobile' ? (
+          <SmartphoneRoundedIcon sx={{ fontSize: 12 }} />
+        ) : device === 'Tablet' ? (
+          <TabletRoundedIcon sx={{ fontSize: 12 }} />
+        ) : (
+          <MonitorRoundedIcon sx={{ fontSize: 12 }} />
+        )}
+        <Typography sx={{ fontSize: '0.7rem' }}>{device}</Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+        {diff.techniques.map((t) => (
+          <TechBadge key={t.technique} label={t.label} percentage={t.diffPercentage} passed={t.passed} />
+        ))}
       </Box>
     </Box>
   );
@@ -162,16 +165,16 @@ export default function DiffListPanel({
       {/* Header */}
       <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: BORDER, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Diffs ({diffs.length})
+          Telas ({diffs.length})
         </Typography>
         {pendingCount > 0 && (
           <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Tooltip title="Aprovar todos pendentes">
+            <Tooltip title="Aprovar todas pendentes">
               <IconButton size="small" onClick={onApproveAll} sx={{ color: '#22c55e', width: 24, height: 24, '&:hover': { bgcolor: 'rgba(34,197,94,.1)' } }}>
                 <CheckRoundedIcon sx={{ fontSize: 14 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Rejeitar todos pendentes">
+            <Tooltip title="Rejeitar todas pendentes">
               <IconButton size="small" onClick={onRejectAll} sx={{ color: '#ef4444', width: 24, height: 24, '&:hover': { bgcolor: 'rgba(239,68,68,.1)' } }}>
                 <CloseRoundedIcon sx={{ fontSize: 14 }} />
               </IconButton>
@@ -186,7 +189,7 @@ export default function DiffListPanel({
           <SearchRoundedIcon sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: '#a1a1aa', pointerEvents: 'none' }} />
           <TextField
             size="small"
-            placeholder="Buscar diffs..."
+            placeholder="Buscar telas..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             InputProps={{
@@ -272,7 +275,7 @@ export default function DiffListPanel({
         {diffs.length === 0 ? (
           <Box sx={{ p: 4, textAlign: 'center' }}>
             <Typography sx={{ fontSize: '0.75rem', color: '#71717a' }}>
-              Nenhum diff encontrado.
+              Nenhuma tela encontrada.
             </Typography>
           </Box>
         ) : (
