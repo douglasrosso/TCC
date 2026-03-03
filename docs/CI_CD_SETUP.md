@@ -45,9 +45,9 @@ Para que o merge só seja permitido após aprovação visual:
 > ⚠️ O status check `visual-regression/review` só aparece para seleção **depois** que o workflow roda pela primeira vez.
 > Execute o workflow manualmente uma vez (via `workflow_dispatch`) para registrar o check.
 
-### 1.2 Permissões do GITHUB_TOKEN
+### 1.2 Permissões do VRT_TOKEN
 
-O `GITHUB_TOKEN` padrão do Actions já tem permissão suficiente. Os workflows declaram:
+O `VRT_TOKEN` padrão do Actions já tem permissão suficiente. Os workflows declaram:
 
 ```yaml
 permissions:
@@ -131,13 +131,13 @@ Para que a aprovação/rejeição reflita no PR, configure o token:
 
 **Windows (PowerShell):**
 ```powershell
-$env:GITHUB_TOKEN = "ghp_SeuTokenAqui"
+$env:VRT_TOKEN = "ghp_SeuTokenAqui"
 npm run review:ui
 ```
 
 **Linux/macOS:**
 ```bash
-GITHUB_TOKEN=ghp_SeuTokenAqui npm run review:ui
+VRT_TOKEN=ghp_SeuTokenAqui npm run review:ui
 ```
 
 > O token precisa ter permissão `repo:status` (ou ser um PAT com escopo `repo`).
