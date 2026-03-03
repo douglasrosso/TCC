@@ -165,42 +165,107 @@ jobs:
             const hasDiffs = '${{ steps.compare.outputs.has_diffs }}' === 'true';
             const hasBaselines = '${{ env.has_baselines }}' === 'true';
             const sha = '${{ github.event.pull_request.head.sha }}'.slice(0, 7);
+            const fullSha = '${{ github.event.pull_request.head.sha }}';
             const branch = '${{ github.head_ref }}';
+            const baseBranch = '${{ github.base_ref }}';
             const prNumber = ${{ github.event.pull_request.number }};
+            const actor = '${{ github.actor }}';
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.run_id }}`;
             const pagesUrl = `https://${{ github.repository_owner }}.github.io/${context.repo.repo}/pr-${prNumber}/`;
+            const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}`;
 
             let body = '';
 
             if (!hasBaselines) {
-              body = `## ✅ Regressão Visual — Primeiro Run\n\n`;
-              body += `**Commit:** \`${sha}\` · **Branch:** \`${branch}\`\n\n`;
-              body += `Nenhuma baseline encontrada. Após o merge, as baselines serão criadas automaticamente.\n`;
+              body += `<div align="center">\n\n`;
+              body += `# ✅ Regressão Visual — Primeiro Run\n\n`;
+              body += `</div>\n\n`;
+              body += `> **Nenhuma baseline encontrada.** Após o merge, as baselines serão criadas automaticamente na \`main\`.\n\n`;
+              body += `---\n\n`;
+              body += `| | |\n|---|---|\n`;
+              body += `| 📌 **Commit** | [\`${sha}\`](${repoUrl}/commit/${fullSha}) |\n`;
+              body += `| 🌿 **Branch** | \`${branch}\` → \`${baseBranch}\` |\n`;
+              body += `| 👤 **Autor** | @${actor} |\n`;
             } else if (!fs.existsSync('results/results.json')) {
-              body = `## ✅ Regressão Visual OK\n\n`;
-              body += `**Commit:** \`${sha}\` · **Branch:** \`${branch}\`\n`;
+              body += `<div align="center">\n\n`;
+              body += `# ✅ Regressão Visual OK\n\n`;
+              body += `</div>\n\n`;
+              body += `| | |\n|---|---|\n`;
+              body += `| 📌 **Commit** | [\`${sha}\`](${repoUrl}/commit/${fullSha}) |\n`;
+              body += `| 🌿 **Branch** | \`${branch}\` → \`${baseBranch}\` |\n`;
             } else {
               const data = JSON.parse(fs.readFileSync('results/results.json', 'utf-8'));
               const s = data.summary;
+              const totalComps = data.comparisons?.length || 0;
+              const totalFailed = s.failed || 0;
+              const totalPassed = s.passed || 0;
 
-              body = `## ${ hasDiffs ? '🔍 Review Visual Necessário' : '✅ Regressão Visual OK' }\n\n`;
-              body += `**Commit:** \`${sha}\` · **Branch:** \`${branch}\`\n\n`;
-              body += `| Técnica | Resultado |\n|---------|----------|\n`;
+              // Header
+              body += `<div align="center">\n\n`;
+              if (hasDiffs) {
+                body += `# 🔍 Review Visual Necessário\n\n`;
+                body += `**${totalFailed} diferença(s) encontrada(s)** em ${totalComps} tela(s) comparada(s)\n\n`;
+              } else {
+                body += `# ✅ Regressão Visual OK\n\n`;
+                body += `**Todas as ${totalComps} tela(s) passaram** sem diferenças visuais\n\n`;
+              }
+              body += `</div>\n\n`;
 
-              for (const [tech, label] of [['pixel','Pixel'],['ssim','SSIM'],['region','Região']]) {
+              // Info table
+              body += `| | |\n|---|---|\n`;
+              body += `| 📌 **Commit** | [\`${sha}\`](${repoUrl}/commit/${fullSha}) |\n`;
+              body += `| 🌿 **Branch** | \`${branch}\` → \`${baseBranch}\` |\n`;
+              body += `| 👤 **Autor** | @${actor} |\n\n`;
+
+              // Results table
+              body += `### 📊 Resultados por Técnica\n\n`;
+              body += `| Técnica | Status | Aprovadas | Reprovadas |\n`;
+              body += `|:--------|:------:|:---------:|:----------:|\n`;
+
+              for (const [tech, label, emoji] of [['pixel','Pixel','🔵'],['ssim','SSIM','🟣'],['region','Região','🟠']]) {
                 const t = s.techniques[tech];
                 const icon = t.failed > 0 ? '❌' : '✅';
-                body += `| ${label} | ${icon} ${t.passed} OK / ${t.failed} FAIL |\n`;
+                body += `| ${emoji} ${label} | ${icon} | ${t.passed} | ${t.failed} |\n`;
               }
 
+              // Detalhes por tela
+              if (hasDiffs && data.comparisons) {
+                body += `\n<details>\n<summary>📋 <b>Detalhes por tela</b></summary>\n\n`;
+                body += `| Tela | Pixel | SSIM | Região |\n`;
+                body += `|:-----|:-----:|:----:|:------:|\n`;
+                for (const c of data.comparisons) {
+                  const p = c.results.pixel;
+                  const ss = c.results.ssim;
+                  const r = c.results.region;
+                  const pIcon = p.passed ? '✅' : `❌ ${p.diffPercent}%`;
+                  const sIcon = ss.passed ? '✅' : `❌ ${ss.score}`;
+                  const rIcon = r.passed ? '✅' : `❌ ${r.failedRegions}/${r.totalRegions}`;
+                  body += `| \`${c.imageName}\` | ${pIcon} | ${sIcon} | ${rIcon} |\n`;
+                }
+                body += `\n</details>\n`;
+              }
+
+              // Action area
               if (hasDiffs) {
-                body += `\n### ⏳ Merge bloqueado até review visual\n\n`;
-                body += `📊 **[Abrir Review Visual](${pagesUrl})**\n\n`;
-                body += `Aprove pelo botão na interface ou comente neste PR: \`/approve-visual\`\n`;
+                body += `\n---\n\n`;
+                body += `<div align="center">\n\n`;
+                body += `### ⏳ Merge bloqueado — review visual necessário\n\n`;
+                body += `<a href="${pagesUrl}"><img src="https://img.shields.io/badge/🔍_Abrir_Review_Visual-4f46e5?style=for-the-badge&logoColor=white" alt="Abrir Review" /></a>\n\n`;
+                body += `</div>\n\n`;
+                body += `> **Como aprovar:** Abra o review visual, analise as diferenças e clique em **Aprovar**.\n`;
+                body += `> O comando \`/approve-visual\` será copiado — basta colar como comentário neste PR.\n`;
+                body += `>\n`;
+                body += `> | Comando | Ação |\n`;
+                body += `> |---------|------|\n`;
+                body += `> | \`/approve-visual\` | ✅ Aprova e libera merge |\n`;
+                body += `> | \`/reject-visual\` | ❌ Rejeita e bloqueia merge |\n`;
+                body += `> | \`/reset-visual\` | 🔄 Reseta para pendente |\n`;
               }
             }
 
-            body += `\n> 🤖 **PixelGuard** · [run \`${{ github.run_id }}\`](${runUrl})`;
+            body += `\n\n---\n<div align="center">\n\n`;
+            body += `🤖 **PixelGuard** · [workflow run](${runUrl})\n\n`;
+            body += `</div>`;
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
