@@ -43,7 +43,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
   const [error, setError] = useState(null);
   const [ciMeta, setCiMeta] = useState(null);
   const [reviewComplete, setReviewComplete] = useState(null); // null | 'approved' | 'rejected' | 'reset'
-  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [statusMessage, setStatusMessage] = useState(null); // { type: 'success'|'error'|'info', text }
 
   /* ---- Responsive breakpoints ---- */
   const isCompact = useMediaQuery('(max-width:1199px)');
@@ -221,18 +221,53 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
      ================================================================ */
   const isStatic = typeof window !== 'undefined' && !!window.__PIXELGUARD_STATIC__;
 
+  /** Call GitHub Statuses API directly from browser (static mode) */
+  const setGitHubCommitStatus = useCallback(async (state, description) => {
+    const meta = window.__PIXELGUARD_STATIC__?.meta;
+    if (!meta?.repository || !meta?.commitSha || !meta?.statusToken) return false;
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${meta.repository}/statuses/${meta.commitSha}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${meta.statusToken}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/vnd.github+json',
+          },
+          body: JSON.stringify({ state, description, context: 'visual-regression/review' }),
+        }
+      );
+      return res.ok;
+    } catch { return false; }
+  }, []);
+
   const updateGitHubStatus = useCallback(
     async (newPending, newApproved, newRejected) => {
       if (newPending > 0) {
         setReviewComplete(null);
-        setBannerDismissed(false);
+        setStatusMessage(null);
         return;
       }
       const allApproved = newRejected === 0;
 
       if (isStatic) {
+        const state = allApproved ? 'success' : 'failure';
+        const desc = allApproved
+          ? `Review visual aprovado — ${newApproved} tela(s)`
+          : `Review visual rejeitado — ${newRejected} tela(s) rejeitada(s)`;
+        const ok = await setGitHubCommitStatus(state, desc);
         setReviewComplete(allApproved ? 'approved' : 'rejected');
-        setBannerDismissed(false);
+        if (ok) {
+          setStatusMessage({
+            type: allApproved ? 'success' : 'error',
+            text: allApproved
+              ? '✅ Review aprovado! Merge liberado no GitHub.'
+              : '❌ Review rejeitado! Merge bloqueado no GitHub.',
+          });
+        } else {
+          setStatusMessage({ type: 'error', text: '⚠️ Não foi possível atualizar o status no GitHub.' });
+        }
         return;
       }
 
@@ -250,7 +285,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         });
       } catch { /* silently fail */ }
     },
-    [ciMeta, API_BASE, isStatic],
+    [ciMeta, API_BASE, isStatic, setGitHubCommitStatus],
   );
 
   /* ================================================================
@@ -330,13 +365,17 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         ...run,
         diffs: run.diffs.map(d => ({ ...d, status: 'pending' })),
       })));
+      const ok = await setGitHubCommitStatus('pending', 'Review visual resetado — aguardando revisão');
       setReviewComplete('reset');
-      setBannerDismissed(false);
+      setStatusMessage(ok
+        ? { type: 'info', text: '🔄 Review resetado! Status atualizado no GitHub.' }
+        : { type: 'error', text: '⚠️ Não foi possível atualizar o status no GitHub.' }
+      );
       return;
     }
     await fetch(`${API_BASE}/api/review/reset`, { method: 'POST' });
     await fetchData();
-  }, [fetchData, API_BASE, isStatic]);
+  }, [fetchData, API_BASE, isStatic, setGitHubCommitStatus]);
 
   const handleNext = useCallback(() => {
     if (currentDiffIndex < filteredDiffs.length - 1) setSelectedDiffId(filteredDiffs[currentDiffIndex + 1].id);
@@ -435,62 +474,46 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         onBack={onBack}
       />
 
-      {/* Static mode: Action banner when review is complete */}
-      {isStatic && reviewComplete && !bannerDismissed && (() => {
+      {/* Static mode: Status notification banner */}
+      {isStatic && statusMessage && (() => {
+        const bgColor = statusMessage.type === 'success' ? 'rgba(34,197,94,.15)'
+          : statusMessage.type === 'error' ? 'rgba(239,68,68,.15)'
+          : 'rgba(59,130,246,.15)';
+        const borderColor = statusMessage.type === 'success' ? 'rgba(34,197,94,.5)'
+          : statusMessage.type === 'error' ? 'rgba(239,68,68,.5)'
+          : 'rgba(59,130,246,.5)';
         const meta = window.__PIXELGUARD_STATIC__?.meta;
         const prUrl = meta?.repository && meta?.prNumber
           ? `https://github.com/${meta.repository}/pull/${meta.prNumber}`
           : null;
-        const cmd = reviewComplete === 'approved' ? '/approve-visual'
-          : reviewComplete === 'rejected' ? '/reject-visual'
-          : '/reset-visual';
-        const bgColor = reviewComplete === 'approved' ? 'rgba(34,197,94,.12)'
-          : reviewComplete === 'rejected' ? 'rgba(239,68,68,.12)'
-          : 'rgba(234,179,8,.12)';
-        const borderColor = reviewComplete === 'approved' ? 'rgba(34,197,94,.5)'
-          : reviewComplete === 'rejected' ? 'rgba(239,68,68,.5)'
-          : 'rgba(234,179,8,.5)';
-        const icon = reviewComplete === 'approved' ? '✅'
-          : reviewComplete === 'rejected' ? '❌'
-          : '🔄';
-        const msg = reviewComplete === 'approved' ? 'Todas as telas foram aprovadas!'
-          : reviewComplete === 'rejected' ? 'Telas rejeitadas!'
-          : 'Review resetado para pendente!';
-
-        const handleCopyAndOpen = async () => {
-          try { await navigator.clipboard.writeText(cmd); } catch { /* ok */ }
-          if (prUrl) window.open(prUrl, '_blank');
-        };
 
         return (
           <Box sx={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2,
-            px: 2, py: 1.25, flexShrink: 0, flexWrap: 'wrap',
+            px: 2, py: 1, flexShrink: 0, flexWrap: 'wrap',
             bgcolor: bgColor, borderBottom: '1px solid', borderColor: borderColor,
           }}>
-            <Box sx={{ fontSize: '0.88rem', fontWeight: 600 }}>
-              {icon} {msg}
+            <Box sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
+              {statusMessage.text}
             </Box>
             {prUrl && (
               <Button
-                variant="contained"
-                onClick={handleCopyAndOpen}
-                sx={{
-                  fontSize: '0.78rem', textTransform: 'none', fontWeight: 600,
-                  bgcolor: reviewComplete === 'approved' ? '#22c55e' : reviewComplete === 'rejected' ? '#ef4444' : '#eab308',
-                  '&:hover': { bgcolor: reviewComplete === 'approved' ? '#16a34a' : reviewComplete === 'rejected' ? '#dc2626' : '#ca8a04' },
-                  color: '#fff', boxShadow: 'none', height: 34, px: 2.5, borderRadius: 1.5,
-                }}
+                variant="text"
+                component="a"
+                href={prUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ fontSize: '0.75rem', textTransform: 'none', fontWeight: 600, color: '#60a5fa' }}
               >
-                Abrir PR e colar {cmd}
+                Ver PR →
               </Button>
             )}
             <Button
               variant="text"
-              onClick={() => setBannerDismissed(true)}
+              onClick={() => setStatusMessage(null)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', color: '#71717a', minWidth: 0, px: 1 }}
             >
-              Fechar
+              ✕
             </Button>
           </Box>
         );

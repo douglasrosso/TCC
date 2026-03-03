@@ -96,11 +96,13 @@ jobs:
             repository: '${{ github.repository }}',
             timestamp: new Date().toISOString(),
             hasDiffs: ${{ steps.compare.outputs.has_diffs || false }},
-            failedCount: ${{ steps.compare.outputs.failed || 0 }}
+            failedCount: ${{ steps.compare.outputs.failed || 0 }},
+            statusToken: process.env.STATUS_TOKEN || ''
           }, null, 2));
           "
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
+          STATUS_TOKEN: ${{ secrets.VRT_TOKEN }}
 
       - name: Build review UI e montar deploy
         if: env.has_baselines == 'true'
