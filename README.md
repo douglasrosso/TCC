@@ -41,16 +41,16 @@ tests/
   compare.js                 Orquestrador de comparação (CI)
   evaluate.js                Avaliação completa com mutações (TCC)
   report.js                  Gerador de relatório HTML
-  review.js                  Sistema de review CLI (aprovar/rejeitar)
-  review-server.js           UI web para review interativo
   comparators/
     pixel.js                 Comparação pixel a pixel
     ssim.js                  Comparação SSIM
     region.js                Comparação por regiões
 
-e2e/
-  dashboard.spec.js          Testes E2E funcionais (14 testes)
-  visual.spec.js             Testes de snapshot visual (4 testes)
+packages/
+  pixelguard-review/         Review UI (pacote npm separado)
+    src/                     Componentes React do review
+    server/                  Servidor HTTP + API REST
+    bin/cli.js               CLI (pixelguard-review start/build)
 
 scripts/
   update-baselines.js        Atualiza imagens de referência
@@ -115,17 +115,7 @@ npm run review:start    # Start review server only (assumes dist/)
 
 ### 7. Aprovar ou rejeitar
 
-```bash
-# Aprovar tudo (atualiza baselines automaticamente)
-npm run review:approve-all
-
-# Rejeitar tudo (mantém baselines)
-npm run review:reject-all
-
-# Individual
-node tests/review.js --approve dashboard-desktop-1366w --comment "OK"
-node tests/review.js --reject dashboard-mobile-360w --comment "Bug no botão"
-```
+Acesse a Review UI em http://localhost:3060 e use os botões de aprovar/rejeitar.
 
 ---
 
@@ -142,14 +132,8 @@ node tests/review.js --reject dashboard-mobile-360w --comment "Bug no botão"
 | `npm run ci` | Pipeline completo (capture → compare → report) |
 | `npm run evaluate` | Avaliação com mutações (TP/FP/F1) |
 | `npm run review` | Build + start review UI (http://localhost:3060) |
-| `npm run review:approve-all` | Aprovar todas as diffs |
-| `npm run review:reject-all` | Rejeitar todas as diffs |
-| `npm run review:history` | Histórico de reviews |
-| `npm run review:reset` | Resetar status |
 | `npm run review:start` | Start review server (serve `packages/pixelguard-review/dist/`) |
-| `npm run review:build` | Build da UI de review (packages/pixelguard-review) |
-| `npm run e2e` | Testes E2E Playwright |
-| `npm run e2e:ui` | Testes E2E com interface visual |
+| `npm run review:build` | Build da UI de review |
 
 ## Testes E2E
 

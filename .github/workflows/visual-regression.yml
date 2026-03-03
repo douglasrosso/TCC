@@ -20,6 +20,11 @@ permissions:
   statuses: write
   actions: read
 
+# Garante que cada PR rode apenas uma instância por vez
+concurrency:
+  group: visual-regression-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   visual-regression:
     runs-on: ubuntu-latest

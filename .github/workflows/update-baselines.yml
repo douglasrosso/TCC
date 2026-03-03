@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write
 
+# Garante que apenas uma execução roda por vez (evita race condition)
+concurrency:
+  group: update-baselines
+  cancel-in-progress: false
+
 jobs:
   update-baselines:
     runs-on: ubuntu-latest
@@ -37,21 +42,11 @@ jobs:
       - name: Atualizar baselines
         run: npm run update-baselines
 
-      - name: Resetar reviews
-        run: |
-          if [ -f results/reviews.json ]; then
-            node -e "
-              const fs = require('fs');
-              fs.writeFileSync('results/reviews.json', JSON.stringify({ currentStatus: {}, history: [] }, null, 2));
-            "
-          fi
-
       - name: Commitar baselines atualizadas
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add baselines/
-          git add results/reviews.json || true
           if git diff --cached --quiet; then
             echo "Nenhuma alteração nas baselines"
           else
