@@ -149,12 +149,14 @@ npm run e2e:ui           # Interface visual do Playwright
 Antes de usar o pipeline de Visual Regression e o Review UI, confirme as configurações abaixo:
 
 - **Segredos / Tokens (CI e local)**:
-  - `VRT_TOKEN` (recomendado): token usado pelo servidor de review para postar status no GitHub e pelo workflow `update-baselines` para commitar baselines. No GitHub Actions crie um Secret `VRT_TOKEN` com um Personal Access Token (PAT) que tenha as permissões descritas abaixo.
-  - Alternativas aceitas pelo servidor: `GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_PAT` (o servidor procura por essas variáveis também).
+  - `VRT_TOKEN`: PAT usado **exclusivamente** pelo workflow `update-baselines` para fazer `git push` na `main` (necessário para contornar Repository Rulesets). No GitHub Actions, crie um Secret `VRT_TOKEN` com um Personal Access Token (PAT) que tenha as permissões descritas abaixo.
+  - Todos os demais acessos nos workflows (checkout, status checks, comentários em PRs, deploy de Pages) usam o `GITHUB_TOKEN` padrão — nenhum secret extra é necessário.
+  - Para uso **local** do Review UI, o servidor aceita `VRT_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` ou `GITHUB_PAT` para postar status checks via API.
 
-- **Permissões do PAT**:
-  - `repo` (ou pelo menos `repo:status` + `contents:write`) — necessário para que a ação/CLI poste `status` checks e para que o workflow que atualiza baselines consiga commitar e pushar alterações em `baselines/`.
-  - Se você pretende alterar regras de branch protection via API, o token precisa de permissões administrativas no repositório (`admin:repo_hook` / `repo` com privilégios suficientes).
+- **Permissões do PAT (`VRT_TOKEN`)**:
+  - O token só precisa de permissão para **push** na `main`. Use um PAT clássico com escopo `repo`, ou um fine-grained token com `Contents: Read & write`.
+  - Se você usa **Repository Rulesets**, adicione o bot/app associado ao token como **bypass actor** na regra.
+  - Para uso **local** do Review UI (postar status checks), o token também precisa de `repo:status`.
 
 - **Branch protection (recomendado)**:
   - Adicione uma regra de proteção para `main` que exija o status check `visual-regression/review` (o workflow usa esse contexto). Assim PRs ficam bloqueadas até o review visual ser aprovado.
@@ -184,13 +186,13 @@ Antes de usar o pipeline de Visual Regression e o Review UI, confirme as configu
     - GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token
     - Name: `pixelguard-review`
     - Expiration: escolha conforme sua política (ou `No expiration` para testes locais)
-    - Scopes: marque `repo` (ou ao menos `repo:status` + `repo` > `contents:write`)
+    - Scopes: marque `repo` (cobre push + status para uso local do Review UI)
     - Generate token → copie o valor (será mostrado só uma vez)
 
   2) (Opcional) Criar Fine-grained token
     - GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token
     - Resource owner: selecione seu repositório
-    - Permissions: `Commit statuses: Read & write`, `Contents: Read & write` (ou equivalente)
+    - Permissions: `Contents: Read & write` (obrigatório para push). Se for usar o Review UI local, adicione também `Commit statuses: Read & write`.
     - Generate token → copie o valor
 
   3) Adicionar secret no repositório
