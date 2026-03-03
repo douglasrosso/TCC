@@ -15,6 +15,7 @@ import fs            from 'node:fs';
 import http          from 'node:http';
 import path          from 'node:path';
 import { fileURLToPath } from 'node:url';
+import dotenv        from 'dotenv';
 
 import {
   loadReviews,
@@ -29,6 +30,8 @@ import {
 
 const __dirname    = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR     = path.resolve(__dirname, '..');
+// Load .env from project root if present so we can read tokens from it
+dotenv.config({ path: path.join(ROOT_DIR, '.env') });
 const DIST_DIR     = path.resolve(ROOT_DIR, 'dist');
 const RESULTS_DIR  = path.resolve(ROOT_DIR, 'results');
 const BASELINES    = path.resolve(ROOT_DIR, 'baselines');
@@ -238,10 +241,32 @@ async function handleRequest(req, res) {
       return;
     }
 
-    // Usar GITHUB_TOKEN do ambiente (deve ser configurado)
-    const token = process.env.GITHUB_TOKEN;
+    // Usar token do GitHub (aceita vários nomes de variável de ambiente)
+    // Prioridade: VRT_TOKEN, GH_TOKEN, GITHUB_PAT, VRT_TOKEN, GITHUB_API_TOKEN
+      // Resolver token do GitHub — aceitar múltiplos nomes e fallback para .env
+      let token = process.env.VRT_TOKEN || process.env.GH_TOKEN || process.env.VRT_TOKEN || process.env.GITHUB_PAT;
+      if (!token) {
+        try {
+          const envPath = path.join(ROOT_DIR, '.env');
+          if (fs.existsSync(envPath)) {
+            const envRaw = fs.readFileSync(envPath, 'utf8');
+            const m = envRaw.match(/(?:^|\\n)\\s*(?:VRT_TOKEN|GH_TOKEN|VRT_TOKEN|GITHUB_PAT)\\s*=\\s*\\"?([^\\\\"\\n\\r]+)\\"?/);
+            if (m) token = m[1];
+          }
+        } catch (e) {
+          // ignore and fall through
+        }
+      }
+
+      if (!token) {
+        jsonResponse(res, { error: 'VRT_TOKEN não configurado. Defina VRT_TOKEN / GH_TOKEN / VRT_TOKEN no ambiente ou em .env' }, 401);
+        return;
+      }
+
     if (!token) {
-      jsonResponse(res, { error: 'GITHUB_TOKEN não configurado. Execute: $env:GITHUB_TOKEN="ghp_..."' }, 401);
+      jsonResponse(res, {
+        error: 'Nenhum token do GitHub configurado. Defina uma das variáveis de ambiente: VRT_TOKEN, GH_TOKEN, GITHUB_PAT, VRT_TOKEN ou GITHUB_API_TOKEN',
+      }, 401);
       return;
     }
 
