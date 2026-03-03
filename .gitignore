@@ -7,6 +7,9 @@ dist/
 # Resultados de testes visuais (gerados pelo capture/compare)
 results/
 
+# Deploy temporário para GitHub Pages
+deploy/
+
 # Logs
 *.log
 

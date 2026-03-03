@@ -1,0 +1,66 @@
+name: Aprovar Review Visual
+
+# Triggered when someone comments "/approve-visual" on a PR
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  approve:
+    # Only run on PR comments containing /approve-visual
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/approve-visual')
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Obter SHA do PR
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            core.setOutput('sha', pr.head.sha);
+            core.setOutput('branch', pr.head.ref);
+
+      - name: Atualizar status para sucesso
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = '${{ steps.pr.outputs.sha }}';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha,
+              state: 'success',
+              description: 'Review visual aprovado por @${{ github.event.comment.user.login }}',
+              context: 'visual-regression/review'
+            });
+
+      - name: Reagir ao comentário
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: ${{ github.event.comment.id }},
+              content: 'rocket'
+            });
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ✅ Review Visual Aprovado\n\nAprovado por @${{ github.event.comment.user.login }}. Merge liberado.\n\n> 🤖 **PixelGuard**`
+            });

@@ -17,9 +17,9 @@ export const pages = [
 
 /* ===== Limiares de aceitação por técnica ===== */
 export const thresholds = {
-  pixel:  { tolerance: 0.1, maxDiffPercent: 0.5 },
-  ssim:   { minScore: 0.95, blockSize: 8 },
-  region: { gridCols: 4, gridRows: 6, maxDiffPercent: 5.0 },
+  pixel:  { tolerance: 0.1, maxDiffPercent: 0.05 },
+  ssim:   { minScore: 0.999, blockSize: 8 },
+  region: { gridCols: 4, gridRows: 6, maxDiffPercent: 1.0 },
 };
 
 /**
