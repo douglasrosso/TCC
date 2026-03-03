@@ -216,6 +216,15 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
   /* ================================================================
      Notify GitHub when all reviews are complete
      ================================================================ */
+  /** Copia o comando e abre o PR no GitHub (static mode) */
+  const openPrWithCommand = useCallback(async (command) => {
+    const meta = window.__PIXELGUARD_STATIC__?.meta;
+    if (!meta?.repository || !meta?.prNumber) return;
+    try { await navigator.clipboard.writeText(command); } catch { /* ok */ }
+    const prUrl = `https://github.com/${meta.repository}/pull/${meta.prNumber}`;
+    window.open(prUrl, '_blank');
+  }, []);
+
   const updateGitHubStatus = useCallback(
     async (newPending, newApproved, newRejected) => {
       if (newPending > 0) return;
@@ -223,38 +232,8 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
 
       const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
       if (isStatic) {
-        if (!allApproved) return;
-        const meta = window.__PIXELGUARD_STATIC__.meta;
-        if (!meta?.repository || !meta?.commitSha) return;
-
-        let token = sessionStorage.getItem('pixelguard_token');
-        if (!token) {
-          token = prompt(
-            'Cole seu GitHub Personal Access Token (com permissão repo) para aprovar o review:'
-          );
-          if (!token) return;
-          sessionStorage.setItem('pixelguard_token', token);
-        }
-
-        try {
-          const res = await fetch(
-            `https://api.github.com/repos/${meta.repository}/statuses/${meta.commitSha}`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                Accept: 'application/vnd.github+json',
-              },
-              body: JSON.stringify({
-                state: 'success',
-                description: `Review visual aprovado — ${newApproved} tela(s)`,
-                context: 'visual-regression/review',
-              }),
-            }
-          );
-          if (!res.ok) sessionStorage.removeItem('pixelguard_token');
-        } catch { /* silently fail */ }
+        const cmd = allApproved ? '/approve-visual' : '/reject-visual';
+        await openPrWithCommand(cmd);
         return;
       }
 
@@ -272,7 +251,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         });
       } catch { /* silently fail */ }
     },
-    [ciMeta, API_BASE],
+    [ciMeta, API_BASE, openPrWithCommand],
   );
 
   /* ================================================================
@@ -330,6 +309,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         ...run,
         diffs: run.diffs.map(d => d.status === 'pending' ? { ...d, status: 'approved' } : d),
       })));
+      // updateGitHubStatus será chamado via useEffect
       return;
     }
     await fetch(`${API_BASE}/api/review/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve-all', comment: '' }) });
@@ -343,6 +323,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         ...run,
         diffs: run.diffs.map(d => d.status === 'pending' ? { ...d, status: 'rejected' } : d),
       })));
+      // updateGitHubStatus será chamado via useEffect
       return;
     }
     await fetch(`${API_BASE}/api/review/all`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reject-all', comment: '' }) });
@@ -356,11 +337,12 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         ...run,
         diffs: run.diffs.map(d => ({ ...d, status: 'pending' })),
       })));
+      await openPrWithCommand('/reset-visual');
       return;
     }
     await fetch(`${API_BASE}/api/review/reset`, { method: 'POST' });
     await fetchData();
-  }, [fetchData, API_BASE]);
+  }, [fetchData, API_BASE, openPrWithCommand]);
 
   const handleNext = useCallback(() => {
     if (currentDiffIndex < filteredDiffs.length - 1) setSelectedDiffId(filteredDiffs[currentDiffIndex + 1].id);
