@@ -20,69 +20,7 @@ import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-
-const BORDER = 'hsl(240 3.7% 15.9%)';
-const CARD = 'hsl(240 10% 3.9%)';
-const FG = '#fafafa';
-const MUTED = '#a1a1aa';
-
-/* ---------- helpers ---------- */
-function TechPercentageBadge({ label, percentage, passed }) {
-  const color = passed ? '#22c55e' : percentage > 15 ? '#ef4444' : percentage > 5 ? '#eab308' : '#f97316';
-  const bc = passed ? 'rgba(34,197,94,.4)' : percentage > 15 ? 'rgba(239,68,68,.4)' : percentage > 5 ? 'rgba(234,179,8,.4)' : 'rgba(249,115,22,.4)';
-  const bg = passed ? 'rgba(34,197,94,.1)' : percentage > 15 ? 'rgba(239,68,68,.1)' : percentage > 5 ? 'rgba(234,179,8,.1)' : 'rgba(249,115,22,.1)';
-  return (
-    <Chip
-      label={`${label} ${percentage.toFixed(1)}%`}
-      size="small"
-      variant="outlined"
-      sx={{ height: 20, fontSize: '0.65rem', fontWeight: 500, borderColor: bc, bgcolor: bg, color, '& .MuiChip-label': { px: 0.75 } }}
-    />
-  );
-}
-
-function StatusBadge({ status }) {
-  const map = {
-    approved: { label: 'Aprovado', color: '#22c55e', bc: 'rgba(34,197,94,.4)', bg: 'rgba(34,197,94,.1)' },
-    rejected: { label: 'Rejeitado', color: '#ef4444', bc: 'rgba(239,68,68,.4)', bg: 'rgba(239,68,68,.1)' },
-    pending: { label: 'Pendente', color: '#eab308', bc: 'rgba(234,179,8,.4)', bg: 'rgba(234,179,8,.1)' },
-  };
-  const s = map[status] || map.pending;
-  return (
-    <Chip
-      label={s.label}
-      size="small"
-      variant="outlined"
-      sx={{ height: 20, fontSize: '0.65rem', fontWeight: 500, borderColor: s.bc, bgcolor: s.bg, color: s.color, '& .MuiChip-label': { px: 0.75 } }}
-    />
-  );
-}
-
-/* ---------- Keyboard shortcut hint badge ---------- */
-function KbdHint({ children }) {
-  return (
-    <Box
-      component="kbd"
-      sx={{
-        px: 0.5,
-        py: 0.15,
-        borderRadius: 0.5,
-        bgcolor: 'rgba(255,255,255,.04)',
-        border: '1px solid',
-        borderColor: BORDER,
-        fontFamily: 'monospace',
-        fontSize: '0.58rem',
-        color: '#52525b',
-        minWidth: 18,
-        textAlign: 'center',
-        lineHeight: 1.6,
-        display: 'inline-block',
-      }}
-    >
-      {children}
-    </Box>
-  );
-}
+import { BORDER, CARD, FG, MUTED, TechBadge, StatusBadge, KbdHint } from './shared.jsx';
 
 /* ---------- Screenshot component ---------- */
 function ScreenshotImage({ src, label, zoom }) {
@@ -342,7 +280,7 @@ export default function DiffViewer({
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25, flexWrap: 'wrap' }}>
               {diff.techniques?.map((t) => (
-                <TechPercentageBadge key={t.technique} label={t.label} percentage={t.diffPercentage} passed={t.passed} />
+                <TechBadge key={t.technique} label={t.label} percentage={t.diffPercentage} passed={t.passed} />
               ))}
               <StatusBadge status={diff.status} />
             </Box>

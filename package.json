@@ -8,10 +8,11 @@
     "build": "vite build",
     "capture": "node tests/capture.js",
     "compare": "node tests/compare.js",
-    "evaluate": "node tests/evaluate.js",
     "report": "node tests/report.js",
     "update-baselines": "node scripts/update-baselines.js",
-    "ci": "node tests/capture.js && node tests/compare.js && node tests/report.js",
+    "init-baselines": "node tests/capture.js && node scripts/update-baselines.js",
+    "vrt": "node tests/capture.js && node tests/compare.js && node tests/report.js && npm run review",
+    "vrt:ci": "node tests/capture.js && node tests/compare.js && node tests/report.js",
     "review:build": "cd packages/pixelguard-review && npx vite build",
     "review:start": "node packages/pixelguard-review/server/index.js",
     "review": "npm run review:build && npm run review:start"

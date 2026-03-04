@@ -4,6 +4,7 @@ import Button from '@mui/material/Button';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
 import ListRoundedIcon from '@mui/icons-material/ListRounded';
+import { BORDER, DIM, MUTED, KbdHint } from './shared.jsx';
 
 export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns }) {
   return (
@@ -31,7 +32,7 @@ export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns }) {
           justifyContent: 'center',
         }}
       >
-        <VisibilityRoundedIcon sx={{ fontSize: 36, color: '#52525b' }} />
+        <VisibilityRoundedIcon sx={{ fontSize: 36, color: DIM }} />
       </Box>
 
       <Box>
@@ -54,11 +55,11 @@ export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns }) {
               sx={{
                 textTransform: 'none',
                 fontSize: '0.82rem',
-                borderColor: 'hsl(240 3.7% 15.9%)',
-                color: '#a1a1aa',
+                borderColor: BORDER,
+                color: MUTED,
                 height: 40,
                 px: 2.5,
-                '&:hover': { bgcolor: 'rgba(255,255,255,.04)', borderColor: '#a1a1aa' },
+                '&:hover': { bgcolor: 'rgba(255,255,255,.04)', borderColor: MUTED },
               }}
             >
               Test Runs
@@ -72,11 +73,11 @@ export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns }) {
               sx={{
                 textTransform: 'none',
                 fontSize: '0.82rem',
-                borderColor: 'hsl(240 3.7% 15.9%)',
-                color: '#a1a1aa',
+                borderColor: BORDER,
+                color: MUTED,
                 height: 40,
                 px: 2.5,
-                '&:hover': { bgcolor: 'rgba(255,255,255,.04)', borderColor: '#a1a1aa' },
+                '&:hover': { bgcolor: 'rgba(255,255,255,.04)', borderColor: MUTED },
               }}
             >
               Lista de Telas
@@ -94,24 +95,8 @@ export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns }) {
           { key: 'R', label: 'Rejeitar' },
         ].map(({ key, label }) => (
           <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-            <Box
-              sx={{
-                px: 0.75,
-                py: 0.25,
-                borderRadius: 0.75,
-                bgcolor: 'rgba(255,255,255,.06)',
-                border: '1px solid hsl(240 3.7% 15.9%)',
-                fontFamily: 'monospace',
-                fontSize: '0.72rem',
-                color: '#a1a1aa',
-                minWidth: 24,
-                textAlign: 'center',
-                lineHeight: 1.6,
-              }}
-            >
-              {key}
-            </Box>
-            <Typography sx={{ fontSize: '0.72rem', color: '#52525b' }}>{label}</Typography>
+            <KbdHint>{key}</KbdHint>
+            <Typography sx={{ fontSize: '0.72rem', color: DIM }}>{label}</Typography>
           </Box>
         ))}
       </Box>

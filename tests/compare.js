@@ -8,7 +8,6 @@
  *   3. Regiões com máscaras
  *
  * Salva os resultados consolidados em results/results.json.
- * Código de saída 1 se qualquer comparação falhar.
  *
  * Uso:  node tests/compare.js
  */
@@ -139,8 +138,5 @@ export async function runComparisons() {
 /* ===== Execução direta ===== */
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
   runComparisons()
-    .then((r) => {
-      if (r.summary.failed > 0) process.exit(1);
-    })
     .catch((err) => { console.error(err); process.exit(1); });
 }

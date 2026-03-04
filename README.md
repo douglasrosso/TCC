@@ -1,250 +1,642 @@
-# Visual Regression Testing — TCC
+<p align="center">
+  <img src="https://img.shields.io/badge/PixelGuard-Visual%20Regression-4f46e5?style=for-the-badge&logoColor=white" alt="PixelGuard" />
+</p>
 
-Comparativo de três técnicas de regressão visual integradas a CI/CD, aplicadas a uma dashboard **React + Material UI**.
+<h1 align="center">PixelGuard — Regressão Visual para React</h1>
 
-| Técnica | Descrição | Arquivo |
-|---------|-----------|---------|
-| **Pixel a pixel** | Diferença numérica por pixel com limiar de tolerância | `tests/comparators/pixel.js` |
-| **SSIM** | Métrica perceptual (luminância, contraste, estrutura) — Wang et al. 2004 | `tests/comparators/ssim.js` |
-| **Regiões** | Segmentação em grade com máscaras para conteúdo dinâmico | `tests/comparators/region.js` |
+<p align="center">
+  Pipeline completo de testes visuais que captura screenshots, compara com baselines usando <strong>3 técnicas</strong> (pixel a pixel, SSIM e regiões) e bloqueia o merge no GitHub quando há diferenças — com UI de review interativa.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/MUI-6-007FFF?logo=mui&logoColor=white" />
+  <img src="https://img.shields.io/badge/Playwright-1.49-2EAD33?logo=playwright&logoColor=white" />
+  <img src="https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white" />
+  <img src="https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white" />
+</p>
 
 ---
 
-## Stack
+## Índice
 
-- **Vite** — Dev server + build
-- **React 19 + Material UI 6** — Dashboard SPA
-- **Playwright** — Captura de screenshots e testes E2E
-- **pixelmatch / pngjs** — Comparação pixel a pixel
-- **SSIM customizado** — Implementação Wang et al. 2004
-- **Node.js** — Scripts de comparação, avaliação e review
+1. [Visão Geral](#visão-geral)
+2. [Arquitetura](#arquitetura)
+3. [Pré-requisitos](#pré-requisitos)
+4. [Instalação](#instalação)
+5. [Configuração](#configuração)
+6. [Uso Local](#uso-local)
+7. [Review UI — Guia Completo](#review-ui--guia-completo)
+8. [Relatório HTML](#relatório-html)
+9. [CI/CD — GitHub Actions](#cicd--github-actions)
+10. [Comandos de Referência](#comandos-de-referência)
+11. [Referência de Configuração](#referência-de-configuração)
+12. [Estrutura do Projeto](#estrutura-do-projeto)
 
-## Estrutura
+---
+
+## Visão Geral
+
+O PixelGuard automatiza a detecção de regressões visuais em aplicações web. O fluxo funciona assim:
 
 ```
-src/                         App React + MUI (Vite)
-  components/
-    NavBar.jsx               Barra de navegação
-    HeroBanner.jsx           Banner com gradiente
-    StatsGrid.jsx            Cards de estatísticas (flexbox)
-    TransactionsTable.jsx    Tabela de transações
-    InfoSidebar.jsx          Sidebar com informações
-    ActivityFeed.jsx         Feed de atividades
-    Footer.jsx               Rodapé
-  App.jsx                    Layout principal (flexbox)
-  theme.js                   Tema MUI customizado
-  main.jsx                   Entry point React
-
-tests/
-  config.js                  Viewports, limiares, máscaras, mutações
-  capture.js                 Captura de screenshots (Vite + Playwright)
-  compare.js                 Orquestrador de comparação (CI)
-  evaluate.js                Avaliação completa com mutações (TCC)
-  report.js                  Gerador de relatório HTML
-  comparators/
-    pixel.js                 Comparação pixel a pixel
-    ssim.js                  Comparação SSIM
-    region.js                Comparação por regiões
-
-packages/
-  pixelguard-review/         Review UI (pacote npm separado)
-    src/                     Componentes React do review
-    server/                  Servidor HTTP + API REST
-    bin/cli.js               CLI (pixelguard-review start/build)
-
-scripts/
-  update-baselines.js        Atualiza imagens de referência
-
-baselines/                   Imagens de referência (versionadas no Git)
-results/                     Saída gerada (gitignored)
-.github/workflows/           Pipeline CI/CD
+Captura screenshots → Compara com baselines → Gera relatório → Abre review UI
+       ↓                      ↓                     ↓                ↓
+   Playwright            3 técnicas           report.html      localhost:3060
+                     (pixel, SSIM, região)
 ```
+
+### Técnicas de Comparação
+
+| Técnica | Descrição | Sensibilidade |
+|:--------|:----------|:-------------|
+| **Pixel a pixel** | Compara cada pixel individualmente usando [pixelmatch](https://github.com/mapbox/pixelmatch). Detecta até alterações de 1px. | Alta |
+| **SSIM** | Structural Similarity Index — métrica perceptual que avalia luminância, contraste e estrutura (Wang et al., 2004). Aproxima a visão humana. | Média |
+| **Regiões** | Divide a imagem em grade (4×6), compara cada célula de forma independente e permite mascarar áreas dinâmicas (datas, contadores). | Configurável |
+
+---
+
+## Arquitetura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Aplicação React                        │
+│              (src/ — React 19 + MUI 6 + Vite 6)            │
+│                     porta 3050                              │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ Playwright captura
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Pipeline de Testes                        │
+│  tests/capture.js → tests/compare.js → tests/report.js     │
+│                                                             │
+│  Comparadores:                                              │
+│    tests/comparators/pixel.js   (pixelmatch)                │
+│    tests/comparators/ssim.js    (SSIM — implementação)      │
+│    tests/comparators/region.js  (grade + máscaras)          │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ results.json
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  PixelGuard Review UI                       │
+│        packages/pixelguard-review/ — porta 3060             │
+│  Server Node.js + React SPA (dark theme, 3 painéis)        │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ GitHub Statuses API
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    GitHub Actions                           │
+│  visual-regression.yml  → Check em PRs                     │
+│  approve-visual.yml     → Comandos via comentário          │
+│  update-baselines.yml   → Atualiza baselines pós-merge     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ## Pré-requisitos
 
-- Node.js 18+
-- npm
+| Ferramenta | Versão | Motivo |
+|:-----------|:-------|:-------|
+| **Node.js** | ≥ 20 | Runtime |
+| **npm** | ≥ 9 | Gerenciador de pacotes |
+| **Git** | Qualquer | Controle de versão |
+| **Conta GitHub** | — | CI/CD e GitHub Pages |
+
+---
 
 ## Instalação
 
+### 1. Clonar o repositório
+
+```bash
+git clone https://github.com/douglasrosso/TCC.git
+cd TCC
+```
+
+### 2. Instalar dependências
+
 ```bash
 npm install
+```
+
+### 3. Instalar o navegador do Playwright
+
+```bash
 npx playwright install chromium
 ```
 
-## Fluxo Completo de Teste Local
+> **Nota:** O Playwright usa Chromium headless para capturar screenshots. Só é necessário instalar uma vez.
 
-### 1. Iniciar o dev server e verificar o app
+---
 
-```bash
-npm run dev
-# Acesse http://localhost:3050
+## Configuração
+
+### Arquivo de configuração: `tests/config.js`
+
+Toda a configuração da pipeline está centralizada neste arquivo:
+
+```javascript
+/* Viewports para captura */
+export const viewports = [
+  { name: 'mobile',  width: 360,  height: 640  },
+  { name: 'tablet',  width: 768,  height: 1024 },
+  { name: 'desktop', width: 1366, height: 768  },
+];
+
+/* Páginas a capturar */
+export const pages = [
+  { name: 'dashboard', path: '/' },
+];
+
+/* Limiares de aceitação por técnica */
+export const thresholds = {
+  pixel:  { tolerance: 0.1, maxDiffPercent: 0.05 },
+  ssim:   { minScore: 0.999, blockSize: 8 },
+  region: { gridCols: 4, gridRows: 6, maxDiffPercent: 1.0 },
+};
+
+/* Máscaras — células da grade a ignorar (regiões dinâmicas) */
+export const masks = [
+  // { row: 2, col: 3 },  ← descomente para mascarar
+];
 ```
 
-### 2. Capturar screenshots (baselines iniciais)
+#### Como adicionar novas páginas
+
+Basta incluir uma entrada no array `pages`:
+
+```javascript
+export const pages = [
+  { name: 'dashboard', path: '/' },
+  { name: 'login',     path: '/login' },
+  { name: 'settings',  path: '/settings' },
+];
+```
+
+Cada página será capturada em **todos os viewports**, gerando arquivos como `dashboard-mobile-360w.png`.
+
+#### Como ajustar limiares
+
+| Parâmetro | Técnica | Significado |
+|:----------|:--------|:------------|
+| `pixel.tolerance` | Pixel | Sensibilidade do pixelmatch (0–1). Menor = mais sensível |
+| `pixel.maxDiffPercent` | Pixel | % máxima de pixels diferentes aceitável |
+| `ssim.minScore` | SSIM | Score mínimo (0–1). Menor = mais tolerante |
+| `ssim.blockSize` | SSIM | Tamanho do bloco para cálculo SSIM |
+| `region.gridCols` / `gridRows` | Região | Divisão da grade |
+| `region.maxDiffPercent` | Região | % máxima de diferença por célula |
+
+#### Como usar máscaras
+
+Máscaras ignoram células da grade que contêm conteúdo dinâmico (datas, contadores, etc.):
+
+```javascript
+export const masks = [
+  { row: 0, col: 3 },  // Canto superior direito
+  { row: 5, col: 0 },  // Canto inferior esquerdo
+];
+```
+
+> `row` e `col` começam em 0, contados do canto superior esquerdo da grade.
+
+---
+
+## Uso Local
+
+### Fluxo completo (um comando)
+
+```bash
+npm run vrt
+```
+
+Este comando executa tudo em sequência:
+1. **Captura** screenshots de todas as páginas e viewports
+2. **Compara** com as baselines usando as 3 técnicas
+3. **Gera** o relatório HTML
+4. **Abre** a Review UI no navegador (porta 3060)
+
+### Primeiro uso — criar baselines iniciais
+
+Na primeira vez (ou após mudanças visuais intencionais), crie as baselines de referência:
+
+```bash
+npm run init-baselines
+```
+
+Isso captura screenshots e os copia para `baselines/`. Depois, faça commit:
+
+```bash
+git add baselines/
+git commit -m "chore: criar baselines iniciais"
+```
+
+### Atualizar baselines após mudança intencional
+
+Quando uma alteração visual é **intencional** (novo tema, nova cor, novo componente), atualize:
 
 ```bash
 npm run capture
 npm run update-baselines
+git add baselines/
+git commit -m "chore: atualizar baselines"
 ```
 
-### 3. Fazer uma alteração visual (proposital)
-
-Edite qualquer componente. Ex: mudar a cor primária no `src/theme.js`.
-
-### 4. Recapturar e comparar
+### Executar etapas individualmente
 
 ```bash
-npm run capture
-npm run compare
+npm run capture     # Captura screenshots → results/current/
+npm run compare     # Compara com baselines → results/results.json
+npm run report      # Gera relatório HTML → results/report.html
+npm run review      # Build + start da Review UI → localhost:3060
 ```
-
-### 5. Ver o relatório
-
-```bash
-npm run report
-# Abra results/report.html no navegador
-```
-
-### 6. Revisar diffs interativamente
-
-```bash
-npm run review          # Build + start review UI (http://localhost:3060)
-npm run review:start    # Start review server only (assumes dist/)
-```
-
-### 7. Aprovar ou rejeitar
-
-Acesse a Review UI em http://localhost:3060 e use os botões de aprovar/rejeitar.
 
 ---
 
-## Scripts npm
+## Review UI — Guia Completo
 
-| Script | Descrição |
-|--------|-----------|
-| `npm run dev` | Dev server Vite (porta 3050) |
-| `npm run build` | Build de produção |
-| `npm run capture` | Capturar screenshots (3 viewports) |
-| `npm run compare` | Comparar capturas × baselines (3 técnicas) |
-| `npm run report` | Gerar relatório HTML |
-| `npm run update-baselines` | Copiar capturas atuais → baselines |
-| `npm run ci` | Pipeline completo (capture → compare → report) |
-| `npm run evaluate` | Avaliação com mutações (TP/FP/F1) |
-| `npm run review` | Build + start review UI (http://localhost:3060) |
-| `npm run review:start` | Start review server (serve `packages/pixelguard-review/dist/`) |
-| `npm run review:build` | Build da UI de review |
+A Review UI é uma aplicação React com **tema escuro** que permite analisar diferenças visuais de forma interativa.
 
-## Testes E2E
+### Abrindo a Review UI
 
 ```bash
-npm run e2e              # Roda todos (14 funcionais + 4 visuais)
-npm run e2e:ui           # Interface visual do Playwright
+npm run review
 ```
 
-## Avaliação para TCC
+Acesse: **http://localhost:3060**
 
-## Configuração necessária
+### Visão geral da interface
 
-Antes de usar o pipeline de Visual Regression e o Review UI, confirme as configurações abaixo:
+![Review UI — Visão geral](docs/images/01-review-overview.png)
 
-- **Segredos / Tokens (CI e local)**:
-  - `VRT_TOKEN`: PAT usado pelo workflow `update-baselines` para checkout e push na `main`. Necessário porque o `GITHUB_TOKEN` padrão não consegue contornar Repository Rulesets. No GitHub Actions, crie um Secret `VRT_TOKEN` em **Settings → Secrets and variables → Actions**.
-  - Os demais workflows usam apenas o `GITHUB_TOKEN` padrão — nenhum secret extra é necessário.
-  - Para uso **local** do Review UI, o servidor aceita `VRT_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` ou `GITHUB_PAT` para postar status checks via API.
+A interface é dividida em **3 painéis redimensionáveis**:
 
-- **Permissões do PAT (`VRT_TOKEN`)**:
-  - Use um PAT clássico com escopo `repo`, ou um fine-grained token com `Contents: Read & write`.
-  - **Bypass de Rulesets**: como o PAT autentica como **você** (admin do repo), adicione **Repository admin** como bypass actor:
-    1. **Settings → Rules → Rulesets** → clique na regra da `main`
-    2. Em **Bypass list** → **+ Add bypass** → selecione **Repository admin**
-    3. Salve
-  - Para uso **local** do Review UI (postar status checks), o token também precisa de `repo:status`.
+| # | Painel | Localização | Função |
+|:-:|:-------|:-----------|:-------|
+| 1 | **Test Runs** | Esquerda | Lista os test runs disponíveis (local ou CI). Mostra branch, commit, autor e progresso de review |
+| 2 | **Diff List** | Centro-esquerda | Lista todas as telas comparadas com filtros por status, viewport e busca por nome |
+| 3 | **Diff Viewer** | Área principal (direita) | Exibe a comparação visual entre baseline e captura atual |
 
-- **Branch protection (recomendado)**:
-  - Adicione uma regra de proteção para `main` que exija o status check `visual-regression/review` (o workflow usa esse contexto). Assim PRs ficam bloqueadas até o review visual ser aprovado.
+### Selecionando e visualizando diffs
 
-- **Diretórios e artefatos**:
-  - `results/` — artefatos gerados pelo CI (upload/download de resultados para revisão local).
-  - `baselines/` — imagens de referência que o comparador usa. O workflow `update-baselines` atualiza este diretório quando um merge é realizado em `main`.
+![Diff selecionado — Side by Side](docs/images/02-review-diff-selected.png)
 
-- **Portas padrão (local)**:
-  - Dashboard: `http://localhost:3050/` (Vite dev)
-  - Review UI: `http://localhost:3060/` (servidor estático + API)
+Ao clicar em um test run e depois em uma tela, o **Diff Viewer** exibe 3 imagens lado a lado:
 
-- **Uso local (exemplo)**:
-  - Defina o token localmente (PowerShell):
-    ```powershell
-    $env:VRT_TOKEN = "ghp_SeuTokenAqui"
-    npm run review
-    ```
-  - Ou (Linux/macOS):
-    ```bash
-    VRT_TOKEN=ghp_SeuTokenAqui npm run review
-    ```
+| Imagem | Descrição |
+|:-------|:----------|
+| **Baseline** | Imagem de referência (da branch `main`) |
+| **Atual** | Captura nova (da branch do PR ou local) |
+| **Diff** | Mapa de diferenças com pixels alterados em destaque |
 
-  ### Passo a passo (criar token, adicionar secret e configurar branch protection)
+### Modos de visualização
 
-  1) Criar um PAT no GitHub (opção simples — Token clássico)
-    - GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token
-    - Name: `pixelguard-review`
-    - Expiration: escolha conforme sua política (ou `No expiration` para testes locais)
-    - Scopes: marque `repo` (cobre push + status para uso local do Review UI)
-    - Generate token → copie o valor (será mostrado só uma vez)
+A toolbar do Diff Viewer oferece **3 modos** de visualização:
 
-  2) (Opcional) Criar Fine-grained token
-    - GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token
-    - Resource owner: selecione seu repositório
-    - Permissions: `Contents: Read & write` (obrigatório para push). Se for usar o Review UI local, adicione também `Commit statuses: Read & write`.
-    - Generate token → copie o valor
+#### 1. Side by Side (padrão)
 
-  3) Adicionar secret no repositório
-    - Vá em `Settings → Secrets and variables → Actions → New repository secret`
-    - Name: `VRT_TOKEN`
-    - Value: cole o token gerado
-    - Save secret
+Mostra baseline, atual e diff lado a lado. Ideal para comparação rápida.
 
-  4) Configurar Branch Protection para `main`
-    - Vá em `Settings → Branches → Add rule`
-    - Branch name pattern: `main`
-    - Marque `Require status checks to pass before merging`
-    - Na lista de checks, selecione `visual-regression/review` (se não aparecer, rode o workflow manualmente uma vez)
-    - (Opcional) marque `Require branches to be up to date before merging`
-    - Save changes
+![Side by Side](docs/images/02-review-diff-selected.png)
 
-  5) Verificar / registrar o status check
-    - Rode manualmente o workflow `visual-regression.yml` (Actions → Visual Regression → Run workflow) para que o context `visual-regression/review` apareça na lista de checks.
+#### 2. Overlay (sobreposição)
 
-  6) Exemplo de uso local
-  ```powershell
-  $env:VRT_TOKEN = "ghp_SeuTokenAqui"
-  npm run review
-  ```
+Sobrepõe a imagem atual sobre a baseline com **opacidade ajustável**. Útil para detectar deslocamentos sutis.
 
-  ou (Linux/macOS):
+![Overlay](docs/images/03-review-overlay.png)
 
-  ```bash
-  VRT_TOKEN=ghp_SeuTokenAqui npm run review
-  ```
+#### 3. Slider (deslizante)
 
-  Se quiser, posso gerar capturas passo-a-passo (screens) mostrando exatamente onde clicar no GitHub UI e opcionalmente criar uma ação de CI que faz build do `packages/pixelguard-review` para publicar um preview (Netlify/Vercel/GitHub Pages). Diga qual prefere.
+Arraste o cursor horizontal para revelar a imagem atual sobre a baseline. Excelente para comparar regiões específicas.
 
-```bash
-npm run evaluate                    # Injeta mutações e calcula métricas
-node tests/report.js --evaluate     # Gera relatório de avaliação
+![Slider](docs/images/04-review-slider.png)
+
+### Elementos da interface em detalhe
+
+#### Header
+
+![Header da Review UI](docs/images/05-review-header.png)
+
+| Elemento | Descrição |
+|:---------|:----------|
+| **Logo PixelGuard** | Identifica a ferramenta |
+| **Status geral** | Mostra o estado atual da review (pendente / aprovado / rejeitado) |
+| **Botão Aprovar (✓)** | Aprova todas as diferenças visuais. Em modo CI, atualiza o status do PR no GitHub para `success` |
+| **Botão Rejeitar (✕)** | Rejeita as diferenças. O merge permanece bloqueado (status `failure`) |
+| **Botão Resetar** | Volta o status para "pendente" |
+| **Informações CI** | Em modo CI, exibe branch, commit SHA, número do PR e autor |
+
+#### Painel de Test Runs (esquerda)
+
+Cada card mostra:
+
+| Campo | Descrição |
+|:------|:----------|
+| **Branch** | Nome da branch (ex: `feature/novo-tema`) |
+| **Commit** | Hash curto do commit |
+| **Autor** | Quem fez o push |
+| **Timestamp** | Quando a comparação foi executada (ex: "5min atrás") |
+| **Barra de progresso** | Porcentagem de telas revisadas |
+| **Badge amarelo** | Quantidade de telas pendentes de review |
+
+#### Painel de Diff List (centro)
+
+Cada item da lista exibe:
+
+| Campo | Descrição |
+|:------|:----------|
+| **Nome da tela** | Ex: `dashboard` |
+| **Ícone de viewport** | 📱 Mobile, 📋 Tablet, 🖥️ Desktop |
+| **Status** | ⏳ Pendente (amarelo), ✅ Aprovado (verde), ❌ Rejeitado (vermelho) |
+| **Badges de técnica** | Quais técnicas detectaram diferença (Pixel, SSIM, Região) |
+
+**Filtros disponíveis:**
+
+| Filtro | Opções |
+|:-------|:-------|
+| **Busca** | Filtra por nome da tela (campo de texto) |
+| **Status** | Todos · Pendentes · Aprovados · Rejeitados |
+| **Viewport** | Todos · Mobile · Tablet · Desktop |
+
+#### Diff Viewer — Toolbar
+
+| Controle | Descrição |
+|:---------|:----------|
+| **Modo de visualização** | Alterna entre Side by Side, Overlay e Slider |
+| **Zoom (+/−/reset)** | Controla o zoom das imagens |
+| **Seletor de técnica** | Alterna entre Pixel, SSIM e Região para ver o diff de cada técnica |
+| **Navegação (← →)** | Navega para a tela anterior ou próxima |
+
+**Atalhos de teclado:**
+
+| Tecla | Ação |
+|:------|:-----|
+| `A` | Aprovar tela selecionada |
+| `R` | Rejeitar tela selecionada |
+| `←` / `→` | Navegar entre telas |
+
+### Integração com GitHub (modo CI)
+
+Quando executada em modo CI (via GitHub Pages), a Review UI se comunica com a **API de Statuses do GitHub**:
+
+| Ação | Status do commit | Efeito no merge |
+|:-----|:----------------|:----------------|
+| **Aprovar** | `success` | Merge liberado ✅ |
+| **Rejeitar** | `failure` | Merge bloqueado ❌ |
+| **Resetar** | `pending` | Merge bloqueado (aguardando review) ⏳ |
+
+> O token do GitHub é criptografado via XOR no CI e descriptografado no browser — isso evita que o GitHub Push Protection bloqueie o deploy.
+
+---
+
+## Relatório HTML
+
+Além da Review UI interativa, o pipeline gera um **relatório HTML estático autocontido**:
+
+![Relatório HTML](docs/images/09-report-html.png)
+
+O relatório inclui:
+
+| Seção | Conteúdo |
+|:------|:---------|
+| **Banner de status** | Indica se o merge está bloqueado ou liberado |
+| **Cards de resumo** | Resultado por técnica (Pixel, SSIM, Região) — OK ou FAIL |
+| **Metadados** | Commit, branch, PR, autor (quando gerado no CI) |
+| **Tabela por imagem** | % de diferença (pixel), score (SSIM), regiões com falha |
+| **Comparações visuais** | Baseline, captura atual e mapas de diff para cada técnica |
+
+O arquivo é gerado em `results/report.html` e pode ser aberto diretamente no navegador.
+
+---
+
+## CI/CD — GitHub Actions
+
+O projeto inclui **3 workflows** que automatizam o fluxo completo no GitHub.
+
+### Pré-requisitos para CI
+
+#### 1. Criar um Personal Access Token (PAT)
+
+1. Acesse [GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained tokens](https://github.com/settings/tokens?type=beta)
+2. Clique em **Generate new token**
+3. Configure:
+   - **Token name:** `VRT_TOKEN`
+   - **Repository access:** Selecione o repositório do projeto
+   - **Permissions:**
+     - `Contents` → Read and write
+     - `Pull requests` → Read and write
+     - `Commit statuses` → Read and write
+     - `Pages` → Read and write
+4. Clique em **Generate token** e **copie o valor**
+
+#### 2. Adicionar o token como secret do repositório
+
+1. No repositório, vá em **Settings → Secrets and variables → Actions**
+2. Clique em **New repository secret**
+3. **Name:** `VRT_TOKEN`
+4. **Value:** cole o token gerado no passo anterior
+5. Clique em **Add secret**
+
+#### 3. Configurar GitHub Pages
+
+1. No repositório, vá em **Settings → Pages**
+2. Em **Source**, selecione **Deploy from a branch**
+3. Em **Branch**, selecione `gh-pages` / `/ (root)`
+4. Clique em **Save**
+
+> Na primeira execução do workflow de PR, a branch `gh-pages` será criada automaticamente.
+
+#### 4. Configurar Branch Protection (recomendado)
+
+Para que o merge seja efetivamente bloqueado quando houver diferenças visuais:
+
+1. Vá em **Settings → Branches → Add branch protection rule**
+2. **Branch name pattern:** `main`
+3. Marque ✅ **Require status checks to pass before merging**
+4. Na busca, adicione: `visual-regression/review`
+5. Salve a regra
+
+### Workflow 1: Visual Regression Check
+
+**Arquivo:** `.github/workflows/visual-regression.yml`
+**Trigger:** Pull Request aberto/atualizado para `main`
+
+**Fluxo:**
+
+```
+PR aberto/atualizado
+    │
+    ├── Checkout do código + baselines da main
+    ├── npm ci + instalar Chromium
+    ├── Capturar screenshots
+    ├── Comparar com baselines (3 técnicas)
+    ├── Gerar meta.json (dados do CI + token XOR)
+    ├── Build Review UI + montar deploy/
+    ├── Deploy para GitHub Pages
+    ├── Definir status do commit (success ou pending)
+    ├── Comentar no PR com resultados
+    └── Upload artefatos
 ```
 
-Métricas geradas: TP, FP, TN, FN, Precisão, Recall, F1-Score, Tempo médio por técnica.
+**Resultado no PR:**
+- **Sem diferenças** → Status `success`, merge liberado
+- **Com diferenças** → Status `pending`, merge bloqueado. Comentário no PR com link para a Review UI no GitHub Pages
+
+### Workflow 2: Ações via Comentário
+
+**Arquivo:** `.github/workflows/approve-visual.yml`
+**Trigger:** Comentário em Pull Request
+
+Permite controlar o status do PR via comentários:
+
+| Comentário | Ação | Status resultante |
+|:-----------|:-----|:-----------------|
+| `/approve-visual` | Aprova as diferenças | `success` — merge liberado |
+| `/reject-visual` | Rejeita as diferenças | `failure` — merge bloqueado |
+| `/reset-visual` | Reseta para pendente | `pending` — review necessário |
+
+Cada comando gera uma reação no comentário e um comentário de confirmação automático.
+
+### Workflow 3: Atualizar Baselines
+
+**Arquivo:** `.github/workflows/update-baselines.yml`
+**Trigger:** Push na `main` (após merge)
+
+**Fluxo:**
+
+```
+Merge na main
+    │
+    ├── Capturar screenshots na main atualizada
+    ├── Copiar para baselines/
+    └── Commit automático: "chore: atualizar baselines visuais [skip ci]"
+```
+
+O `[skip ci]` no commit impede que o workflow entre em loop.
+
+---
+
+## Comandos de Referência
+
+| Comando | Descrição |
+|:--------|:----------|
+| `npm run dev` | Inicia o servidor de desenvolvimento da aplicação (porta 3050) |
+| `npm run build` | Build de produção da aplicação |
+| `npm run capture` | Captura screenshots de todas as páginas/viewports |
+| `npm run compare` | Compara capturas com baselines (3 técnicas) |
+| `npm run report` | Gera relatório HTML em `results/report.html` |
+| `npm run vrt` | **Pipeline completo:** capture → compare → report → review UI |
+| `npm run vrt:ci` | Pipeline sem abrir a review UI (usado no CI) |
+| `npm run review` | Build e inicia a Review UI (porta 3060) |
+| `npm run review:build` | Apenas build da Review UI |
+| `npm run review:start` | Apenas inicia o servidor da Review UI |
+| `npm run init-baselines` | Captura + copia para baselines (primeiro uso) |
+| `npm run update-baselines` | Copia `results/current/` para `baselines/` |
+
+---
+
+## Referência de Configuração
+
+### `tests/config.js`
+
+| Export | Tipo | Descrição |
+|:-------|:-----|:----------|
+| `viewports` | `Array<{ name, width, height }>` | Viewports para captura (mobile, tablet, desktop) |
+| `pages` | `Array<{ name, path }>` | Páginas a capturar |
+| `thresholds` | `{ pixel, ssim, region }` | Limiares de aceitação por técnica |
+| `masks` | `Array<{ row, col }>` | Células da grade a ignorar no comparador de regiões |
+
+### Variáveis de ambiente
+
+| Variável | Padrão | Descrição |
+|:---------|:-------|:----------|
+| `PIXELGUARD_RESULTS_DIR` | `./results` | Pasta de resultados |
+| `PIXELGUARD_BASELINES_DIR` | `./baselines` | Pasta de baselines |
+| `STATIC_DEPLOY` | — | Quando `true`, a Review UI usa dados estáticos (GitHub Pages) |
+
+### GitHub Secrets
+
+| Secret | Obrigatório | Descrição |
+|:-------|:-----------|:----------|
+| `VRT_TOKEN` | Sim | Personal Access Token com permissões de contents, statuses, pull-requests e pages |
+
+---
+
+## Estrutura do Projeto
+
+```
+├── baselines/                    # Imagens de referência (commitadas no Git)
+├── results/                      # Saída do pipeline (não commitado)
+│   ├── current/                  #   Screenshots atuais
+│   ├── diffs/                    #   Mapas de diferença
+│   │   ├── pixel/                #     Diff pixel a pixel
+│   │   ├── ssim/                 #     Diff SSIM (heatmap)
+│   │   └── region/               #     Diff por regiões (grade)
+│   ├── results.json              #   Resultados consolidados
+│   └── report.html               #   Relatório HTML
+├── src/                          # Aplicação React (MUI) — o app sendo testado
+│   ├── App.jsx                   #   Componente raiz
+│   ├── main.jsx                  #   Entry point
+│   ├── theme.js                  #   Tema MUI (cores, tipografia)
+│   └── components/               #   Componentes do dashboard
+│       ├── HeroBanner.jsx
+│       ├── StatsGrid.jsx
+│       ├── TransactionsTable.jsx
+│       ├── ActivityFeed.jsx
+│       ├── InfoSidebar.jsx
+│       ├── NavBar.jsx
+│       └── Footer.jsx
+├── tests/                        # Pipeline de testes visuais
+│   ├── capture.js                #   Captura com Playwright
+│   ├── compare.js                #   Orquestrador de comparação
+│   ├── config.js                 #   Configuração central
+│   ├── report.js                 #   Gerador de relatório HTML + deploy
+│   └── comparators/              #   Implementações das 3 técnicas
+│       ├── pixel.js              #     pixelmatch (anti-aliased aware)
+│       ├── ssim.js               #     SSIM (implementação própria)
+│       └── region.js             #     Grade com máscaras
+├── scripts/
+│   └── update-baselines.js       #   Copia current/ → baselines/
+├── packages/
+│   └── pixelguard-review/        # Review UI (pacote independente)
+│       ├── src/                  #   Componentes React da UI
+│       │   ├── ReviewPage.jsx    #     Página principal
+│       │   └── components/       #     Painéis e visualizador
+│       │       ├── ReviewHeader.jsx
+│       │       ├── TestRunPanel.jsx
+│       │       ├── DiffListPanel.jsx
+│       │       ├── DiffViewer.jsx
+│       │       ├── ReviewEmptyState.jsx
+│       │       └── shared.jsx    #     Design tokens e componentes base
+│       ├── server/               #   Servidor Node.js + REST API
+│       │   ├── index.js          #     HTTP server (porta 3060)
+│       │   └── review.js         #     Lógica de approve/reject/reset
+│       └── bin/
+│           └── cli.js            #   CLI
+├── .github/workflows/
+│   ├── visual-regression.yml     # Check visual em PRs
+│   ├── approve-visual.yml        # Comandos via comentário no PR
+│   └── update-baselines.yml      # Atualiza baselines após merge
+├── package.json
+└── vite.config.js
+```
+
+---
 
 ## Determinismo
 
-As capturas congelam `Date` e `Math.random` e desativam animações CSS para garantir resultados reproduzíveis entre execuções.
+Para garantir que capturas consecutivas produzam imagens **idênticas**, o pipeline aplica:
 
-## Configuração
+| Técnica | Descrição |
+|:--------|:----------|
+| **Date congelado** | `new Date()` sempre retorna `2025-06-15T10:00:00` |
+| **Math.random determinístico** | PRNG com seed 42 (substituição global) |
+| **Animações desativadas** | CSS injetado: `animation: none !important; transition: none !important` |
+| **Locale/timezone fixos** | `pt-BR` e `America/Sao_Paulo` |
+| **DeviceScaleFactor = 1** | Evita variação de DPI entre máquinas |
 
-Edite `tests/config.js` para ajustar:
+---
 
-- **Viewports**: larguras de tela para captura
-- **Limiares**: tolerância de cada técnica
-- **Máscaras**: células a ignorar (conteúdo dinâmico)
-- **Mutações**: alterações injetadas para avaliação
+<p align="center">
+  🤖 <strong>PixelGuard</strong> — Regressão visual automatizada para React
+</p>
