@@ -6,7 +6,6 @@ import Tab from '@mui/material/Tab';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
-import Button from '@mui/material/Button';
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
@@ -16,6 +15,7 @@ import TestRunPanel from './components/TestRunPanel.jsx';
 import DiffListPanel, { getDeviceLabel } from './components/DiffListPanel.jsx';
 import DiffViewer from './components/DiffViewer.jsx';
 import ReviewEmptyState from './components/ReviewEmptyState.jsx';
+import { BORDER, CARD, BG, FG, SUBTLE, DIM } from './components/shared.jsx';
 
 const DRAWER_WIDTH = 340;
 const MIN_PANEL = 200;
@@ -434,7 +434,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
      ================================================================ */
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', bgcolor: '#09090b', color: '#fafafa' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', bgcolor: BG, color: FG }}>
         Carregando...
       </Box>
     );
@@ -442,10 +442,10 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
 
   if (error) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', bgcolor: '#09090b', color: '#fca5a5', flexDirection: 'column', gap: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', bgcolor: BG, color: '#fca5a5', flexDirection: 'column', gap: 2 }}>
         <Box sx={{ fontSize: '1.2rem', fontWeight: 600 }}>Erro ao conectar à API</Box>
         <Box sx={{ fontSize: '0.85rem' }}>{error}</Box>
-        <Box sx={{ fontSize: '0.8rem', color: '#71717a' }}>
+        <Box sx={{ fontSize: '0.8rem', color: SUBTLE }}>
           Execute: npx pixelguard-review (porta 3060)
         </Box>
       </Box>
@@ -469,7 +469,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
      Render
      ================================================================ */
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: '#09090b', color: '#fafafa' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: BG, color: FG }}>
       <ReviewHeader
         totalPending={totalPending}
         totalApproved={totalApproved}
@@ -511,7 +511,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         PaperProps={{
-          sx: { bgcolor: '#09090b', width: DRAWER_WIDTH, borderRight: '1px solid hsl(240 3.7% 15.9%)', display: 'flex', flexDirection: 'column' },
+          sx: { bgcolor: BG, width: DRAWER_WIDTH, borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column' },
         }}
       >
         <Tabs
@@ -519,8 +519,8 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
           onChange={(_, v) => setDrawerTab(v)}
           variant="fullWidth"
           sx={{
-            minHeight: 42, borderBottom: '1px solid hsl(240 3.7% 15.9%)',
-            '& .MuiTab-root': { minHeight: 42, textTransform: 'none', fontSize: '0.8rem', fontWeight: 500, color: '#71717a', '&.Mui-selected': { color: '#fafafa' } },
+            minHeight: 42, borderBottom: `1px solid ${BORDER}`,
+            '& .MuiTab-root': { minHeight: 42, textTransform: 'none', fontSize: '0.8rem', fontWeight: 500, color: SUBTLE, '&.Mui-selected': { color: FG } },
             '& .MuiTabs-indicator': { bgcolor: '#3b82f6' },
           }}
         >
@@ -547,12 +547,12 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
                   onClick={() => setRunsCollapsed(false)}
                   sx={{
                     width: 36, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 1.5, gap: 1,
-                    borderRight: '1px solid', borderColor: 'hsl(240 3.7% 15.9%)', bgcolor: 'hsl(240 10% 3.9%)',
+                    borderRight: '1px solid', borderColor: BORDER, bgcolor: CARD,
                     cursor: 'pointer', '&:hover': { bgcolor: 'rgba(255,255,255,.03)' }, transition: 'background-color .15s',
                   }}
                 >
-                  <ChevronRightRoundedIcon sx={{ fontSize: 16, color: '#71717a' }} />
-                  <Box sx={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#52525b', userSelect: 'none' }}>
+                  <ChevronRightRoundedIcon sx={{ fontSize: 16, color: SUBTLE }} />
+                  <Box sx={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: DIM, userSelect: 'none' }}>
                     Test Runs
                   </Box>
                 </Box>
@@ -577,12 +577,12 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
                   onClick={() => setDiffsCollapsed(false)}
                   sx={{
                     width: 36, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 1.5, gap: 1,
-                    borderRight: '1px solid', borderColor: 'hsl(240 3.7% 15.9%)', bgcolor: 'rgba(9,9,11,.5)',
+                    borderRight: '1px solid', borderColor: BORDER, bgcolor: 'rgba(9,9,11,.5)',
                     cursor: 'pointer', '&:hover': { bgcolor: 'rgba(255,255,255,.03)' }, transition: 'background-color .15s',
                   }}
                 >
-                  <ChevronRightRoundedIcon sx={{ fontSize: 16, color: '#71717a' }} />
-                  <Box sx={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#52525b', userSelect: 'none' }}>
+                  <ChevronRightRoundedIcon sx={{ fontSize: 16, color: SUBTLE }} />
+                  <Box sx={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: DIM, userSelect: 'none' }}>
                     Telas
                   </Box>
                 </Box>

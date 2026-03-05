@@ -23,12 +23,23 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
-const __dirname    = path.dirname(fileURLToPath(import.meta.url));
-const RESULTS_DIR  = path.resolve(__dirname, '..', 'results');
-const BASELINES    = path.resolve(__dirname, '..', 'baselines');
-const CURRENT_DIR  = path.resolve(__dirname, '..', 'results', 'current');
-const REVIEWS_PATH = path.resolve(RESULTS_DIR, 'reviews.json');
-const RESULTS_PATH = path.resolve(RESULTS_DIR, 'results.json');
+/* ---------- Paths (configuráveis via configure()) ---------- */
+let RESULTS_DIR  = path.resolve(process.cwd(), 'results');
+let BASELINES    = path.resolve(process.cwd(), 'baselines');
+let CURRENT_DIR  = path.resolve(RESULTS_DIR, 'current');
+let REVIEWS_PATH = path.resolve(RESULTS_DIR, 'reviews.json');
+let RESULTS_PATH = path.resolve(RESULTS_DIR, 'results.json');
+
+/**
+ * Permite que o servidor (index.js) injete os caminhos corretos.
+ */
+export function configure({ resultsDir, baselinesDir } = {}) {
+  if (resultsDir)   RESULTS_DIR = resultsDir;
+  if (baselinesDir) BASELINES   = baselinesDir;
+  CURRENT_DIR  = path.resolve(RESULTS_DIR, 'current');
+  REVIEWS_PATH = path.resolve(RESULTS_DIR, 'reviews.json');
+  RESULTS_PATH = path.resolve(RESULTS_DIR, 'results.json');
+}
 
 /* ===== Estrutura do reviews.json ===== */
 

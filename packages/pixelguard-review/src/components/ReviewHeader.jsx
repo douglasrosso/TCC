@@ -8,6 +8,7 @@ import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import { BORDER, CARD, FG, MUTED, SUBTLE, STATUS_MAP } from './shared.jsx';
 
 export default function ReviewHeader({
   totalPending,
@@ -27,8 +28,8 @@ export default function ReviewHeader({
       component="header"
       sx={{
         borderBottom: '1px solid',
-        borderColor: 'hsl(240 3.7% 15.9%)',
-        bgcolor: 'hsl(240 10% 3.9%)',
+        borderColor: BORDER,
+        bgcolor: CARD,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -46,7 +47,7 @@ export default function ReviewHeader({
             <IconButton
               size="small"
               onClick={onBack}
-              sx={{ color: '#a1a1aa', '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
+              sx={{ color: MUTED, '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
             >
               <ArrowBackRoundedIcon sx={{ fontSize: 20 }} />
             </IconButton>
@@ -58,7 +59,7 @@ export default function ReviewHeader({
             <IconButton
               size="small"
               onClick={onToggleMenu}
-              sx={{ color: '#a1a1aa', '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
+              sx={{ color: MUTED, '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
             >
               <MenuRoundedIcon sx={{ fontSize: 20 }} />
             </IconButton>
@@ -71,7 +72,7 @@ export default function ReviewHeader({
             sx={{
               fontWeight: 600,
               fontSize: { xs: '0.95rem', sm: '1.05rem' },
-              color: '#fafafa',
+              color: FG,
               letterSpacing: '-0.01em',
             }}
           >
@@ -81,7 +82,7 @@ export default function ReviewHeader({
 
         <Typography
           variant="body2"
-          sx={{ color: '#71717a', ml: 0.5, display: { xs: 'none', md: 'block' } }}
+          sx={{ color: SUBTLE, ml: 0.5, display: { xs: 'none', md: 'block' } }}
         >
           Teste de Regressão Visual
         </Typography>
@@ -97,9 +98,9 @@ export default function ReviewHeader({
             height: 24,
             fontSize: '0.68rem',
             fontWeight: 500,
-            borderColor: totalPending > 0 ? 'rgba(234,179,8,.4)' : 'rgba(34,197,94,.4)',
-            bgcolor: totalPending > 0 ? 'rgba(234,179,8,.1)' : 'rgba(34,197,94,.1)',
-            color: totalPending > 0 ? '#eab308' : '#22c55e',
+            borderColor: totalPending > 0 ? STATUS_MAP.pending.border : STATUS_MAP.approved.border,
+            bgcolor: totalPending > 0 ? STATUS_MAP.pending.bg : STATUS_MAP.approved.bg,
+            color: totalPending > 0 ? STATUS_MAP.pending.color : STATUS_MAP.approved.color,
             '& .MuiChip-label': { px: 1 },
             display: { xs: 'flex', sm: 'none' },
           }}
@@ -111,7 +112,7 @@ export default function ReviewHeader({
             variant="outlined"
             sx={{
               height: 24, fontSize: '0.72rem', fontWeight: 500,
-              borderColor: 'rgba(234,179,8,.4)', bgcolor: 'rgba(234,179,8,.1)', color: '#eab308',
+              borderColor: STATUS_MAP.pending.border, bgcolor: STATUS_MAP.pending.bg, color: STATUS_MAP.pending.color,
               '& .MuiChip-label': { px: 1 },
             }}
           />
@@ -121,7 +122,7 @@ export default function ReviewHeader({
             variant="outlined"
             sx={{
               height: 24, fontSize: '0.72rem', fontWeight: 500,
-              borderColor: 'rgba(34,197,94,.4)', bgcolor: 'rgba(34,197,94,.1)', color: '#22c55e',
+              borderColor: STATUS_MAP.approved.border, bgcolor: STATUS_MAP.approved.bg, color: STATUS_MAP.approved.color,
               '& .MuiChip-label': { px: 1 },
             }}
           />
@@ -131,7 +132,7 @@ export default function ReviewHeader({
             variant="outlined"
             sx={{
               height: 24, fontSize: '0.72rem', fontWeight: 500,
-              borderColor: 'rgba(239,68,68,.4)', bgcolor: 'rgba(239,68,68,.1)', color: '#ef4444',
+              borderColor: STATUS_MAP.rejected.border, bgcolor: STATUS_MAP.rejected.bg, color: STATUS_MAP.rejected.color,
               '& .MuiChip-label': { px: 1 },
             }}
           />
@@ -140,7 +141,7 @@ export default function ReviewHeader({
         <Box
           sx={{
             display: { xs: 'none', lg: 'flex' },
-            alignItems: 'center', gap: 0.75, color: '#71717a',
+            alignItems: 'center', gap: 0.75, color: SUBTLE,
             fontSize: '0.72rem', fontFamily: 'monospace',
           }}
         >
@@ -182,7 +183,7 @@ export default function ReviewHeader({
           <IconButton
             size="small"
             onClick={onReset}
-            sx={{ color: '#71717a', '&:hover': { bgcolor: 'rgba(239,68,68,.1)', color: '#ef4444' } }}
+            sx={{ color: SUBTLE, '&:hover': { bgcolor: 'rgba(239,68,68,.1)', color: '#ef4444' } }}
           >
             <RestartAltRoundedIcon sx={{ fontSize: 20 }} />
           </IconButton>

@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import dotenv        from 'dotenv';
 
 import {
-  loadReviews,
+  configure,
   loadResults,
   getStatus,
   getHistory,
@@ -36,6 +36,9 @@ const DIST_DIR     = path.resolve(PKG_ROOT, 'dist');
 const RESULTS_DIR  = process.env.PIXELGUARD_RESULTS_DIR || path.resolve(process.cwd(), 'results');
 const BASELINES    = process.env.PIXELGUARD_BASELINES_DIR || path.resolve(process.cwd(), 'baselines');
 const CURRENT_DIR  = path.resolve(RESULTS_DIR, 'current');
+
+// Sync paths with review.js so API reads from the correct location
+configure({ resultsDir: RESULTS_DIR, baselinesDir: BASELINES });
 
 /* MIME types */
 const MIME_TYPES = {

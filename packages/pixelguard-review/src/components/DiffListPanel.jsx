@@ -1,6 +1,5 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Chip from '@mui/material/Chip';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
@@ -10,59 +9,13 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import FilterListRoundedIcon from '@mui/icons-material/FilterListRounded';
-import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import MonitorRoundedIcon from '@mui/icons-material/MonitorRounded';
 import SmartphoneRoundedIcon from '@mui/icons-material/SmartphoneRounded';
 import TabletRoundedIcon from '@mui/icons-material/TabletRounded';
 import DevicesRoundedIcon from '@mui/icons-material/DevicesRounded';
-
-import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
-
-/* ---- Shared dark-theme border color ---- */
-const BORDER = 'hsl(240 3.7% 15.9%)';
-
-function StatusIcon({ status }) {
-  if (status === 'approved') {
-    return (
-      <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: 'rgba(34,197,94,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <CheckRoundedIcon sx={{ fontSize: 12, color: '#22c55e' }} />
-      </Box>
-    );
-  }
-  if (status === 'rejected') {
-    return (
-      <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: 'rgba(239,68,68,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <CloseRoundedIcon sx={{ fontSize: 12, color: '#ef4444' }} />
-      </Box>
-    );
-  }
-  return (
-    <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: 'rgba(234,179,8,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <AccessTimeRoundedIcon sx={{ fontSize: 12, color: '#eab308' }} />
-    </Box>
-  );
-}
-
-function TechBadge({ label, percentage, passed }) {
-  const color = passed ? '#22c55e' : percentage > 15 ? '#ef4444' : percentage > 5 ? '#eab308' : '#f97316';
-  return (
-    <Chip
-      label={`${label} ${percentage.toFixed(1)}%`}
-      size="small"
-      variant="outlined"
-      sx={{
-        height: 16,
-        fontSize: '0.55rem',
-        fontWeight: 500,
-        borderColor: BORDER,
-        color,
-        '& .MuiChip-label': { px: 0.5 },
-      }}
-    />
-  );
-}
+import { BORDER, StatusIcon, TechBadge, CollapseButton, PanelHeaderLabel } from './shared.jsx';
 
 function getDeviceLabel(viewport) {
   if (!viewport) return 'Desktop';
@@ -128,7 +81,7 @@ function DiffListItem({ diff, isSelected, onSelect }) {
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
         {diff.techniques.map((t) => (
-          <TechBadge key={t.technique} label={t.label} percentage={t.diffPercentage} passed={t.passed} />
+          <TechBadge key={t.technique} label={t.label} percentage={t.diffPercentage} passed={t.passed} size="sm" />
         ))}
       </Box>
     </Box>
@@ -167,9 +120,7 @@ export default function DiffListPanel({
     >
       {/* Header */}
       <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: BORDER, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Telas ({diffs.length})
-        </Typography>
+        <PanelHeaderLabel>Telas ({diffs.length})</PanelHeaderLabel>
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
           {pendingCount > 0 && (
             <>
@@ -185,13 +136,7 @@ export default function DiffListPanel({
               </Tooltip>
             </>
           )}
-          {onCollapse && (
-            <Tooltip title="Recolher painel">
-              <IconButton size="small" onClick={onCollapse} sx={{ color: '#71717a', width: 22, height: 22, '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}>
-                <ChevronLeftRoundedIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Tooltip>
-          )}
+          {onCollapse && <CollapseButton onClick={onCollapse} />}
         </Box>
       </Box>
 

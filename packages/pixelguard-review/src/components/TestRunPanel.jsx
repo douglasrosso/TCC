@@ -2,13 +2,11 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
-import IconButton from '@mui/material/IconButton';
-import Tooltip from '@mui/material/Tooltip';
 import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import CommitRoundedIcon from '@mui/icons-material/CommitRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
-import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
+import { BORDER, CARD, CollapseButton, PanelHeaderLabel } from './shared.jsx';
 
 function getTimeAgo(timestamp) {
   const now = new Date();
@@ -38,12 +36,12 @@ function TestRunCard({ run, isSelected, onSelect }) {
         p: 2,
         borderRadius: 2,
         border: '1px solid',
-        borderColor: isSelected ? 'rgba(59,130,246,.5)' : 'hsl(240 3.7% 15.9%)',
-        bgcolor: isSelected ? 'rgba(59,130,246,.05)' : 'hsl(240 10% 3.9%)',
+        borderColor: isSelected ? 'rgba(59,130,246,.5)' : BORDER,
+        bgcolor: isSelected ? 'rgba(59,130,246,.05)' : CARD,
         cursor: 'pointer',
         transition: 'all 0.15s',
         '&:hover': {
-          borderColor: isSelected ? 'rgba(59,130,246,.5)' : 'hsl(240 3.7% 15.9%)',
+          borderColor: isSelected ? 'rgba(59,130,246,.5)' : BORDER,
           bgcolor: isSelected ? 'rgba(59,130,246,.05)' : 'rgba(255,255,255,.03)',
         },
         display: 'block',
@@ -131,25 +129,17 @@ export default function TestRunPanel({ testRuns, selectedRunId, onSelectRun, onC
         width: '100%',
         height: '100%',
         borderRight: '1px solid',
-        borderColor: 'hsl(240 3.7% 15.9%)',
+        borderColor: BORDER,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: 'hsl(240 10% 3.9%)',
+        bgcolor: CARD,
         overflow: 'hidden',
       }}
     >
       {/* Header */}
-      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'hsl(240 3.7% 15.9%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography sx={{ fontSize: '0.72rem', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Test Runs
-        </Typography>
-        {onCollapse && (
-          <Tooltip title="Recolher painel">
-            <IconButton size="small" onClick={onCollapse} sx={{ color: '#71717a', width: 22, height: 22, '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}>
-              <ChevronLeftRoundedIcon sx={{ fontSize: 16 }} />
-            </IconButton>
-          </Tooltip>
-        )}
+      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: BORDER, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <PanelHeaderLabel>Test Runs</PanelHeaderLabel>
+        {onCollapse && <CollapseButton onClick={onCollapse} />}
       </Box>
 
       {/* Run list */}
