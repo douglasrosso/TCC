@@ -8,7 +8,38 @@ import Footer from './components/Footer';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
 
+import ScenarioColor from './scenarios/ScenarioColor';
+import ScenarioLayout from './scenarios/ScenarioLayout';
+import ScenarioTypography from './scenarios/ScenarioTypography';
+import ScenarioDynamic from './scenarios/ScenarioDynamic';
+import ScenarioComponent from './scenarios/ScenarioComponent';
+import ScenarioOpacity from './scenarios/ScenarioOpacity';
+import ScenarioShadow from './scenarios/ScenarioShadow';
+import ScenarioMicroShift from './scenarios/ScenarioMicroShift';
+import ScenarioBorder from './scenarios/ScenarioBorder';
+import ScenarioRemoval from './scenarios/ScenarioRemoval';
+import ScenarioFontSwap from './scenarios/ScenarioFontSwap';
+import ScenarioIdentical from './scenarios/ScenarioIdentical';
+
+const SCENARIOS = {
+  '/scenario-color': ScenarioColor,
+  '/scenario-layout': ScenarioLayout,
+  '/scenario-typography': ScenarioTypography,
+  '/scenario-dynamic': ScenarioDynamic,
+  '/scenario-component': ScenarioComponent,
+  '/scenario-opacity': ScenarioOpacity,
+  '/scenario-shadow': ScenarioShadow,
+  '/scenario-microshift': ScenarioMicroShift,
+  '/scenario-border': ScenarioBorder,
+  '/scenario-removal': ScenarioRemoval,
+  '/scenario-fontswap': ScenarioFontSwap,
+  '/scenario-identical': ScenarioIdentical,
+};
+
 export default function App() {
+  const ScenarioPage = SCENARIOS[window.location.pathname];
+  if (ScenarioPage) return <ScenarioPage />;
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
       <NavBar />

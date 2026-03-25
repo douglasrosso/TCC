@@ -98,20 +98,24 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
       let status, results, meta;
       const isStatic = typeof window !== 'undefined' && window.__PIXELGUARD_STATIC__;
 
+      let scenarios = null;
       if (isStatic) {
         const s = window.__PIXELGUARD_STATIC__;
         status = s.status || [];
         results = s.results || { comparisons: [], timestamp: new Date().toISOString() };
         meta = s.meta || null;
+        scenarios = s.scenarios || null;
       } else {
-        const [statusRes, resultsRes, metaRes] = await Promise.all([
+        const [statusRes, resultsRes, metaRes, scenariosRes] = await Promise.all([
           fetch(`${API_BASE}/api/status`),
           fetch(`${API_BASE}/api/results`),
           fetch(`${API_BASE}/api/meta`),
+          fetch(`${API_BASE}/api/scenarios`).catch(() => null),
         ]);
         status = await statusRes.json();
         results = await resultsRes.json();
         meta = await metaRes.json().catch(() => null);
+        scenarios = scenariosRes ? await scenariosRes.json().catch(() => null) : null;
       }
 
       if (meta) setCiMeta(meta);
@@ -180,7 +184,68 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         }
       }
 
-      setTestRuns([run]);
+      /* ---- Scenarios run ---- */
+      const runs = [run];
+
+      if (scenarios?.scenarios?.length) {
+        const techLabels = { pixel: 'Pixel', ssim: 'SSIM', region: 'Região' };
+        const scenarioRun = {
+          id: 'run-scenarios',
+          branch: 'Cenários de Teste',
+          commit: scenarios.timestamp ? scenarios.timestamp.slice(0, 7) : 'local',
+          author: 'scenarios',
+          timestamp: scenarios.timestamp || new Date().toISOString(),
+          totalTests: scenarios.scenarios.length * 3,
+          passed: 0,
+          failed: 0,
+          pending: 0,
+          diffs: [],
+        };
+
+        for (const sc of scenarios.scenarios) {
+          const techniques = [];
+          for (const tech of ['pixel', 'ssim', 'region']) {
+            const r = sc.results[tech];
+            let diffPercentage;
+            if (tech === 'ssim') {
+              diffPercentage = parseFloat(((1 - r.score) * 100).toFixed(2));
+            } else if (tech === 'region') {
+              diffPercentage = r.totalRegions
+                ? parseFloat(((r.failedRegions / r.totalRegions) * 100).toFixed(2))
+                : 0;
+            } else {
+              diffPercentage = parseFloat((r.diffPercent || 0).toFixed(2));
+            }
+            techniques.push({
+              technique: tech,
+              label: techLabels[tech],
+              diffPercentage,
+              passed: r.passed,
+              diffUrl: `${IMG_BASE}/img/scenarios/diff/${tech}/${sc.id}.png`,
+            });
+            if (r.passed) scenarioRun.passed++;
+            else scenarioRun.failed++;
+          }
+
+          scenarioRun.diffs.push({
+            id: `scenario-${sc.id}`,
+            name: sc.name,
+            imageName: sc.id,
+            status: 'pending',
+            viewport: '1366×768',
+            baselineUrl: `${IMG_BASE}/img/scenarios/baseline/${sc.id}.png`,
+            currentUrl: `${IMG_BASE}/img/scenarios/current/${sc.id}.png`,
+            techniques,
+            isScenario: true,
+          });
+
+          scenarioRun.pending++;
+        }
+
+        runs.push(scenarioRun);
+      }
+
+      setTestRuns(runs);
       if (!selectedRunId) setSelectedRunId(run.id);
       setError(null);
     } catch (err) {

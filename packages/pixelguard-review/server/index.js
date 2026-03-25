@@ -36,6 +36,7 @@ const DIST_DIR     = path.resolve(PKG_ROOT, 'dist');
 const RESULTS_DIR  = process.env.PIXELGUARD_RESULTS_DIR || path.resolve(process.cwd(), 'results');
 const BASELINES    = process.env.PIXELGUARD_BASELINES_DIR || path.resolve(process.cwd(), 'baselines');
 const CURRENT_DIR  = path.resolve(RESULTS_DIR, 'current');
+const SCENARIOS_DIR = path.resolve(RESULTS_DIR, 'scenarios');
 
 // Sync paths with review.js so API reads from the correct location
 configure({ resultsDir: RESULTS_DIR, baselinesDir: BASELINES });
@@ -138,6 +139,18 @@ async function handleRequest(req, res) {
     serveImage(res, path.join(RESULTS_DIR, 'diffs', decodeURIComponent(pathname.replace('/img/diff/', ''))));
     return;
   }
+  if (pathname.startsWith('/img/scenarios/baseline/')) {
+    serveImage(res, path.join(SCENARIOS_DIR, 'baseline', decodeURIComponent(pathname.replace('/img/scenarios/baseline/', ''))));
+    return;
+  }
+  if (pathname.startsWith('/img/scenarios/current/')) {
+    serveImage(res, path.join(SCENARIOS_DIR, 'current', decodeURIComponent(pathname.replace('/img/scenarios/current/', ''))));
+    return;
+  }
+  if (pathname.startsWith('/img/scenarios/diff/')) {
+    serveImage(res, path.join(SCENARIOS_DIR, 'diffs', decodeURIComponent(pathname.replace('/img/scenarios/diff/', ''))));
+    return;
+  }
 
   /* ===== API ===== */
   if (pathname === '/api/status' && req.method === 'GET') {
@@ -183,6 +196,16 @@ async function handleRequest(req, res) {
   if (pathname === '/api/results' && req.method === 'GET') {
     const results = loadResults();
     jsonResponse(res, results || { error: 'Nenhum resultado encontrado' });
+    return;
+  }
+
+  if (pathname === '/api/scenarios' && req.method === 'GET') {
+    const scenariosPath = path.join(SCENARIOS_DIR, 'scenarios-results.json');
+    if (fs.existsSync(scenariosPath)) {
+      jsonResponse(res, JSON.parse(fs.readFileSync(scenariosPath, 'utf-8')));
+    } else {
+      jsonResponse(res, { scenarios: [] });
+    }
     return;
   }
 
@@ -279,5 +302,6 @@ server.listen(PORT, () => {
   console.log(`  POST /api/review         → Aprovar/rejeitar arquivo`);
   console.log(`  POST /api/review/all     → Aprovar/rejeitar todos`);
   console.log(`  POST /api/review/reset   → Resetar status`);
+  console.log(`  GET  /api/scenarios       → Resultados dos cenários de teste`);
   console.log(`  POST /api/github/status  → Atualizar GitHub status check\n`);
 });
