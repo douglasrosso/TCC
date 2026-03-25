@@ -26,12 +26,13 @@
 4. [Instalação](#instalação)
 5. [Configuração](#configuração)
 6. [Uso Local](#uso-local)
-7. [Review UI — Guia Completo](#review-ui--guia-completo)
-8. [Relatório HTML](#relatório-html)
-9. [CI/CD — GitHub Actions](#cicd--github-actions)
-10. [Comandos de Referência](#comandos-de-referência)
-11. [Referência de Configuração](#referência-de-configuração)
-12. [Estrutura do Projeto](#estrutura-do-projeto)
+7. [PixelGuard CLI](#pixelguard-cli)
+8. [Review UI — Guia Completo](#review-ui--guia-completo)
+9. [Relatório HTML](#relatório-html)
+10. [CI/CD — GitHub Actions](#cicd--github-actions)
+11. [Comandos de Referência](#comandos-de-referência)
+12. [Referência de Configuração](#referência-de-configuração)
+13. [Estrutura do Projeto](#estrutura-do-projeto)
 
 ---
 
@@ -67,20 +68,19 @@ Captura screenshots → Compara com baselines → Gera relatório → Abre revie
                            │ Playwright captura
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   Pipeline de Testes                        │
-│  tests/capture.js → tests/compare.js → tests/report.js     │
+│              PixelGuard (pacote unificado)                   │
+│           packages/pixelguard/ — CLI + Engine                │
+│                                                             │
+│  src/capture.js → src/compare.js → src/report.js            │
 │                                                             │
 │  Comparadores:                                              │
-│    tests/comparators/pixel.js   (pixelmatch)                │
-│    tests/comparators/ssim.js    (SSIM — implementação)      │
-│    tests/comparators/region.js  (grade + máscaras)          │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ results.json
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  PixelGuard Review UI                       │
-│        packages/pixelguard-review/ — porta 3060             │
-│  Server Node.js + React SPA (dark theme, 3 painéis)        │
+│    src/comparators/pixel.js   (pixelmatch)                  │
+│    src/comparators/ssim.js    (SSIM — implementação)        │
+│    src/comparators/region.js  (grade + máscaras)            │
+│                                                             │
+│  Review UI (embutida):                                      │
+│    review/server/   → HTTP server + REST API (porta 3060)   │
+│    review/dist/     → SPA React pré-buildada                │
 └──────────────────────────┬──────────────────────────────────┘
                            │ GitHub Statuses API
                            ▼
@@ -132,34 +132,55 @@ npx playwright install chromium
 
 ## Configuração
 
-### Arquivo de configuração: `tests/config.js`
+### Arquivo de configuração: `pixelguard.config.js`
 
-Toda a configuração da pipeline está centralizada neste arquivo:
+Toda a configuração da pipeline está centralizada neste arquivo na raiz do projeto. Para criar um novo:
+
+```bash
+npx pixelguard init
+```
+
+Exemplo completo:
 
 ```javascript
-/* Viewports para captura */
-export const viewports = [
-  { name: 'mobile',  width: 360,  height: 640  },
-  { name: 'tablet',  width: 768,  height: 1024 },
-  { name: 'desktop', width: 1366, height: 768  },
-];
+/** @type {import('pixelguard').PixelGuardConfig} */
+export default {
+  // URL base da aplicação (null = auto-start Vite)
+  baseUrl: null,
+  port: 3050,
 
-/* Páginas a capturar */
-export const pages = [
-  { name: 'dashboard', path: '/' },
-];
+  /* Viewports para captura */
+  viewports: [
+    { name: 'mobile',  width: 360,  height: 640  },
+    { name: 'tablet',  width: 768,  height: 1024 },
+    { name: 'desktop', width: 1366, height: 768  },
+  ],
 
-/* Limiares de aceitação por técnica */
-export const thresholds = {
-  pixel:  { tolerance: 0.1, maxDiffPercent: 0.05 },
-  ssim:   { minScore: 0.999, blockSize: 8 },
-  region: { gridCols: 4, gridRows: 6, maxDiffPercent: 1.0 },
+  /* Páginas a capturar */
+  pages: [
+    { name: 'dashboard', path: '/' },
+  ],
+
+  /* Limiares de aceitação por técnica */
+  thresholds: {
+    pixel:  { tolerance: 0.1, maxDiffPercent: 0.1 },
+    ssim:   { minScore: 0.98, blockSize: 8 },
+    region: { gridCols: 4, gridRows: 6, maxDiffPercent: 1.0 },
+  },
+
+  /* Máscaras — células da grade a ignorar (regiões dinâmicas) */
+  masks: [],
+
+  /* Diretórios */
+  baselinesDir: 'baselines',
+  resultsDir: 'results',
+
+  /* Congelar Date/Math.random para determinismo */
+  freeze: true,
+
+  /* Porta da Review UI */
+  reviewPort: 3060,
 };
-
-/* Máscaras — células da grade a ignorar (regiões dinâmicas) */
-export const masks = [
-  // { row: 2, col: 3 },  ← descomente para mascarar
-];
 ```
 
 #### Como adicionar novas páginas
@@ -167,14 +188,21 @@ export const masks = [
 Basta incluir uma entrada no array `pages`:
 
 ```javascript
-export const pages = [
+pages: [
   { name: 'dashboard', path: '/' },
   { name: 'login',     path: '/login' },
   { name: 'settings',  path: '/settings' },
-];
+],
 ```
 
 Cada página será capturada em **todos os viewports**, gerando arquivos como `dashboard-mobile-360w.png`.
+
+#### `baseUrl` — auto-start ou URL externa
+
+| Valor | Comportamento |
+|:------|:--------------|
+| `null` | PixelGuard inicia o Vite automaticamente na `port` configurada, captura, e encerra |
+| `'http://localhost:3000'` | Usa uma URL externa já rodando (útil para Next.js, CRA, etc.) |
 
 #### Como ajustar limiares
 
@@ -192,10 +220,10 @@ Cada página será capturada em **todos os viewports**, gerando arquivos como `d
 Máscaras ignoram células da grade que contêm conteúdo dinâmico (datas, contadores, etc.):
 
 ```javascript
-export const masks = [
+masks: [
   { row: 0, col: 3 },  // Canto superior direito
   { row: 5, col: 0 },  // Canto inferior esquerdo
-];
+],
 ```
 
 > `row` e `col` começam em 0, contados do canto superior esquerdo da grade.
@@ -210,18 +238,26 @@ export const masks = [
 npm run vrt
 ```
 
-Este comando executa tudo em sequência:
+Este comando executa o pipeline completo via `pixelguard test`:
 1. **Captura** screenshots de todas as páginas e viewports
 2. **Compara** com as baselines usando as 3 técnicas
-3. **Gera** o relatório HTML
-4. **Abre** a Review UI no navegador (porta 3060)
+3. **Gera** o relatório HTML em `results/report.html`
+
+### Testar e revisar
+
+```bash
+npm run vrt:review
+```
+
+Executa o pipeline completo e em seguida abre a **Review UI** interativa na porta 3060.
 
 ### Primeiro uso — criar baselines iniciais
 
 Na primeira vez (ou após mudanças visuais intencionais), crie as baselines de referência:
 
 ```bash
-npm run init-baselines
+npx pixelguard capture
+npx pixelguard update-baselines
 ```
 
 Isso captura screenshots e os copia para `baselines/`. Depois, faça commit:
@@ -236,8 +272,8 @@ git commit -m "chore: criar baselines iniciais"
 Quando uma alteração visual é **intencional** (novo tema, nova cor, novo componente), atualize:
 
 ```bash
-npm run capture
-npm run update-baselines
+npx pixelguard capture
+npx pixelguard update-baselines
 git add baselines/
 git commit -m "chore: atualizar baselines"
 ```
@@ -245,10 +281,46 @@ git commit -m "chore: atualizar baselines"
 ### Executar etapas individualmente
 
 ```bash
-npm run capture     # Captura screenshots → results/current/
-npm run compare     # Compara com baselines → results/results.json
-npm run report      # Gera relatório HTML → results/report.html
-npm run review      # Build + start da Review UI → localhost:3060
+npx pixelguard capture     # Captura screenshots → results/current/
+npx pixelguard compare     # Compara com baselines → results/results.json
+npx pixelguard report      # Gera relatório HTML → results/report.html
+npx pixelguard review      # Inicia a Review UI → localhost:3060
+```
+
+---
+
+## PixelGuard CLI
+
+O PixelGuard inclui uma CLI unificada que pode ser usada diretamente via `npx pixelguard` ou através dos scripts do `package.json`:
+
+```bash
+npx pixelguard <command>
+```
+
+| Comando | Descrição |
+|:--------|:----------|
+| `init` | Cria `pixelguard.config.js` no projeto |
+| `capture` | Captura screenshots de todas as páginas/viewports |
+| `compare` | Compara capturas com baselines (3 técnicas) |
+| `report` | Gera relatório HTML em `results/report.html` |
+| `update-baselines` | Copia `results/current/` para `baselines/` |
+| `test` | **Pipeline completo:** capture → compare → report |
+| `review` | Inicia a Review UI interativa (porta 3060) |
+
+Opções:
+
+| Opção | Descrição |
+|:------|:----------|
+| `--help`, `-h` | Mostra ajuda |
+| `--port <n>` | Porta para o servidor de review (padrão: 3060) |
+
+### Usando em outros projetos
+
+```bash
+npm install pixelguard --save-dev
+npx pixelguard init
+# Edite pixelguard.config.js com suas páginas e viewports
+npx pixelguard test
 ```
 
 ---
@@ -260,7 +332,13 @@ A Review UI é uma aplicação React com **tema escuro** que permite analisar di
 ### Abrindo a Review UI
 
 ```bash
-npm run review
+npx pixelguard review
+```
+
+Ou com porta customizada:
+
+```bash
+npx pixelguard review --port 4000
 ```
 
 Acesse: **http://localhost:3060**
@@ -518,33 +596,51 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 
 ## Comandos de Referência
 
+### Scripts npm (específicos do TCC)
+
 | Comando | Descrição |
 |:--------|:----------|
-| `npm run dev` | Inicia o servidor de desenvolvimento da aplicação (porta 3050) |
-| `npm run build` | Build de produção da aplicação |
-| `npm run capture` | Captura screenshots de todas as páginas/viewports |
-| `npm run compare` | Compara capturas com baselines (3 técnicas) |
-| `npm run report` | Gera relatório HTML em `results/report.html` |
-| `npm run vrt` | **Pipeline completo:** capture → compare → report → review UI |
-| `npm run vrt:ci` | Pipeline sem abrir a review UI (usado no CI) |
-| `npm run review` | Build e inicia a Review UI (porta 3060) |
-| `npm run review:build` | Apenas build da Review UI |
-| `npm run review:start` | Apenas inicia o servidor da Review UI |
-| `npm run init-baselines` | Captura + copia para baselines (primeiro uso) |
+| `npm run dev` | Inicia o servidor de desenvolvimento da aplicação de exemplo (porta 3050) |
+| `npm run build` | Build de produção da aplicação de exemplo |
+| `npm run vrt` | **Pipeline completo:** captura → comparação → relatório |
+| `npm run vrt:review` | Pipeline completo + abre Review UI |
 | `npm run update-baselines` | Copia `results/current/` para `baselines/` |
+| `npm run scenarios` | Roda os cenários de teste (mutações controladas) |
+| `npm run review` | Inicia a Review UI (porta 3060) |
+
+### CLI PixelGuard (uso geral)
+
+| Comando | Descrição |
+|:--------|:----------|
+| `npx pixelguard init` | Cria `pixelguard.config.js` |
+| `npx pixelguard capture` | Captura screenshots → `results/current/` |
+| `npx pixelguard compare` | Compara com baselines → `results/results.json` |
+| `npx pixelguard report` | Gera relatório HTML → `results/report.html` |
+| `npx pixelguard test` | Pipeline completo (capture → compare → report) |
+| `npx pixelguard update-baselines` | Copia current/ → baselines/ |
+| `npx pixelguard review` | Inicia Review UI → localhost:3060 |
+| `npx pixelguard review --port 4000` | Review UI em porta customizada |
 
 ---
 
 ## Referência de Configuração
 
-### `tests/config.js`
+### `pixelguard.config.js`
 
-| Export | Tipo | Descrição |
-|:-------|:-----|:----------|
-| `viewports` | `Array<{ name, width, height }>` | Viewports para captura (mobile, tablet, desktop) |
-| `pages` | `Array<{ name, path }>` | Páginas a capturar |
-| `thresholds` | `{ pixel, ssim, region }` | Limiares de aceitação por técnica |
-| `masks` | `Array<{ row, col }>` | Células da grade a ignorar no comparador de regiões |
+| Propriedade | Tipo | Padrão | Descrição |
+|:------------|:-----|:-------|:----------|
+| `baseUrl` | `string \| null` | `null` | URL da aplicação. `null` = auto-start Vite |
+| `port` | `number` | `3050` | Porta para auto-start do Vite |
+| `viewports` | `Array<{ name, width, height }>` | mobile/tablet/desktop | Viewports para captura |
+| `pages` | `Array<{ name, path }>` | `[{ name: 'home', path: '/' }]` | Páginas a capturar |
+| `thresholds.pixel` | `{ tolerance, maxDiffPercent }` | `{ 0.1, 0.1 }` | Limiares do comparador pixel |
+| `thresholds.ssim` | `{ minScore, blockSize }` | `{ 0.98, 8 }` | Limiares do comparador SSIM |
+| `thresholds.region` | `{ gridCols, gridRows, maxDiffPercent }` | `{ 4, 6, 1.0 }` | Limiares do comparador de regiões |
+| `masks` | `Array<{ row, col }>` | `[]` | Células da grade a ignorar |
+| `baselinesDir` | `string` | `'baselines'` | Pasta de baselines (relativa ao cwd) |
+| `resultsDir` | `string` | `'results'` | Pasta de resultados (relativa ao cwd) |
+| `freeze` | `boolean` | `true` | Congela Date/Math.random para determinismo |
+| `reviewPort` | `number` | `3060` | Porta da Review UI |
 
 ### Variáveis de ambiente
 
@@ -565,60 +661,68 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 ## Estrutura do Projeto
 
 ```
-├── baselines/                    # Imagens de referência (commitadas no Git)
-├── results/                      # Saída do pipeline (não commitado)
-│   ├── current/                  #   Screenshots atuais
-│   ├── diffs/                    #   Mapas de diferença
-│   │   ├── pixel/                #     Diff pixel a pixel
-│   │   ├── ssim/                 #     Diff SSIM (heatmap)
-│   │   └── region/               #     Diff por regiões (grade)
-│   ├── results.json              #   Resultados consolidados
-│   └── report.html               #   Relatório HTML
-├── src/                          # Aplicação React (MUI) — o app sendo testado
-│   ├── App.jsx                   #   Componente raiz
-│   ├── main.jsx                  #   Entry point
-│   ├── theme.js                  #   Tema MUI (cores, tipografia)
-│   └── components/               #   Componentes do dashboard
-│       ├── HeroBanner.jsx
-│       ├── StatsGrid.jsx
-│       ├── TransactionsTable.jsx
-│       ├── ActivityFeed.jsx
-│       ├── InfoSidebar.jsx
-│       ├── NavBar.jsx
-│       └── Footer.jsx
-├── tests/                        # Pipeline de testes visuais
-│   ├── capture.js                #   Captura com Playwright
-│   ├── compare.js                #   Orquestrador de comparação
-│   ├── config.js                 #   Configuração central
-│   ├── report.js                 #   Gerador de relatório HTML + deploy
-│   └── comparators/              #   Implementações das 3 técnicas
-│       ├── pixel.js              #     pixelmatch (anti-aliased aware)
-│       ├── ssim.js               #     SSIM (implementação própria)
-│       └── region.js             #     Grade com máscaras
-├── scripts/
-│   └── update-baselines.js       #   Copia current/ → baselines/
+├── pixelguard.config.js              # Configuração do PixelGuard
+├── baselines/                        # Imagens de referência (commitadas no Git)
+├── results/                          # Saída do pipeline (não commitado)
+│   ├── current/                      #   Screenshots atuais
+│   ├── diffs/                        #   Mapas de diferença
+│   │   ├── pixel/                    #     Diff pixel a pixel
+│   │   ├── ssim/                     #     Diff SSIM (heatmap)
+│   │   └── region/                   #     Diff por regiões (grade)
+│   ├── results.json                  #   Resultados consolidados
+│   └── report.html                   #   Relatório HTML
+├── src/                              # Aplicação React de exemplo (dashboard)
+│   ├── App.jsx                       #   Componente raiz
+│   ├── main.jsx                      #   Entry point
+│   ├── theme.js                      #   Tema MUI (cores, tipografia)
+│   ├── components/                   #   Componentes do dashboard
+│   │   ├── HeroBanner.jsx
+│   │   ├── StatsGrid.jsx
+│   │   ├── TransactionsTable.jsx
+│   │   ├── ActivityFeed.jsx
+│   │   ├── InfoSidebar.jsx
+│   │   ├── NavBar.jsx
+│   │   └── Footer.jsx
+│   └── scenarios/                    #   Cenários de mutação para testes
+├── tests/                            # Scripts legados de teste (referência)
+│   ├── scenarios.js                  #   Runner de cenários
+│   ├── config.js                     #   Config legada
+│   └── comparators/                  #   Implementações originais
 ├── packages/
-│   └── pixelguard-review/        # Review UI (pacote independente)
-│       ├── src/                  #   Componentes React da UI
-│       │   ├── ReviewPage.jsx    #     Página principal
-│       │   └── components/       #     Painéis e visualizador
-│       │       ├── ReviewHeader.jsx
-│       │       ├── TestRunPanel.jsx
-│       │       ├── DiffListPanel.jsx
-│       │       ├── DiffViewer.jsx
-│       │       ├── ReviewEmptyState.jsx
-│       │       └── shared.jsx    #     Design tokens e componentes base
-│       ├── server/               #   Servidor Node.js + REST API
-│       │   ├── index.js          #     HTTP server (porta 3060)
-│       │   └── review.js         #     Lógica de approve/reject/reset
-│       └── bin/
-│           └── cli.js            #   CLI
+│   └── pixelguard/                   # Pacote npm reutilizável (CLI + Engine + Review)
+│       ├── bin/
+│       │   └── cli.js                #   CLI unificada
+│       ├── src/                      #   Engine de comparação
+│       │   ├── config.js             #     Loader de pixelguard.config.js
+│       │   ├── capture.js            #     Captura com Playwright
+│       │   ├── compare.js            #     Orquestrador de comparação
+│       │   ├── report.js             #     Gerador de relatório HTML
+│       │   ├── update-baselines.js   #     Copia current → baselines
+│       │   └── comparators/          #     Implementações das 3 técnicas
+│       │       ├── pixel.js          #       pixelmatch (anti-aliased aware)
+│       │       ├── ssim.js           #       SSIM (implementação própria)
+│       │       └── region.js         #       Grade com máscaras
+│       └── review/                   #   Review UI (embutida)
+│           ├── server/               #     Servidor HTTP + REST API
+│           │   ├── index.js          #       Router e servidor (porta 3060)
+│           │   └── review.js         #       Lógica de approve/reject/reset
+│           ├── dist/                 #     SPA React pré-buildada
+│           └── src/                  #     Código-fonte React (para rebuild)
+│               ├── ReviewPage.jsx
+│               └── components/
+│                   ├── ReviewHeader.jsx
+│                   ├── TestRunPanel.jsx
+│                   ├── DiffListPanel.jsx
+│                   ├── DiffViewer.jsx
+│                   ├── ReviewEmptyState.jsx
+│                   └── shared.jsx
 ├── .github/workflows/
-│   ├── visual-regression.yml     # Check visual em PRs
-│   ├── approve-visual.yml        # Comandos via comentário no PR
-│   └── update-baselines.yml      # Atualiza baselines após merge
+│   ├── visual-regression.yml         # Check visual em PRs
+│   ├── approve-visual.yml            # Comandos via comentário no PR
+│   └── update-baselines.yml          # Atualiza baselines após merge
 ├── package.json
-└── vite.config.js
+├── vite.config.js
+└── index.html
 ```
 
 ---

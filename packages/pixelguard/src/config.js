@@ -35,6 +35,9 @@ const DEFAULTS = {
   /** Region masks — cells to ignore. [{row, col}] */
   masks: [],
 
+  /** Which comparators to run. Subset of ['pixel', 'ssim', 'region']. */
+  comparators: ['pixel', 'ssim', 'region'],
+
   /** Directory for baseline images (relative to cwd). */
   baselinesDir: 'baselines',
 
@@ -114,6 +117,9 @@ export default {
 
   // Region masks — cells to skip during region comparison.
   masks: [],
+
+  // Which comparators to run (any combination of 'pixel', 'ssim', 'region').
+  comparators: ['pixel', 'ssim', 'region'],
 
   // Directory paths (relative to project root).
   baselinesDir: 'baselines',
