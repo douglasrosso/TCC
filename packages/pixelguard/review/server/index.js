@@ -74,7 +74,7 @@ function serveIndex(res) {
   const indexPath = path.join(DIST_DIR, 'index.html');
   if (!fs.existsSync(indexPath)) {
     res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Build não encontrado. Execute: npx pixelguard-review build');
+    res.end('Build não encontrado. Execute: npx pixelguard review:build');
     return;
   }
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -291,7 +291,7 @@ const server = http.createServer(handleRequest);
 server.listen(PORT, () => {
   const hasBuild = fs.existsSync(path.join(DIST_DIR, 'index.html'));
   console.log(`\n🔍 PixelGuard Review Server — http://localhost:${PORT}`);
-  if (!hasBuild) console.log(`\n   ⚠️  Build not found in dist/ — run: npx pixelguard-review build`);
+  if (!hasBuild) console.log(`\n   ⚠️  Build not found in dist/ — run: npx pixelguard review:build`);
   console.log(`\n   Results dir: ${RESULTS_DIR}`);
   console.log(`   Baselines:   ${BASELINES}\n`);
   console.log(`API endpoints:`);

@@ -124,40 +124,25 @@ async function main() {
       const portIdx = process.argv.indexOf('--port');
       const port = portIdx !== -1 ? parseInt(process.argv[portIdx + 1], 10) : config.reviewPort;
 
-      // Check if the review dist exists in the sibling package
-      const reviewPkg = path.resolve(PKG_ROOT, '..', 'pixelguard-review');
-      const reviewServer = path.join(reviewPkg, 'server', 'index.js');
+      const reviewServer = path.resolve(PKG_ROOT, 'review', 'server', 'index.js');
 
-      if (fs.existsSync(reviewServer)) {
-        // Use the review package server
-        const { execSync } = await import('node:child_process');
-
-        // Build review UI first
-        try {
-          console.log('Building review UI...');
-          execSync('npx vite build', { cwd: reviewPkg, stdio: 'inherit' });
-        } catch {
-          console.log('Review UI build skipped (already built or not available).');
-        }
-
-        // Start review server
-        console.log(`Starting review server on port ${port}...`);
-        const { spawn } = await import('node:child_process');
-        const child = spawn('node', [reviewServer, '--port', String(port)], {
-          cwd: process.cwd(),
-          stdio: 'inherit',
-          env: {
-            ...process.env,
-            PIXELGUARD_RESULTS_DIR: config.resultsDir,
-            PIXELGUARD_BASELINES_DIR: config.baselinesDir,
-          },
-        });
-        child.on('exit', (code) => process.exit(code || 0));
-      } else {
-        console.log('Review server not found. Install @pixelguard/review for the review UI.');
-        console.log('Or open results/report.html for a static report.');
+      if (!fs.existsSync(reviewServer)) {
+        console.error('Review server not found at:', reviewServer);
         process.exit(1);
       }
+
+      console.log(`Starting review server on port ${port}...`);
+      const { spawn } = await import('node:child_process');
+      const child = spawn('node', [reviewServer, '--port', String(port)], {
+        cwd: process.cwd(),
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          PIXELGUARD_RESULTS_DIR: config.resultsDir,
+          PIXELGUARD_BASELINES_DIR: config.baselinesDir,
+        },
+      });
+      child.on('exit', (code) => process.exit(code || 0));
       break;
     }
 
