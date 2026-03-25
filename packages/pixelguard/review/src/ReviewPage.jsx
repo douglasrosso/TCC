@@ -127,28 +127,23 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         commit: meta?.commitShort || (results?.timestamp ? results.timestamp.slice(0, 7) : 'local'),
         author: meta?.actor || status[0]?.reviewedBy || 'local',
         timestamp: results?.timestamp || new Date().toISOString(),
+        totalTests: (results?.comparisons?.length || 0) * 3,
         passed: 0,
         failed: 0,
         pending: 0,
         diffs: [],
       };
 
-      // Detect which comparators are present from first comparison
-      const enabledTechs = results?.comparisons?.[0]
-        ? Object.keys(results.comparisons[0].results)
-        : ['pixel', 'ssim', 'region'];
-      run.totalTests = (results?.comparisons?.length || 0) * enabledTechs.length;
-
       if (results?.comparisons) {
         const techLabels = { pixel: 'Pixel', ssim: 'SSIM', region: 'Região' };
 
         for (const comp of results.comparisons) {
           const reviewInfo = status.find((s) => s.imageName === comp.imageName);
+          const reviewStatus = reviewInfo?.reviewStatus || 'pending';
 
           const techniques = [];
-          for (const tech of enabledTechs) {
+          for (const tech of ['pixel', 'ssim', 'region']) {
             const r = comp.results[tech];
-            if (!r) continue;
             let diffPercentage;
             if (tech === 'ssim') {
               diffPercentage = parseFloat(((1 - r.score) * 100).toFixed(2));
@@ -161,7 +156,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             }
             techniques.push({
               technique: tech,
-              label: techLabels[tech] || tech,
+              label: techLabels[tech],
               diffPercentage,
               passed: r.passed,
               diffUrl: `${IMG_BASE}/img/diff/${tech}/${comp.imageName}.png`,
@@ -169,9 +164,6 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             if (r.passed) run.passed++;
             else run.failed++;
           }
-
-          const techAllPassed = techniques.length > 0 && techniques.every((t) => t.passed);
-          const reviewStatus = techAllPassed ? 'approved' : (reviewInfo?.reviewStatus || 'pending');
 
           run.diffs.push({
             id: comp.imageName,
@@ -197,16 +189,13 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
 
       if (scenarios?.scenarios?.length) {
         const techLabels = { pixel: 'Pixel', ssim: 'SSIM', region: 'Região' };
-        const scenarioTechs = scenarios.scenarios[0]
-          ? Object.keys(scenarios.scenarios[0].results)
-          : ['pixel', 'ssim', 'region'];
         const scenarioRun = {
           id: 'run-scenarios',
           branch: 'Cenários de Teste',
           commit: scenarios.timestamp ? scenarios.timestamp.slice(0, 7) : 'local',
           author: 'scenarios',
           timestamp: scenarios.timestamp || new Date().toISOString(),
-          totalTests: scenarios.scenarios.length * scenarioTechs.length,
+          totalTests: scenarios.scenarios.length * 3,
           passed: 0,
           failed: 0,
           pending: 0,
@@ -215,9 +204,8 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
 
         for (const sc of scenarios.scenarios) {
           const techniques = [];
-          for (const tech of scenarioTechs) {
+          for (const tech of ['pixel', 'ssim', 'region']) {
             const r = sc.results[tech];
-            if (!r) continue;
             let diffPercentage;
             if (tech === 'ssim') {
               diffPercentage = parseFloat(((1 - r.score) * 100).toFixed(2));
@@ -230,7 +218,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             }
             techniques.push({
               technique: tech,
-              label: techLabels[tech] || tech,
+              label: techLabels[tech],
               diffPercentage,
               passed: r.passed,
               diffUrl: `${IMG_BASE}/img/scenarios/diff/${tech}/${sc.id}.png`,
@@ -239,13 +227,11 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             else scenarioRun.failed++;
           }
 
-          const scenarioAllPassed = techniques.length > 0 && techniques.every((t) => t.passed);
-
           scenarioRun.diffs.push({
             id: `scenario-${sc.id}`,
             name: sc.name,
             imageName: sc.id,
-            status: scenarioAllPassed ? 'approved' : 'pending',
+            status: 'pending',
             viewport: '1366×768',
             baselineUrl: `${IMG_BASE}/img/scenarios/baseline/${sc.id}.png`,
             currentUrl: `${IMG_BASE}/img/scenarios/current/${sc.id}.png`,
@@ -253,7 +239,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             isScenario: true,
           });
 
-          if (!scenarioAllPassed) scenarioRun.pending++;
+          scenarioRun.pending++;
         }
 
         runs.push(scenarioRun);
@@ -501,9 +487,8 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.key === 'ArrowLeft') { e.preventDefault(); handlePrevious(); }
       if (e.key === 'ArrowRight') { e.preventDefault(); handleNext(); }
-      const diffAllPassed = selectedDiff?.techniques?.length > 0 && selectedDiff.techniques.every((t) => t.passed);
-      if ((e.key === 'a' || e.key === 'A') && !e.ctrlKey && !e.metaKey && selectedDiff && !diffAllPassed) { e.preventDefault(); handleApprove(selectedDiff.id); }
-      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && selectedDiff && !diffAllPassed) { e.preventDefault(); handleReject(selectedDiff.id); }
+      if ((e.key === 'a' || e.key === 'A') && !e.ctrlKey && !e.metaKey && selectedDiff) { e.preventDefault(); handleApprove(selectedDiff.id); }
+      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && selectedDiff) { e.preventDefault(); handleReject(selectedDiff.id); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -526,7 +511,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         <Box sx={{ fontSize: '1.2rem', fontWeight: 600 }}>Erro ao conectar à API</Box>
         <Box sx={{ fontSize: '0.85rem' }}>{error}</Box>
         <Box sx={{ fontSize: '0.8rem', color: SUBTLE }}>
-          Execute: npx pixelguard-review (porta 8080)
+          Execute: npx pixelguard-review (porta 3060)
         </Box>
       </Box>
     );
@@ -694,8 +679,6 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             />
           ) : (
             <ReviewEmptyState
-              noDiffs={selectedRun && filteredDiffs.length === 0}
-              hasFilters={search !== '' || statusFilter !== 'all' || viewportFilter !== 'all'}
               onOpenDiffs={isMobile ? () => { setDrawerTab(1); setDrawerOpen(true); } : undefined}
               onOpenRuns={isCompact ? () => { setDrawerTab(0); setDrawerOpen(true); } : undefined}
             />

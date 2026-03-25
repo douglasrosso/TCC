@@ -8,7 +8,6 @@ export { capture }            from './capture.js';
 export { runComparisons }     from './compare.js';
 export { generateReport }     from './report.js';
 export { updateBaselines }    from './update-baselines.js';
-export { buildDeploy }        from './deploy.js';
 export { loadConfig, configTemplate } from './config.js';
 export { compare as pixelCompare }    from './comparators/pixel.js';
 export { compare as ssimCompare }     from './comparators/ssim.js';

@@ -10,8 +10,9 @@
     "vrt:review": "pixelguard test && npm run review",
     "update-baselines": "pixelguard update-baselines",
     "scenarios": "node tests/scenarios.js",
-    "review": "pixelguard review",
-    "deploy": "pixelguard deploy"
+    "review:build": "cd packages/pixelguard-review && npx vite build",
+    "review:start": "node packages/pixelguard-review/server/index.js",
+    "review": "npm run review:build && npm run review:start"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",

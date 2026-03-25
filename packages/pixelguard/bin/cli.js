@@ -11,12 +11,12 @@
  *   npx pixelguard test                    → capture + compare + report (full pipeline)
  *   npx pixelguard review                  → start review UI server
  */
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import fs   from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PKG_ROOT = path.resolve(__dirname, "..");
+const PKG_ROOT  = path.resolve(__dirname, '..');
 
 const command = process.argv[2];
 
@@ -34,87 +34,82 @@ function printHelp() {
     update-baselines   Copy current screenshots to baselines/
     test               Run the full pipeline (capture → compare → report)
     review             Start the review UI server
-    deploy             Build review UI and prepare static deploy folder
 
   Options:
     --help, -h         Show this help message
-    --port <n>         Port for the review server (default: 8080)
-    --build            Force rebuild of the review UI before starting
-    --pr <n>           PR number for deploy folder naming
-    --out <dir>        Output directory for capture / deploy
+    --port <n>         Port for the review server (default: 3060)
+    --out <dir>        Output directory for capture
 `);
 }
 
 async function main() {
-  if (!command || command === "--help" || command === "-h") {
+  if (!command || command === '--help' || command === '-h') {
     printHelp();
     process.exit(0);
   }
 
   switch (command) {
-    case "init": {
-      const { configTemplate } = await import("../src/config.js");
-      const dest = path.join(process.cwd(), "pixelguard.config.js");
+    case 'init': {
+      const { configTemplate } = await import('../src/config.js');
+      const dest = path.join(process.cwd(), 'pixelguard.config.js');
       if (fs.existsSync(dest)) {
-        console.log("pixelguard.config.js already exists.");
+        console.log('pixelguard.config.js already exists.');
         process.exit(0);
       }
       fs.writeFileSync(dest, configTemplate());
-      console.log("Created pixelguard.config.js");
-      console.log(
-        "Edit it to configure your viewports, pages, and thresholds.",
-      );
+      console.log('Created pixelguard.config.js');
+      console.log('Edit it to configure your viewports, pages, and thresholds.');
       break;
     }
 
-    case "capture": {
-      const { capture } = await import("../src/capture.js");
-      const outIdx = process.argv.indexOf("--out");
+    case 'capture': {
+      const { capture } = await import('../src/capture.js');
+      const outIdx = process.argv.indexOf('--out');
       const outDir = outIdx !== -1 ? process.argv[outIdx + 1] : undefined;
       const files = await capture({ outDir });
       console.log(`\nCapturas concluidas (${files.length} imagens):`);
-      files.forEach((f) => console.log("  " + path.basename(f)));
+      files.forEach((f) => console.log('  ' + path.basename(f)));
       break;
     }
 
-    case "compare": {
-      const { runComparisons } = await import("../src/compare.js");
+    case 'compare': {
+      const { runComparisons } = await import('../src/compare.js');
       await runComparisons();
       break;
     }
 
-    case "report": {
-      const { generateReport } = await import("../src/report.js");
+    case 'report': {
+      const { generateReport } = await import('../src/report.js');
       await generateReport();
       break;
     }
 
-    case "update-baselines": {
-      const { updateBaselines } = await import("../src/update-baselines.js");
+    case 'update-baselines': {
+      const { updateBaselines } = await import('../src/update-baselines.js');
       await updateBaselines();
       break;
     }
 
-    case "test": {
-      console.log("=== PixelGuard: Full pipeline ===\n");
+    case 'test': {
+      console.log('=== PixelGuard: Full pipeline ===\n');
 
-      console.log("1/3 Capturing screenshots...");
-      const { capture } = await import("../src/capture.js");
-      const { loadConfig } = await import("../src/config.js");
+      console.log('1/3 Capturing screenshots...');
+      const { capture } = await import('../src/capture.js');
+      const { loadConfig } = await import('../src/config.js');
       const config = await loadConfig();
 
       const files = await capture({ config });
       console.log(`    ${files.length} screenshots captured.\n`);
 
-      console.log("2/3 Running comparisons...");
-      const { runComparisons } = await import("../src/compare.js");
+      console.log('2/3 Running comparisons...');
+      const { runComparisons } = await import('../src/compare.js');
       const results = await runComparisons({ config });
 
-      console.log("\n3/3 Generating report...");
-      const { generateReport } = await import("../src/report.js");
+      console.log('\n3/3 Generating report...');
+      const { generateReport } = await import('../src/report.js');
       await generateReport({ config });
 
-      console.log("\nDone! Open results/report.html to see your report.");
+      console.log('\nDone! Open results/report.html to see your report.');
 
       if (results.summary.failed > 0) {
         console.log(`\n${results.summary.failed} comparison(s) failed.`);
@@ -123,55 +118,46 @@ async function main() {
       break;
     }
 
-    case "deploy": {
-      const { buildDeploy } = await import("../src/deploy.js");
-      const prIdx = process.argv.indexOf("--pr");
-      const prNumber = prIdx !== -1 ? process.argv[prIdx + 1] : "0";
-      const outIdx = process.argv.indexOf("--out");
-      const outDir = outIdx !== -1 ? process.argv[outIdx + 1] : undefined;
-      await buildDeploy({ prNumber, outDir });
-      break;
-    }
-
-    case "review": {
-      const { loadConfig } = await import("../src/config.js");
+    case 'review': {
+      const { loadConfig } = await import('../src/config.js');
       const config = await loadConfig();
-      const portIdx = process.argv.indexOf("--port");
-      const port =
-        portIdx !== -1
-          ? parseInt(process.argv[portIdx + 1], 10)
-          : config.reviewPort;
+      const portIdx = process.argv.indexOf('--port');
+      const port = portIdx !== -1 ? parseInt(process.argv[portIdx + 1], 10) : config.reviewPort;
 
-      const reviewDir = path.resolve(PKG_ROOT, "review");
-      const reviewDist = path.resolve(reviewDir, "dist");
-      const reviewServer = path.resolve(reviewDir, "server", "index.js");
+      // Check if the review dist exists in the sibling package
+      const reviewPkg = path.resolve(PKG_ROOT, '..', 'pixelguard-review');
+      const reviewServer = path.join(reviewPkg, 'server', 'index.js');
 
-      if (!fs.existsSync(reviewServer)) {
-        console.error("Review server not found at:", reviewServer);
+      if (fs.existsSync(reviewServer)) {
+        // Use the review package server
+        const { execSync } = await import('node:child_process');
+
+        // Build review UI first
+        try {
+          console.log('Building review UI...');
+          execSync('npx vite build', { cwd: reviewPkg, stdio: 'inherit' });
+        } catch {
+          console.log('Review UI build skipped (already built or not available).');
+        }
+
+        // Start review server
+        console.log(`Starting review server on port ${port}...`);
+        const { spawn } = await import('node:child_process');
+        const child = spawn('node', [reviewServer, '--port', String(port)], {
+          cwd: process.cwd(),
+          stdio: 'inherit',
+          env: {
+            ...process.env,
+            PIXELGUARD_RESULTS_DIR: config.resultsDir,
+            PIXELGUARD_BASELINES_DIR: config.baselinesDir,
+          },
+        });
+        child.on('exit', (code) => process.exit(code || 0));
+      } else {
+        console.log('Review server not found. Install @pixelguard/review for the review UI.');
+        console.log('Or open results/report.html for a static report.');
         process.exit(1);
       }
-
-      // Auto-build review UI if dist/ is missing, or --build flag is passed
-      const distIndex = path.resolve(reviewDist, "index.html");
-      const forceBuild = process.argv.includes("--build");
-      if (forceBuild || !fs.existsSync(distIndex)) {
-        console.log("Building review UI...");
-        const { execSync } = await import("node:child_process");
-        execSync("npx vite build", { cwd: reviewDir, stdio: "inherit" });
-      }
-
-      console.log(`Starting review server on port ${port}...`);
-      const { spawn } = await import("node:child_process");
-      const child = spawn("node", [reviewServer, "--port", String(port)], {
-        cwd: process.cwd(),
-        stdio: "inherit",
-        env: {
-          ...process.env,
-          PIXELGUARD_RESULTS_DIR: config.resultsDir,
-          PIXELGUARD_BASELINES_DIR: config.baselinesDir,
-        },
-      });
-      child.on("exit", (code) => process.exit(code || 0));
       break;
     }
 

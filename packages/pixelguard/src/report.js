@@ -70,10 +70,9 @@ function generateCIReport(data, meta = null) {
   }
 
   html += `<div class="summary-grid">`;
-  const techLabels = { pixel: 'Pixel a Pixel', ssim: 'SSIM (Perceptual)', region: 'Regiões' };
-  for (const tech of Object.keys(summary.techniques)) {
+  for (const tech of ['pixel', 'ssim', 'region']) {
     const t = summary.techniques[tech];
-    const label = techLabels[tech] || tech;
+    const label = { pixel: 'Pixel a Pixel', ssim: 'SSIM (Perceptual)', region: 'Regiões' }[tech];
     html += `<div class="summary-card">
       <h3>${label}</h3>
       <span class="big-number ${t.failed ? 'fail' : 'pass'}">${t.failed === 0 ? 'OK' : t.failed + ' FAIL'}</span>
@@ -83,40 +82,37 @@ function generateCIReport(data, meta = null) {
   html += `</div>`;
 
   html += `<h2>Resumo por Imagem</h2>`;
-  const enabledTechs = Object.keys(summary.techniques);
-  const thLabels = { pixel: 'Pixel (%diff)', ssim: 'SSIM (score)', region: 'Região (falhas)' };
   html += `<table><thead><tr>
     <th>Imagem</th>
-    ${enabledTechs.map(t => `<th>${thLabels[t] || t}</th>`).join('')}
+    <th>Pixel (%diff)</th><th>SSIM (score)</th><th>Região (falhas)</th>
   </tr></thead><tbody>`;
 
   for (const c of comparisons) {
-    html += `<tr><td>${c.imageName}</td>`;
-    for (const t of enabledTechs) {
-      const r = c.results[t];
-      if (!r) { html += `<td>—</td>`; continue; }
-      if (t === 'pixel') html += `<td class="${r.passed ? 'pass' : 'fail'}">${r.passed ? 'OK' : 'FAIL'} ${r.diffPercent}%</td>`;
-      else if (t === 'ssim') html += `<td class="${r.passed ? 'pass' : 'fail'}">${r.passed ? 'OK' : 'FAIL'} ${r.score}</td>`;
-      else if (t === 'region') html += `<td class="${r.passed ? 'pass' : 'fail'}">${r.passed ? 'OK' : 'FAIL'} ${r.failedRegions}/${r.totalRegions}</td>`;
-      else html += `<td class="${r.passed ? 'pass' : 'fail'}">${r.passed ? 'OK' : 'FAIL'}</td>`;
-    }
-    html += `</tr>`;
+    const p = c.results.pixel;
+    const s = c.results.ssim;
+    const r = c.results.region;
+    html += `<tr>
+      <td>${c.imageName}</td>
+      <td class="${p.passed ? 'pass' : 'fail'}">${p.passed ? 'OK' : 'FAIL'} ${p.diffPercent}%</td>
+      <td class="${s.passed ? 'pass' : 'fail'}">${s.passed ? 'OK' : 'FAIL'} ${s.score}</td>
+      <td class="${r.passed ? 'pass' : 'fail'}">${r.passed ? 'OK' : 'FAIL'} ${r.failedRegions}/${r.totalRegions}</td>
+    </tr>`;
   }
   html += `</tbody></table>`;
 
   html += `<h2>Comparações Visuais</h2>`;
   for (const c of comparisons) {
-    const anyFailed = Object.values(c.results).some((r) => !r.passed);
+    const anyFailed = !c.results.pixel.passed || !c.results.ssim.passed || !c.results.region.passed;
     html += `<div class="comparison-block">`;
     html += `<h3>${c.imageName} <span class="badge ${anyFailed ? 'fail' : 'pass'}">${anyFailed ? 'DIFERENÇA' : 'OK'}</span></h3>`;
     html += `<div class="images">`;
     html += `<figure><img src="baselines/${c.imageName}.png" alt="Baseline"><figcaption>Baseline</figcaption></figure>`;
     html += `<figure><img src="current/${c.imageName}.png" alt="Atual"><figcaption>Atual</figcaption></figure>`;
-    for (const tech of enabledTechs) {
+    for (const tech of ['pixel', 'ssim', 'region']) {
       const r = c.results[tech];
-      if (r && r.diffImagePath) {
+      if (r.diffImagePath) {
         const rel = `diffs/${tech}/${c.imageName}.png`;
-        const label = { pixel: 'Diff Pixel', ssim: 'Diff SSIM', region: 'Diff Região' }[tech] || `Diff ${tech}`;
+        const label = { pixel: 'Diff Pixel', ssim: 'Diff SSIM', region: 'Diff Região' }[tech];
         html += `<figure><img src="${rel}" alt="${label}"><figcaption>${label}</figcaption></figure>`;
       }
     }

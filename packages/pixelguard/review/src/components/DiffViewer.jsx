@@ -194,6 +194,172 @@ function FullscreenViewer({ open, onClose, src, label }) {
   );
 }
 
+/* ---------- Fullscreen Viewer ---------- */
+function FullscreenViewer({ open, onClose, src, label }) {
+  const [fsZoom, setFsZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const isPanning = useRef(false);
+  const lastMouse = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (open) {
+      setFsZoom(1);
+      setPan({ x: 0, y: 0 });
+    }
+  }, [open, src]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === '+' || e.key === '=') setFsZoom((z) => Math.min(5, z + 0.25));
+      if (e.key === '-') setFsZoom((z) => Math.max(0.25, z - 0.25));
+      if (e.key === '0') { setFsZoom(1); setPan({ x: 0, y: 0 }); }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [open, onClose]);
+
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    setFsZoom((z) => {
+      const delta = e.deltaY > 0 ? -0.15 : 0.15;
+      return Math.max(0.25, Math.min(5, z + delta));
+    });
+  }, []);
+
+  const handlePointerDown = useCallback((e) => {
+    if (e.button !== 0) return;
+    isPanning.current = true;
+    lastMouse.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const handlePointerMove = useCallback((e) => {
+    if (!isPanning.current) return;
+    const dx = e.clientX - lastMouse.current.x;
+    const dy = e.clientY - lastMouse.current.y;
+    lastMouse.current = { x: e.clientX, y: e.clientY };
+    setPan((p) => ({ x: p.x + dx, y: p.y + dy }));
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    isPanning.current = false;
+  }, []);
+
+  if (!open) return null;
+
+  return (
+    <Modal open={open} onClose={onClose} sx={{ zIndex: 1400 }}>
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          bgcolor: 'rgba(0,0,0,.92)',
+          display: 'flex',
+          flexDirection: 'column',
+          outline: 'none',
+        }}
+      >
+        {/* Toolbar */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 2,
+            py: 1,
+            bgcolor: 'rgba(0,0,0,.6)',
+            backdropFilter: 'blur(8px)',
+            borderBottom: '1px solid rgba(255,255,255,.1)',
+            flexShrink: 0,
+            zIndex: 10,
+          }}
+        >
+          <Typography sx={{ color: '#fafafa', fontSize: '0.85rem', fontWeight: 500 }}>
+            {label}
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Tooltip title="Diminuir zoom (-)">
+              <IconButton
+                size="small"
+                onClick={() => setFsZoom((z) => Math.max(0.25, z - 0.25))}
+                sx={{ color: '#fafafa', '&:hover': { bgcolor: 'rgba(255,255,255,.1)' } }}
+              >
+                <ZoomOutRoundedIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Tooltip>
+            <Typography sx={{ fontFamily: 'monospace', color: '#a1a1aa', fontSize: '0.8rem', minWidth: 50, textAlign: 'center' }}>
+              {Math.round(fsZoom * 100)}%
+            </Typography>
+            <Tooltip title="Aumentar zoom (+)">
+              <IconButton
+                size="small"
+                onClick={() => setFsZoom((z) => Math.min(5, z + 0.25))}
+                sx={{ color: '#fafafa', '&:hover': { bgcolor: 'rgba(255,255,255,.1)' } }}
+              >
+                <ZoomInRoundedIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Resetar (0)">
+              <IconButton
+                size="small"
+                onClick={() => { setFsZoom(1); setPan({ x: 0, y: 0 }); }}
+                sx={{ color: '#fafafa', '&:hover': { bgcolor: 'rgba(255,255,255,.1)' } }}
+              >
+                <RestartAltRoundedIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Tooltip>
+            <Box sx={{ width: '1px', height: 20, bgcolor: 'rgba(255,255,255,.15)', mx: 0.5 }} />
+            <Tooltip title="Fechar (Esc)">
+              <IconButton
+                size="small"
+                onClick={onClose}
+                sx={{ color: '#fafafa', '&:hover': { bgcolor: 'rgba(255,255,255,.1)' } }}
+              >
+                <CloseRoundedIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {/* Image area */}
+        <Box
+          onWheel={handleWheel}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          sx={{
+            flex: 1,
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: fsZoom > 1 ? 'grab' : 'zoom-in',
+            '&:active': { cursor: fsZoom > 1 ? 'grabbing' : 'zoom-in' },
+          }}
+        >
+          <Box
+            component="img"
+            src={src}
+            alt={label}
+            draggable={false}
+            sx={{
+              maxWidth: fsZoom <= 1 ? '90vw' : 'none',
+              maxHeight: fsZoom <= 1 ? '85vh' : 'none',
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${fsZoom})`,
+              transformOrigin: 'center center',
+              transition: isPanning.current ? 'none' : 'transform 0.15s ease',
+              userSelect: 'none',
+              pointerEvents: 'none',
+            }}
+          />
+        </Box>
+      </Box>
+    </Modal>
+  );
+}
+
 /* ---------- Screenshot component ---------- */
 function ScreenshotImage({ src, label, zoom }) {
   const [fullscreen, setFullscreen] = useState(false);
