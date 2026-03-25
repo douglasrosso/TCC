@@ -26,6 +26,10 @@ export async function runComparisons(options = {}) {
   const CURRENT_DIR = path.join(config.resultsDir, 'current');
   const RESULTS_DIR = config.resultsDir;
   const { thresholds, masks } = config;
+  const enabledComparators = config.comparators || ['pixel', 'ssim', 'region'];
+  const usePixel  = enabledComparators.includes('pixel');
+  const useSSIM   = enabledComparators.includes('ssim');
+  const useRegion = enabledComparators.includes('region');
 
   const baselineFiles = fs.existsSync(BASELINES)
     ? fs.readdirSync(BASELINES).filter((f) => f.endsWith('.png'))
@@ -57,53 +61,58 @@ export async function runComparisons(options = {}) {
     const name = file.replace('.png', '');
     console.log(`  Comparando: ${name}`);
 
-    const diffPixel  = path.join(RESULTS_DIR, 'diffs', 'pixel',  file);
-    const diffSSIM   = path.join(RESULTS_DIR, 'diffs', 'ssim',   file);
-    const diffRegion = path.join(RESULTS_DIR, 'diffs', 'region', file);
+    const promises = [];
+    const labels   = [];
 
-    const [pixel, ssim, region] = await Promise.all([
-      pixelCompare(baselinePath, currentPath, {
-        ...thresholds.pixel,
-        diffPath: diffPixel,
-      }),
-      ssimCompare(baselinePath, currentPath, {
-        ...thresholds.ssim,
-        diffPath: diffSSIM,
-      }),
-      regionCompare(baselinePath, currentPath, {
-        ...thresholds.region,
-        masks,
-        diffPath: diffRegion,
-      }),
-    ]);
+    if (usePixel) {
+      const diffPixel = path.join(RESULTS_DIR, 'diffs', 'pixel', file);
+      promises.push(pixelCompare(baselinePath, currentPath, { ...thresholds.pixel, diffPath: diffPixel }));
+      labels.push('pixel');
+    }
+    if (useSSIM) {
+      const diffSSIM = path.join(RESULTS_DIR, 'diffs', 'ssim', file);
+      promises.push(ssimCompare(baselinePath, currentPath, { ...thresholds.ssim, diffPath: diffSSIM }));
+      labels.push('ssim');
+    }
+    if (useRegion) {
+      const diffRegion = path.join(RESULTS_DIR, 'diffs', 'region', file);
+      promises.push(regionCompare(baselinePath, currentPath, { ...thresholds.region, masks, diffPath: diffRegion }));
+      labels.push('region');
+    }
 
-    const anyFailed = !pixel.passed || !ssim.passed || !region.passed;
+    const settled = await Promise.all(promises);
+    const results = {};
+    labels.forEach((l, i) => { results[l] = settled[i]; });
+
+    const anyFailed = Object.values(results).some((r) => !r.passed);
     if (anyFailed) totalFailed++;
 
-    comparisons.push({ imageName: name, results: { pixel, ssim, region } });
+    comparisons.push({ imageName: name, results });
 
     const tag = (r) => r.passed ? 'OK' : 'FAIL';
-    console.log(
-      `    pixel: ${tag(pixel)} (${pixel.diffPercent}%)  ` +
-      `ssim: ${tag(ssim)} (${ssim.score})  ` +
-      `region: ${tag(region)} (${region.failedRegions}/${region.totalRegions} falhas)`,
-    );
+    const parts = [];
+    if (results.pixel)  parts.push(`pixel: ${tag(results.pixel)} (${results.pixel.diffPercent}%)`);
+    if (results.ssim)   parts.push(`ssim: ${tag(results.ssim)} (${results.ssim.score})`);
+    if (results.region) parts.push(`region: ${tag(results.region)} (${results.region.failedRegions}/${results.region.totalRegions} falhas)`);
+    console.log(`    ${parts.join('  ')}`);
   }
 
   const summary = {
     totalComparisons: comparisons.length,
     passed: comparisons.length - totalFailed,
     failed: totalFailed,
-    techniques: {
-      pixel:  { passed: 0, failed: 0 },
-      ssim:   { passed: 0, failed: 0 },
-      region: { passed: 0, failed: 0 },
-    },
+    techniques: {},
   };
 
+  for (const t of enabledComparators) {
+    summary.techniques[t] = { passed: 0, failed: 0 };
+  }
+
   for (const c of comparisons) {
-    for (const t of ['pixel', 'ssim', 'region']) {
-      c.results[t].passed ? summary.techniques[t].passed++ : summary.techniques[t].failed++;
+    for (const t of enabledComparators) {
+      if (c.results[t]) {
+        c.results[t].passed ? summary.techniques[t].passed++ : summary.techniques[t].failed++;
+      }
     }
   }
 
@@ -119,9 +128,10 @@ export async function runComparisons(options = {}) {
 
   console.log('\n=== Resumo ===');
   console.log(`  Total: ${summary.totalComparisons}   OK: ${summary.passed}   FAIL: ${summary.failed}`);
-  console.log(`  Pixel : ${summary.techniques.pixel.passed} OK / ${summary.techniques.pixel.failed} FAIL`);
-  console.log(`  SSIM  : ${summary.techniques.ssim.passed} OK / ${summary.techniques.ssim.failed} FAIL`);
-  console.log(`  Region: ${summary.techniques.region.passed} OK / ${summary.techniques.region.failed} FAIL`);
+  for (const t of enabledComparators) {
+    const s = summary.techniques[t];
+    console.log(`  ${t.padEnd(6)}: ${s.passed} OK / ${s.failed} FAIL`);
+  }
 
   return output;
 }

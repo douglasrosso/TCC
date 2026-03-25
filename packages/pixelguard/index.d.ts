@@ -55,7 +55,7 @@ export interface Mask {
   col: number;
 }
 
-export type Comparator = "pixel" | "ssim" | "region";
+export type Comparator = 'pixel' | 'ssim' | 'region';
 
 export interface PixelGuardConfig {
   /**
@@ -67,7 +67,7 @@ export interface PixelGuardConfig {
 
   /**
    * Porta do servidor Vite (usado apenas quando `baseUrl` é `null`).
-   * @default 8000
+   * @default 3050
    */
   port?: number;
 
@@ -123,7 +123,7 @@ export interface PixelGuardConfig {
 
   /**
    * Porta do servidor da Review UI.
-   * @default 8080
+   * @default 3060
    */
   reviewPort?: number;
 }
@@ -132,37 +132,11 @@ export interface PixelGuardConfig {
 
 export function loadConfig(): Promise<PixelGuardConfig>;
 export function configTemplate(): string;
-export function capture(options?: {
-  config?: PixelGuardConfig;
-  outDir?: string;
-}): Promise<string[]>;
-export function runComparisons(options?: {
-  config?: PixelGuardConfig;
-}): Promise<object>;
-export function generateReport(options?: {
-  config?: PixelGuardConfig;
-}): Promise<string>;
-export function updateBaselines(options?: {
-  config?: PixelGuardConfig;
-}): Promise<void>;
-export function buildDeploy(options?: {
-  prNumber?: string;
-  outDir?: string;
-  config?: PixelGuardConfig;
-}): Promise<void>;
+export function capture(options?: { config?: PixelGuardConfig; outDir?: string }): Promise<string[]>;
+export function runComparisons(options?: { config?: PixelGuardConfig }): Promise<object>;
+export function generateReport(options?: { config?: PixelGuardConfig }): Promise<string>;
+export function updateBaselines(options?: { config?: PixelGuardConfig }): Promise<void>;
 
-export function pixelCompare(
-  baseline: string,
-  current: string,
-  options?: PixelThresholds & { diffPath?: string },
-): Promise<object>;
-export function ssimCompare(
-  baseline: string,
-  current: string,
-  options?: SSIMThresholds & { diffPath?: string },
-): Promise<object>;
-export function regionCompare(
-  baseline: string,
-  current: string,
-  options?: RegionThresholds & { masks?: Mask[]; diffPath?: string },
-): Promise<object>;
+export function pixelCompare(baseline: string, current: string, options?: PixelThresholds & { diffPath?: string }): Promise<object>;
+export function ssimCompare(baseline: string, current: string, options?: SSIMThresholds & { diffPath?: string }): Promise<object>;
+export function regionCompare(baseline: string, current: string, options?: RegionThresholds & { masks?: Mask[]; diffPath?: string }): Promise<object>;

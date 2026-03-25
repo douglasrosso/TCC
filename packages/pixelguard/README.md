@@ -68,9 +68,18 @@ export default {
   // Region masks — grid cells to skip.
   masks: [],
 
+  // Which comparators to run (any combination of 'pixel', 'ssim', 'region').
+  comparators: ['pixel', 'ssim', 'region'],
+
   // Output directories (relative to project root).
   baselinesDir: 'baselines',
   resultsDir: 'results',
+
+  // Freeze Date and Math.random for deterministic captures.
+  freeze: true,
+
+  // Review UI server port.
+  reviewPort: 3060,
 };
 ```
 

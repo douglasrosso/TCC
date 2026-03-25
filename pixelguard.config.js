@@ -22,6 +22,9 @@ export default {
 
   masks: [],
 
+  // Comparators to run (any combination of 'pixel', 'ssim', 'region')
+  comparators: ['pixel', 'ssim', 'region'],
+
   baselinesDir: 'baselines',
   resultsDir: 'results',
 

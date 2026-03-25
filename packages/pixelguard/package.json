@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Visual regression testing with pixel, SSIM, and region comparison techniques",
   "type": "module",
+  "types": "./index.d.ts",
   "bin": {
     "pixelguard": "./bin/cli.js"
   },
@@ -21,6 +22,7 @@
     "bin/",
     "src/",
     "review/",
+    "index.d.ts",
     "README.md"
   ],
   "dependencies": {
