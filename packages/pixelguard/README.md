@@ -32,6 +32,16 @@ npx pixelguard test
 | `npx pixelguard update-baselines` | Copy current screenshots to baselines/        |
 | `npx pixelguard test`             | Full pipeline: capture → compare → report     |
 | `npx pixelguard review`           | Start the review UI server                    |
+| `npx pixelguard deploy`           | Build review UI and prepare static deploy     |
+
+### Options
+
+| Option | Description |
+| ------ | ----------- |
+| `--help`, `-h` | Show help message |
+| `--port <n>` | Port for the review server (default: 8080) |
+| `--build` | Force rebuild of the review UI before starting |
+| `--pr <n>` | PR number for deploy folder naming |
 
 ## Configuration
 
@@ -90,6 +100,7 @@ import {
   capture,
   runComparisons,
   generateReport,
+  updateBaselines,
   loadConfig,
 } from "pixelguard";
 
@@ -97,6 +108,7 @@ const config = await loadConfig();
 await capture({ config });
 const results = await runComparisons({ config });
 await generateReport({ config });
+await updateBaselines({ config });
 ```
 
 ### Comparators

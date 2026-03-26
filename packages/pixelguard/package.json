@@ -12,6 +12,7 @@
     "./capture": "./src/capture.js",
     "./compare": "./src/compare.js",
     "./report": "./src/report.js",
+    "./deploy": "./src/deploy.js",
     "./comparators/pixel": "./src/comparators/pixel.js",
     "./comparators/ssim": "./src/comparators/ssim.js",
     "./comparators/region": "./src/comparators/region.js",

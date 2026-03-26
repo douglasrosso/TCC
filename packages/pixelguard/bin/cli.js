@@ -34,11 +34,14 @@ function printHelp() {
     update-baselines   Copy current screenshots to baselines/
     test               Run the full pipeline (capture → compare → report)
     review             Start the review UI server
+    deploy             Build review UI and prepare static deploy folder
 
   Options:
     --help, -h         Show this help message
     --port <n>         Port for the review server (default: 8080)
-    --out <dir>        Output directory for capture
+    --build            Force rebuild of the review UI before starting
+    --pr <n>           PR number for deploy folder naming
+    --out <dir>        Output directory for capture / deploy
 `);
 }
 
@@ -120,6 +123,16 @@ async function main() {
       break;
     }
 
+    case "deploy": {
+      const { buildDeploy } = await import("../src/deploy.js");
+      const prIdx = process.argv.indexOf("--pr");
+      const prNumber = prIdx !== -1 ? process.argv[prIdx + 1] : "0";
+      const outIdx = process.argv.indexOf("--out");
+      const outDir = outIdx !== -1 ? process.argv[outIdx + 1] : undefined;
+      await buildDeploy({ prNumber, outDir });
+      break;
+    }
+
     case "review": {
       const { loadConfig } = await import("../src/config.js");
       const config = await loadConfig();
@@ -129,16 +142,22 @@ async function main() {
           ? parseInt(process.argv[portIdx + 1], 10)
           : config.reviewPort;
 
-      const reviewServer = path.resolve(
-        PKG_ROOT,
-        "review",
-        "server",
-        "index.js",
-      );
+      const reviewDir = path.resolve(PKG_ROOT, "review");
+      const reviewDist = path.resolve(reviewDir, "dist");
+      const reviewServer = path.resolve(reviewDir, "server", "index.js");
 
       if (!fs.existsSync(reviewServer)) {
         console.error("Review server not found at:", reviewServer);
         process.exit(1);
+      }
+
+      // Auto-build review UI if dist/ is missing, or --build flag is passed
+      const distIndex = path.resolve(reviewDist, "index.html");
+      const forceBuild = process.argv.includes("--build");
+      if (forceBuild || !fs.existsSync(distIndex)) {
+        console.log("Building review UI...");
+        const { execSync } = await import("node:child_process");
+        execSync("npx vite build", { cwd: reviewDir, stdio: "inherit" });
       }
 
       console.log(`Starting review server on port ${port}...`);

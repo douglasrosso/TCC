@@ -144,7 +144,6 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
 
         for (const comp of results.comparisons) {
           const reviewInfo = status.find((s) => s.imageName === comp.imageName);
-          const reviewStatus = reviewInfo?.reviewStatus || 'pending';
 
           const techniques = [];
           for (const tech of enabledTechs) {
@@ -170,6 +169,9 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             if (r.passed) run.passed++;
             else run.failed++;
           }
+
+          const techAllPassed = techniques.length > 0 && techniques.every((t) => t.passed);
+          const reviewStatus = techAllPassed ? 'approved' : (reviewInfo?.reviewStatus || 'pending');
 
           run.diffs.push({
             id: comp.imageName,
@@ -237,11 +239,13 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             else scenarioRun.failed++;
           }
 
+          const scenarioAllPassed = techniques.length > 0 && techniques.every((t) => t.passed);
+
           scenarioRun.diffs.push({
             id: `scenario-${sc.id}`,
             name: sc.name,
             imageName: sc.id,
-            status: 'pending',
+            status: scenarioAllPassed ? 'approved' : 'pending',
             viewport: '1366×768',
             baselineUrl: `${IMG_BASE}/img/scenarios/baseline/${sc.id}.png`,
             currentUrl: `${IMG_BASE}/img/scenarios/current/${sc.id}.png`,
@@ -249,7 +253,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             isScenario: true,
           });
 
-          scenarioRun.pending++;
+          if (!scenarioAllPassed) scenarioRun.pending++;
         }
 
         runs.push(scenarioRun);
@@ -497,8 +501,9 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if (e.key === 'ArrowLeft') { e.preventDefault(); handlePrevious(); }
       if (e.key === 'ArrowRight') { e.preventDefault(); handleNext(); }
-      if ((e.key === 'a' || e.key === 'A') && !e.ctrlKey && !e.metaKey && selectedDiff) { e.preventDefault(); handleApprove(selectedDiff.id); }
-      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && selectedDiff) { e.preventDefault(); handleReject(selectedDiff.id); }
+      const diffAllPassed = selectedDiff?.techniques?.length > 0 && selectedDiff.techniques.every((t) => t.passed);
+      if ((e.key === 'a' || e.key === 'A') && !e.ctrlKey && !e.metaKey && selectedDiff && !diffAllPassed) { e.preventDefault(); handleApprove(selectedDiff.id); }
+      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey && selectedDiff && !diffAllPassed) { e.preventDefault(); handleReject(selectedDiff.id); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -689,6 +694,8 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             />
           ) : (
             <ReviewEmptyState
+              noDiffs={selectedRun && filteredDiffs.length === 0}
+              hasFilters={search !== '' || statusFilter !== 'all' || viewportFilter !== 'all'}
               onOpenDiffs={isMobile ? () => { setDrawerTab(1); setDrawerOpen(true); } : undefined}
               onOpenRuns={isCompact ? () => { setDrawerTab(0); setDrawerOpen(true); } : undefined}
             />

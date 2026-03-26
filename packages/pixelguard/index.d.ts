@@ -145,6 +145,11 @@ export function generateReport(options?: {
 export function updateBaselines(options?: {
   config?: PixelGuardConfig;
 }): Promise<void>;
+export function buildDeploy(options?: {
+  prNumber?: string;
+  outDir?: string;
+  config?: PixelGuardConfig;
+}): Promise<void>;
 
 export function pixelCompare(
   baseline: string,
