@@ -53,7 +53,7 @@ jobs:
 
       # ── Captura + Comparação ───────────────────────────
       - name: Capturar screenshots
-        run: npm run capture
+        run: npx pixelguard capture
 
       - name: Comparar com baselines
         id: compare
@@ -64,7 +64,7 @@ jobs:
             echo "✅ Sem baselines — check aprovado"
             exit 0
           fi
-          npm run compare || true
+          npx pixelguard compare || true
           if [ -f results/results.json ]; then
             FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('results/results.json','utf-8')); console.log(r.summary.failed)")
             echo "failed=$FAILED" >> $GITHUB_OUTPUT
@@ -113,7 +113,7 @@ jobs:
 
       - name: Build review UI e montar deploy
         if: env.has_baselines == 'true'
-        run: node tests/report.js --deploy --pr ${{ github.event.pull_request.number }}
+        run: npx pixelguard deploy --pr ${{ github.event.pull_request.number }}
 
       # ── Deploy GitHub Pages ────────────────────────────
       - name: Deploy review para GitHub Pages

@@ -313,6 +313,7 @@ Opções:
 |:------|:----------|
 | `--help`, `-h` | Mostra ajuda |
 | `--port <n>` | Porta para o servidor de review (padrão: 8080) |
+| `--build` | Força rebuild da Review UI antes de iniciar |
 
 ### Usando em outros projetos
 
@@ -620,6 +621,8 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 | `npx pixelguard update-baselines` | Copia current/ → baselines/ |
 | `npx pixelguard review` | Inicia Review UI → localhost:8080 |
 | `npx pixelguard review --port 4000` | Review UI em porta customizada |
+| `npx pixelguard review --build` | Rebuild da UI e inicia o servidor |
+| `npx pixelguard deploy --pr 42` | Build review UI + montar deploy estático |
 
 ---
 
