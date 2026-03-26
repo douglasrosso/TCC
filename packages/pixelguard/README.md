@@ -42,6 +42,7 @@ npx pixelguard test
 | `--port <n>` | Port for the review server (default: 8080) |
 | `--build` | Force rebuild of the review UI before starting |
 | `--pr <n>` | PR number for deploy folder naming |
+| `--out <dir>` | Output directory for capture / deploy |
 
 ## Configuration
 
@@ -101,6 +102,7 @@ import {
   runComparisons,
   generateReport,
   updateBaselines,
+  buildDeploy,
   loadConfig,
 } from "pixelguard";
 
@@ -109,6 +111,7 @@ await capture({ config });
 const results = await runComparisons({ config });
 await generateReport({ config });
 await updateBaselines({ config });
+await buildDeploy({ prNumber: "42" });
 ```
 
 ### Comparators
@@ -135,7 +138,8 @@ Add to your `package.json`:
     "vrt:compare": "pixelguard compare",
     "vrt:report": "pixelguard report",
     "vrt:update": "pixelguard update-baselines",
-    "vrt:review": "pixelguard review"
+    "vrt:review": "pixelguard review",
+    "vrt:deploy": "pixelguard deploy"
   }
 }
 ```
@@ -148,3 +152,9 @@ Add to your `package.json`:
    - **SSIM**: Structural similarity index (perceptual)
    - **Region**: Grid-based comparison with masking support
 3. **Report** — A self-contained HTML report is generated with all results and diff images
+4. **Review** — An interactive dark-theme UI for reviewing diffs:
+   - Three view modes: side-by-side, overlay, and slider
+   - Diffs where **all techniques pass** are **auto-approved** (no manual review needed)
+   - A "View images anyway" button lets you inspect auto-approved screenshots
+   - Keyboard shortcuts: `←`/`→` to navigate, `A` to approve, `R` to reject (only for failed diffs)
+   - GitHub Statuses API integration for CI/CD merge gating

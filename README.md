@@ -306,6 +306,7 @@ npx pixelguard <command>
 | `update-baselines` | Copia `results/current/` para `baselines/` |
 | `test` | **Pipeline completo:** capture → compare → report |
 | `review` | Inicia a Review UI interativa (porta 8080) |
+| `deploy` | Build da Review UI + montar pasta de deploy estático |
 
 Opções:
 
@@ -314,6 +315,8 @@ Opções:
 | `--help`, `-h` | Mostra ajuda |
 | `--port <n>` | Porta para o servidor de review (padrão: 8080) |
 | `--build` | Força rebuild da Review UI antes de iniciar |
+| `--pr <n>` | Número do PR para nomear a pasta de deploy |
+| `--out <dir>` | Diretório de saída para capture / deploy |
 
 ### Usando em outros projetos
 
@@ -450,9 +453,20 @@ Cada item da lista exibe:
 
 | Tecla | Ação |
 |:------|:-----|
-| `A` | Aprovar tela selecionada |
-| `R` | Rejeitar tela selecionada |
+| `A` | Aprovar tela selecionada (somente quando há diferenças que falharam) |
+| `R` | Rejeitar tela selecionada (somente quando há diferenças que falharam) |
 | `←` / `→` | Navegar entre telas |
+
+### Aprovação automática
+
+Quando **todas as técnicas de comparação** passam nos limiares configurados, a tela é **aprovada automaticamente** — não requer revisão manual.
+
+- Os botões Aprovar / Rejeitar ficam ocultos
+- O ícone de status mostra ✅ aprovado
+- Uma mensagem indica o resultado:
+  - **"Nenhuma diferença visual detectada"** — quando todas as técnicas retornam 0% de diferença
+  - **"Diferenças dentro do limiar aceitável"** — quando há pequenas diferenças, mas dentro dos thresholds
+- O botão **"Ver imagens mesmo assim"** permite visualizar a comparação completa (baseline × atual) mesmo sem diferenças
 
 ### Integração com GitHub (modo CI)
 
@@ -606,6 +620,7 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 | `npm run vrt` | **Pipeline completo:** captura → comparação → relatório |
 | `npm run vrt:review` | Pipeline completo + abre Review UI |
 | `npm run update-baselines` | Copia `results/current/` para `baselines/` |
+| `npm run deploy` | Build Review UI + montar deploy estático |
 | `npm run scenarios` | Roda os cenários de teste (mutações controladas) |
 | `npm run review` | Inicia a Review UI (porta 8080) |
 
@@ -687,10 +702,10 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 │   │   ├── NavBar.jsx
 │   │   └── Footer.jsx
 │   └── scenarios/                    #   Cenários de mutação para testes
-├── tests/                            # Scripts legados de teste (referência)
-│   ├── scenarios.js                  #   Runner de cenários
-│   ├── config.js                     #   Config legada
-│   └── comparators/                  #   Implementações originais
+├── tests/                            # Scripts de teste
+│   └── scenarios.js                  #   Runner de cenários de mutação
+├── scripts/
+│   └── capture-figs.js               #   Captura figuras para o LaTeX
 ├── packages/
 │   └── pixelguard/                   # Pacote npm reutilizável (CLI + Engine + Review)
 │       ├── bin/
@@ -701,6 +716,7 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 │       │   ├── compare.js            #     Orquestrador de comparação
 │       │   ├── report.js             #     Gerador de relatório HTML
 │       │   ├── update-baselines.js   #     Copia current → baselines
+│       │   ├── deploy.js             #     Build e deploy estático (GitHub Pages)
 │       │   └── comparators/          #     Implementações das 3 técnicas
 │       │       ├── pixel.js          #       pixelmatch (anti-aliased aware)
 │       │       ├── ssim.js           #       SSIM (implementação própria)
