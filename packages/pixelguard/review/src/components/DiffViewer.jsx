@@ -21,178 +21,9 @@ import LayersRoundedIcon from '@mui/icons-material/LayersRounded';
 import ViewCarouselRoundedIcon from '@mui/icons-material/ViewCarouselRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
-import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
-import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
-import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { BORDER, CARD, FG, MUTED, DIM, TechBadge, StatusBadge, KbdHint } from './shared.jsx';
-
-/* ---------- Fullscreen Viewer ---------- */
-function FullscreenViewer({ open, onClose, src, label }) {
-  const [fsZoom, setFsZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const isPanning = useRef(false);
-  const lastMouse = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    if (open) {
-      setFsZoom(1);
-      setPan({ x: 0, y: 0 });
-    }
-  }, [open, src]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === '+' || e.key === '=') setFsZoom((z) => Math.min(5, z + 0.25));
-      if (e.key === '-') setFsZoom((z) => Math.max(0.25, z - 0.25));
-      if (e.key === '0') { setFsZoom(1); setPan({ x: 0, y: 0 }); }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [open, onClose]);
-
-  const handleWheel = useCallback((e) => {
-    e.preventDefault();
-    setFsZoom((z) => {
-      const delta = e.deltaY > 0 ? -0.15 : 0.15;
-      return Math.max(0.25, Math.min(5, z + delta));
-    });
-  }, []);
-
-  const handlePointerDown = useCallback((e) => {
-    if (e.button !== 0) return;
-    isPanning.current = true;
-    lastMouse.current = { x: e.clientX, y: e.clientY };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }, []);
-
-  const handlePointerMove = useCallback((e) => {
-    if (!isPanning.current) return;
-    const dx = e.clientX - lastMouse.current.x;
-    const dy = e.clientY - lastMouse.current.y;
-    lastMouse.current = { x: e.clientX, y: e.clientY };
-    setPan((p) => ({ x: p.x + dx, y: p.y + dy }));
-  }, []);
-
-  const handlePointerUp = useCallback(() => {
-    isPanning.current = false;
-  }, []);
-
-  if (!open) return null;
-
-  return (
-    <Modal open={open} onClose={onClose} sx={{ zIndex: 1400 }}>
-      <Box
-        sx={{
-          position: 'fixed',
-          inset: 0,
-          bgcolor: 'rgba(0,0,0,.92)',
-          display: 'flex',
-          flexDirection: 'column',
-          outline: 'none',
-        }}
-      >
-        {/* Toolbar */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            px: 2,
-            py: 1,
-            bgcolor: 'rgba(0,0,0,.6)',
-            backdropFilter: 'blur(8px)',
-            borderBottom: '1px solid rgba(255,255,255,.1)',
-            flexShrink: 0,
-            zIndex: 10,
-          }}
-        >
-          <Typography sx={{ color: '#fafafa', fontSize: '0.85rem', fontWeight: 500 }}>
-            {label}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Tooltip title="Diminuir zoom (-)">
-              <IconButton
-                size="small"
-                onClick={() => setFsZoom((z) => Math.max(0.25, z - 0.25))}
-                sx={{ color: '#fafafa', '&:hover': { bgcolor: 'rgba(255,255,255,.1)' } }}
-              >
-                <ZoomOutRoundedIcon sx={{ fontSize: 20 }} />
-              </IconButton>
-            </Tooltip>
-            <Typography sx={{ fontFamily: 'monospace', color: '#a1a1aa', fontSize: '0.8rem', minWidth: 50, textAlign: 'center' }}>
-              {Math.round(fsZoom * 100)}%
-            </Typography>
-            <Tooltip title="Aumentar zoom (+)">
-              <IconButton
-                size="small"
-                onClick={() => setFsZoom((z) => Math.min(5, z + 0.25))}
-                sx={{ color: '#fafafa', '&:hover': { bgcolor: 'rgba(255,255,255,.1)' } }}
-              >
-                <ZoomInRoundedIcon sx={{ fontSize: 20 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Resetar (0)">
-              <IconButton
-                size="small"
-                onClick={() => { setFsZoom(1); setPan({ x: 0, y: 0 }); }}
-                sx={{ color: '#fafafa', '&:hover': { bgcolor: 'rgba(255,255,255,.1)' } }}
-              >
-                <RestartAltRoundedIcon sx={{ fontSize: 20 }} />
-              </IconButton>
-            </Tooltip>
-            <Box sx={{ width: '1px', height: 20, bgcolor: 'rgba(255,255,255,.15)', mx: 0.5 }} />
-            <Tooltip title="Fechar (Esc)">
-              <IconButton
-                size="small"
-                onClick={onClose}
-                sx={{ color: '#fafafa', '&:hover': { bgcolor: 'rgba(255,255,255,.1)' } }}
-              >
-                <CloseRoundedIcon sx={{ fontSize: 20 }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Box>
-
-        {/* Image area */}
-        <Box
-          onWheel={handleWheel}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          sx={{
-            flex: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: fsZoom > 1 ? 'grab' : 'zoom-in',
-            '&:active': { cursor: fsZoom > 1 ? 'grabbing' : 'zoom-in' },
-          }}
-        >
-          <Box
-            component="img"
-            src={src}
-            alt={label}
-            draggable={false}
-            sx={{
-              maxWidth: fsZoom <= 1 ? '90vw' : 'none',
-              maxHeight: fsZoom <= 1 ? '85vh' : 'none',
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${fsZoom})`,
-              transformOrigin: 'center center',
-              transition: isPanning.current ? 'none' : 'transform 0.15s ease',
-              userSelect: 'none',
-              pointerEvents: 'none',
-            }}
-          />
-        </Box>
-      </Box>
-    </Modal>
-  );
-}
+import { BORDER, CARD, FG, MUTED, TechBadge, StatusBadge, KbdHint } from './shared.jsx';
 
 /* ---------- Fullscreen Viewer ---------- */
 function FullscreenViewer({ open, onClose, src, label }) {
@@ -555,7 +386,6 @@ export default function DiffViewer({
   const [zoom, setZoom] = useState(100);
   const [overlayOpacity, setOverlayOpacity] = useState(50);
   const [sliderPosition, setSliderPosition] = useState(50);
-  const [showImages, setShowImages] = useState(false);
   const availableTechniques = diff.techniques || [];
   const [selectedTechnique, setSelectedTechnique] = useState(availableTechniques[0]?.technique || 'pixel');
   const sliderRef = useRef(null);
@@ -563,11 +393,6 @@ export default function DiffViewer({
 
   const activeTech = diff.techniques?.find((t) => t.technique === selectedTechnique) || diff.techniques?.[0];
   const diffUrl = activeTech?.diffUrl || '';
-  const allPassed = availableTechniques.length > 0 && availableTechniques.every((t) => t.passed);
-  const allZero = allPassed && availableTechniques.every((t) => t.diffPercentage === 0);
-
-  // Reset showImages when switching to a different diff
-  useEffect(() => { setShowImages(false); }, [diff.id]);
 
   const handleMouseDown = useCallback(() => { isDragging.current = true; }, []);
   const handleMouseUp = useCallback(() => { isDragging.current = false; }, []);
@@ -663,60 +488,58 @@ export default function DiffViewer({
           </Box>
         </Box>
 
-        {/* Right: action buttons (hidden when all techniques passed — auto-approved) */}
-        {!allPassed && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 }}>
-            <Tooltip title="Rejeitar esta tela (R)" arrow>
-              <Button
-                variant="outlined"
-                startIcon={<CloseRoundedIcon sx={{ fontSize: { xs: 14, sm: 16 } }} />}
-                onClick={() => onReject(diff.id)}
-                sx={{
-                  fontSize: { xs: '0.72rem', sm: '0.82rem' },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  borderColor: 'rgba(239,68,68,.4)',
-                  color: '#ef4444',
-                  '&:hover': { bgcolor: 'rgba(239,68,68,.15)', borderColor: '#ef4444' },
-                  height: { xs: 32, sm: 38 },
-                  px: { xs: 1.25, sm: 2 },
-                  borderRadius: 1.5,
-                  minWidth: 0,
-                  '& .MuiButton-startIcon': { mr: { xs: 0.25, sm: 0.5 } },
-                }}
-              >
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Rejeitar</Box>
-              </Button>
-            </Tooltip>
-            <Tooltip title="Aprovar esta tela (A)" arrow>
-              <Button
-                variant="contained"
-                startIcon={<CheckRoundedIcon sx={{ fontSize: { xs: 14, sm: 16 } }} />}
-                onClick={() => onApprove(diff.id)}
-                sx={{
-                  fontSize: { xs: '0.72rem', sm: '0.82rem' },
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  bgcolor: '#22c55e',
-                  color: '#fff',
-                  boxShadow: 'none',
-                  '&:hover': { bgcolor: '#16a34a', boxShadow: 'none' },
-                  height: { xs: 32, sm: 38 },
-                  px: { xs: 1.25, sm: 2.5 },
-                  borderRadius: 1.5,
-                  minWidth: 0,
-                  '& .MuiButton-startIcon': { mr: { xs: 0.25, sm: 0.5 } },
-                }}
-              >
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Aprovar</Box>
-              </Button>
-            </Tooltip>
-          </Box>
-        )}
+        {/* Right: action buttons */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 }}>
+          <Tooltip title="Rejeitar esta tela (R)" arrow>
+            <Button
+              variant="outlined"
+              startIcon={<CloseRoundedIcon sx={{ fontSize: { xs: 14, sm: 16 } }} />}
+              onClick={() => onReject(diff.id)}
+              sx={{
+                fontSize: { xs: '0.72rem', sm: '0.82rem' },
+                textTransform: 'none',
+                fontWeight: 600,
+                borderColor: 'rgba(239,68,68,.4)',
+                color: '#ef4444',
+                '&:hover': { bgcolor: 'rgba(239,68,68,.15)', borderColor: '#ef4444' },
+                height: { xs: 32, sm: 38 },
+                px: { xs: 1.25, sm: 2 },
+                borderRadius: 1.5,
+                minWidth: 0,
+                '& .MuiButton-startIcon': { mr: { xs: 0.25, sm: 0.5 } },
+              }}
+            >
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Rejeitar</Box>
+            </Button>
+          </Tooltip>
+          <Tooltip title="Aprovar esta tela (A)" arrow>
+            <Button
+              variant="contained"
+              startIcon={<CheckRoundedIcon sx={{ fontSize: { xs: 14, sm: 16 } }} />}
+              onClick={() => onApprove(diff.id)}
+              sx={{
+                fontSize: { xs: '0.72rem', sm: '0.82rem' },
+                textTransform: 'none',
+                fontWeight: 600,
+                bgcolor: '#22c55e',
+                color: '#fff',
+                boxShadow: 'none',
+                '&:hover': { bgcolor: '#16a34a', boxShadow: 'none' },
+                height: { xs: 32, sm: 38 },
+                px: { xs: 1.25, sm: 2.5 },
+                borderRadius: 1.5,
+                minWidth: 0,
+                '& .MuiButton-startIcon': { mr: { xs: 0.25, sm: 0.5 } },
+              }}
+            >
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Aprovar</Box>
+            </Button>
+          </Tooltip>
+        </Box>
       </Box>
 
       {/* =============== Row 2: View Mode + Zoom + Controls =============== */}
-      {(!allPassed || showImages) && <Box
+      <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -862,106 +685,26 @@ export default function DiffViewer({
           <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 0.5, ml: 0.5 }}>
             <KbdHint>←</KbdHint>
             <KbdHint>→</KbdHint>
-            {!allPassed && <KbdHint>A</KbdHint>}
-            {!allPassed && <KbdHint>R</KbdHint>}
+            <KbdHint>A</KbdHint>
+            <KbdHint>R</KbdHint>
           </Box>
         </Box>
-      </Box>}
+      </Box>
 
       {/* =============== Image comparison area =============== */}
       <Box sx={{ flex: 1, overflow: 'auto', bgcolor: '#09090b', p: { xs: 1, sm: 2 } }}>
-        {allPassed && !showImages ? (
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              gap: 2.5,
-              textAlign: 'center',
-            }}
-          >
-            <Box
-              sx={{
-                width: 72,
-                height: 72,
-                borderRadius: 3,
-                bgcolor: 'rgba(34,197,94,.08)',
-                border: '1px solid rgba(34,197,94,.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CheckCircleOutlineRoundedIcon sx={{ fontSize: 36, color: '#22c55e' }} />
-            </Box>
-            <Box>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#fafafa', mb: 0.75 }}>
-                {allZero ? 'Nenhuma diferença visual detectada' : 'Diferenças dentro do limiar aceitável'}
-              </Typography>
-              <Typography sx={{ fontSize: '0.82rem', color: '#71717a', maxWidth: 380, lineHeight: 1.6 }}>
-                {allZero
-                  ? 'A tela atual é idêntica ao baseline. Todas as técnicas de comparação retornaram 0% de diferença.'
-                  : 'Foram detectadas pequenas diferenças, mas todas estão dentro dos limiares configurados. Nenhuma ação é necessária.'}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1.5, mt: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
-              {availableTechniques.map((t) => (
-                <Chip
-                  key={t.technique}
-                  label={`${t.label} ${t.diffPercentage}%`}
-                  size="small"
-                  sx={{
-                    fontSize: '0.72rem',
-                    fontFamily: 'monospace',
-                    bgcolor: 'rgba(34,197,94,.1)',
-                    color: '#4ade80',
-                    border: '1px solid rgba(34,197,94,.2)',
-                    height: 26,
-                  }}
-                />
-              ))}
-            </Box>
-            <Button
-              variant="outlined"
-              startIcon={<VisibilityRoundedIcon sx={{ fontSize: 16 }} />}
-              onClick={() => setShowImages(true)}
-              sx={{
-                mt: 2,
-                fontSize: '0.78rem',
-                textTransform: 'none',
-                fontWeight: 500,
-                borderColor: 'rgba(255,255,255,.15)',
-                color: '#a1a1aa',
-                '&:hover': { bgcolor: 'rgba(255,255,255,.06)', borderColor: 'rgba(255,255,255,.25)' },
-                height: 36,
-                px: 2.5,
-                borderRadius: 1.5,
-              }}
-            >
-              Ver imagens mesmo assim
-            </Button>
-            <Typography sx={{ fontSize: '0.72rem', color: DIM, mt: 1 }}>
-              Aprovado automaticamente — use as setas para navegar.
-            </Typography>
-          </Box>
-        ) : (
-          <>
-            {viewMode === 0 && <SideBySideView diff={diff} zoom={zoom} diffUrl={diffUrl} techniqueLabel={activeTech?.label || 'Pixel'} />}
-            {viewMode === 1 && <OverlayView diff={diff} zoom={zoom} opacity={overlayOpacity} diffUrl={diffUrl} />}
-            {viewMode === 2 && (
-              <SliderView
-                diff={diff}
-                zoom={zoom}
-                sliderPosition={sliderPosition}
-                sliderRef={sliderRef}
-                onMouseDown={handleMouseDown}
-                onMouseUp={handleMouseUp}
-                onMouseMove={handleMouseMove}
-              />
-            )}
-          </>
+        {viewMode === 0 && <SideBySideView diff={diff} zoom={zoom} diffUrl={diffUrl} techniqueLabel={activeTech?.label || 'Pixel'} />}
+        {viewMode === 1 && <OverlayView diff={diff} zoom={zoom} opacity={overlayOpacity} diffUrl={diffUrl} />}
+        {viewMode === 2 && (
+          <SliderView
+            diff={diff}
+            zoom={zoom}
+            sliderPosition={sliderPosition}
+            sliderRef={sliderRef}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+          />
         )}
       </Box>
     </Box>

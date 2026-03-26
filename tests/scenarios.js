@@ -2,8 +2,10 @@
  * Runner de cenarios de teste para comparacao entre tecnicas de regressao visual.
  *
  * Para cada cenario definido, captura uma imagem de referencia (baseline) e
- * uma imagem com mutacao (current), executa os tres comparadores e
+ * uma imagem com mutacao (current), executa os comparadores configurados e
  * consolida os resultados em results/scenarios/scenarios-results.json.
+ *
+ * Respeita a opcao `comparators` do pixelguard.config.js.
  *
  * Uso:  node tests/scenarios.js
  */
@@ -13,10 +15,12 @@ import fs                from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createServer }  from 'vite';
 
-import { compare as pixelCompare }  from './comparators/pixel.js';
-import { compare as ssimCompare }   from './comparators/ssim.js';
-import { compare as regionCompare } from './comparators/region.js';
-import { thresholds }               from './config.js';
+import {
+  loadConfig,
+  pixelCompare,
+  ssimCompare,
+  regionCompare,
+} from 'pixelguard';
 
 const __dirname     = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR      = path.resolve(__dirname, '..');
@@ -250,7 +254,28 @@ async function captureOne(browser, pagePath, outputPath, freeze, mutation) {
 
 /* ===== Runner principal ===== */
 async function runScenarios() {
-  console.log('=== PixelGuard — Cenarios de Teste ===\n');
+  const config = await loadConfig();
+  const { thresholds } = config;
+  const enabledComparators = config.comparators || ['pixel', 'ssim', 'region'];
+
+  const comparatorMap = {
+    pixel:  (base, cur, id, diffDir) => pixelCompare(base, cur, {
+      ...thresholds.pixel,
+      diffPath: path.join(diffDir, 'pixel', `${id}.png`),
+    }),
+    ssim:   (base, cur, id, diffDir) => ssimCompare(base, cur, {
+      ...thresholds.ssim,
+      diffPath: path.join(diffDir, 'ssim', `${id}.png`),
+    }),
+    region: (base, cur, id, diffDir, masks) => regionCompare(base, cur, {
+      ...thresholds.region,
+      masks,
+      diffPath: path.join(diffDir, 'region', `${id}.png`),
+    }),
+  };
+
+  console.log('=== PixelGuard — Cenarios de Teste ===');
+  console.log(`Comparadores ativos: ${enabledComparators.join(', ')}\n`);
 
   // Iniciar servidor Vite
   const vite = await createServer({
@@ -293,37 +318,31 @@ async function runScenarios() {
         console.log('  Current capturado' + (scenario.mutation ? ' (com mutacao)' : ' (variacao natural)') + (fc ? ' (freeze)' : ' (sem freeze)'));
       }
 
-      // Executar comparadores
+      // Executar comparadores habilitados
       const diffDir = path.join(SCENARIOS_DIR, 'diffs');
       const masks = scenario.masks || [];
 
-      const [pixel, ssim, region] = await Promise.all([
-        pixelCompare(baselinePath, currentPath, {
-          ...thresholds.pixel,
-          diffPath: path.join(diffDir, 'pixel', `${scenario.id}.png`),
-        }),
-        ssimCompare(baselinePath, currentPath, {
-          ...thresholds.ssim,
-          diffPath: path.join(diffDir, 'ssim', `${scenario.id}.png`),
-        }),
-        regionCompare(baselinePath, currentPath, {
-          ...thresholds.region,
-          masks,
-          diffPath: path.join(diffDir, 'region', `${scenario.id}.png`),
-        }),
-      ]);
+      const techResults = {};
+      const promises = enabledComparators.map(async (tech) => {
+        const fn = comparatorMap[tech];
+        techResults[tech] = await fn(baselinePath, currentPath, scenario.id, diffDir, masks);
+      });
+      await Promise.all(promises);
 
       results.push({
         id: scenario.id,
         name: scenario.name,
-        results: { pixel, ssim, region },
+        results: techResults,
       });
 
       // Exibir resultados
       const tag = (r) => r.passed ? 'PASS' : 'FAIL';
-      console.log(`  Pixel:  ${tag(pixel).padEnd(5)} diffPercent=${pixel.diffPercent ?? 'err'}%  score=${pixel.score ?? 'err'}`);
-      console.log(`  SSIM:   ${tag(ssim).padEnd(5)} score=${ssim.score ?? 'err'}  diffPercent=${ssim.diffPercent ?? 'err'}%`);
-      console.log(`  Region: ${tag(region).padEnd(5)} failed=${region.failedRegions ?? 'err'}/${region.totalRegions ?? 'err'}  masked=${region.maskedRegions ?? 0}`);
+      for (const tech of enabledComparators) {
+        const r = techResults[tech];
+        if (tech === 'pixel')  console.log(`  Pixel:  ${tag(r).padEnd(5)} diffPercent=${r.diffPercent ?? 'err'}%  score=${r.score ?? 'err'}`);
+        if (tech === 'ssim')   console.log(`  SSIM:   ${tag(r).padEnd(5)} score=${r.score ?? 'err'}  diffPercent=${r.diffPercent ?? 'err'}%`);
+        if (tech === 'region') console.log(`  Region: ${tag(r).padEnd(5)} failed=${r.failedRegions ?? 'err'}/${r.totalRegions ?? 'err'}  masked=${r.maskedRegions ?? 0}`);
+      }
       console.log();
     }
   } finally {
@@ -334,6 +353,7 @@ async function runScenarios() {
   // Salvar resultados
   const output = {
     timestamp: new Date().toISOString(),
+    comparators: enabledComparators,
     thresholds,
     scenarios: results,
   };
@@ -345,28 +365,29 @@ async function runScenarios() {
   );
 
   // Tabela resumo
+  const colLabels = { pixel: 'Pixel', ssim: 'SSIM', region: 'Regioes' };
+  const COL_W = 22;
+  const NAME_W = 42;
+
   console.log('=== MATRIZ DE COMPARACAO ===');
   console.log(
-    'Cenario'.padEnd(42) +
-    'Pixel'.padEnd(22) +
-    'SSIM'.padEnd(22) +
-    'Regioes'.padEnd(22),
+    'Cenario'.padEnd(NAME_W) +
+    enabledComparators.map(t => (colLabels[t] || t).padEnd(COL_W)).join(''),
   );
-  console.log('-'.repeat(108));
+  console.log('-'.repeat(NAME_W + enabledComparators.length * COL_W));
 
   for (const r of results) {
-    const p = r.results.pixel;
-    const s = r.results.ssim;
-    const rg = r.results.region;
-    const pStr = `${p.passed ? 'PASS' : 'FAIL'} (${p.diffPercent ?? 'err'}%)`;
-    const sStr = `${s.passed ? 'PASS' : 'FAIL'} (${s.score ?? 'err'})`;
-    const rgStr = `${rg.passed ? 'PASS' : 'FAIL'} (${rg.failedRegions ?? 'err'}/${rg.totalRegions ?? 'err'})`;
-    console.log(
-      r.name.padEnd(42) +
-      pStr.padEnd(22) +
-      sStr.padEnd(22) +
-      rgStr.padEnd(22),
-    );
+    let line = r.name.padEnd(NAME_W);
+    for (const tech of enabledComparators) {
+      const t = r.results[tech];
+      let cell;
+      if (tech === 'pixel')       cell = `${t.passed ? 'PASS' : 'FAIL'} (${t.diffPercent ?? 'err'}%)`;
+      else if (tech === 'ssim')   cell = `${t.passed ? 'PASS' : 'FAIL'} (${t.score ?? 'err'})`;
+      else if (tech === 'region') cell = `${t.passed ? 'PASS' : 'FAIL'} (${t.failedRegions ?? 'err'}/${t.totalRegions ?? 'err'})`;
+      else                        cell = `${t.passed ? 'PASS' : 'FAIL'}`;
+      line += cell.padEnd(COL_W);
+    }
+    console.log(line);
   }
 
   console.log('\nResultados salvos em: results/scenarios/scenarios-results.json');

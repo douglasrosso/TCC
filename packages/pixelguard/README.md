@@ -23,15 +23,15 @@ npx pixelguard test
 
 ## CLI Commands
 
-| Command | Description |
-|---|---|
-| `npx pixelguard init` | Create `pixelguard.config.js` in your project |
-| `npx pixelguard capture` | Capture screenshots of your app |
-| `npx pixelguard compare` | Compare current screenshots against baselines |
-| `npx pixelguard report` | Generate an HTML report |
-| `npx pixelguard update-baselines` | Copy current screenshots to baselines/ |
-| `npx pixelguard test` | Full pipeline: capture → compare → report |
-| `npx pixelguard review` | Start the review UI server |
+| Command                           | Description                                   |
+| --------------------------------- | --------------------------------------------- |
+| `npx pixelguard init`             | Create `pixelguard.config.js` in your project |
+| `npx pixelguard capture`          | Capture screenshots of your app               |
+| `npx pixelguard compare`          | Compare current screenshots against baselines |
+| `npx pixelguard report`           | Generate an HTML report                       |
+| `npx pixelguard update-baselines` | Copy current screenshots to baselines/        |
+| `npx pixelguard test`             | Full pipeline: capture → compare → report     |
+| `npx pixelguard review`           | Start the review UI server                    |
 
 ## Configuration
 
@@ -43,25 +43,25 @@ export default {
   baseUrl: null,
 
   // Vite dev server port (only when baseUrl is null).
-  port: 3050,
+  port: 8000,
 
   // Viewports to capture.
   viewports: [
-    { name: 'desktop', width: 1366, height: 768 },
-    { name: 'tablet',  width: 768,  height: 1024 },
-    { name: 'mobile',  width: 360,  height: 640  },
+    { name: "desktop", width: 1366, height: 768 },
+    { name: "tablet", width: 768, height: 1024 },
+    { name: "mobile", width: 360, height: 640 },
   ],
 
   // Pages to capture.
   pages: [
-    { name: 'home', path: '/' },
-    { name: 'about', path: '/about' },
+    { name: "home", path: "/" },
+    { name: "about", path: "/about" },
   ],
 
   // Thresholds per comparison technique.
   thresholds: {
-    pixel:  { tolerance: 0.1, maxDiffPercent: 0.1 },
-    ssim:   { minScore: 0.98, blockSize: 8 },
+    pixel: { tolerance: 0.1, maxDiffPercent: 0.1 },
+    ssim: { minScore: 0.98, blockSize: 8 },
     region: { gridCols: 4, gridRows: 6, maxDiffPercent: 1.0 },
   },
 
@@ -69,24 +69,29 @@ export default {
   masks: [],
 
   // Which comparators to run (any combination of 'pixel', 'ssim', 'region').
-  comparators: ['pixel', 'ssim', 'region'],
+  comparators: ["pixel", "ssim", "region"],
 
   // Output directories (relative to project root).
-  baselinesDir: 'baselines',
-  resultsDir: 'results',
+  baselinesDir: "baselines",
+  resultsDir: "results",
 
   // Freeze Date and Math.random for deterministic captures.
   freeze: true,
 
   // Review UI server port.
-  reviewPort: 3060,
+  reviewPort: 8080,
 };
 ```
 
 ## Programmatic API
 
 ```js
-import { capture, runComparisons, generateReport, loadConfig } from 'pixelguard';
+import {
+  capture,
+  runComparisons,
+  generateReport,
+  loadConfig,
+} from "pixelguard";
 
 const config = await loadConfig();
 await capture({ config });
@@ -97,12 +102,12 @@ await generateReport({ config });
 ### Comparators
 
 ```js
-import { pixelCompare, ssimCompare, regionCompare } from 'pixelguard';
+import { pixelCompare, ssimCompare, regionCompare } from "pixelguard";
 
-const result = await pixelCompare('baseline.png', 'current.png', {
+const result = await pixelCompare("baseline.png", "current.png", {
   tolerance: 0.1,
   maxDiffPercent: 0.5,
-  diffPath: 'diff.png',
+  diffPath: "diff.png",
 });
 ```
 
