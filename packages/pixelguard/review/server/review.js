@@ -285,7 +285,7 @@ export function getStatus() {
     const review     = data.currentStatus[imageName];
     const comparison = results?.comparisons?.find((c) => c.imageName === imageName);
     const anyFailed  = comparison
-      ? !comparison.results.pixel.passed || !comparison.results.ssim.passed || !comparison.results.region.passed
+      ? Object.values(comparison.results).some((r) => !r.passed)
       : false;
 
     status.push({
@@ -294,15 +294,15 @@ export function getStatus() {
       reviewedAt:   review?.reviewedAt || null,
       reviewedBy:   review?.reviewedBy || null,
       hasDiff:      anyFailed,
-      pixel: comparison ? {
+      pixel: comparison?.results.pixel ? {
         passed: comparison.results.pixel.passed,
         diffPercent: comparison.results.pixel.diffPercent,
       } : null,
-      ssim: comparison ? {
+      ssim: comparison?.results.ssim ? {
         passed: comparison.results.ssim.passed,
         score: comparison.results.ssim.score,
       } : null,
-      region: comparison ? {
+      region: comparison?.results.region ? {
         passed: comparison.results.region.passed,
         failedRegions: comparison.results.region.failedRegions,
         totalRegions: comparison.results.region.totalRegions,

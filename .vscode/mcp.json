@@ -4,7 +4,7 @@
       "command": "npx",
       "args": ["@anthropic-ai/mcp-server-playwright"],
       "env": {
-        "PLAYWRIGHT_BASE_URL": "http://localhost:3050"
+        "PLAYWRIGHT_BASE_URL": "http://localhost:8000"
       }
     }
   }

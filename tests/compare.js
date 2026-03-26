@@ -2,10 +2,9 @@
  * Orquestrador de comparação visual.
  *
  * Para cada imagem em baselines/, localiza a captura correspondente
- * em results/current/ e executa os três comparadores:
- *   1. Pixel a pixel
- *   2. SSIM (perceptual)
- *   3. Regiões com máscaras
+ * em results/current/ e executa os comparadores configurados.
+ *
+ * Respeita a opcao `comparators` do pixelguard.config.js.
  *
  * Salva os resultados consolidados em results/results.json.
  *
@@ -15,10 +14,12 @@ import fs   from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { compare as pixelCompare }  from './comparators/pixel.js';
-import { compare as ssimCompare }   from './comparators/ssim.js';
-import { compare as regionCompare } from './comparators/region.js';
-import { thresholds, masks }        from './config.js';
+import {
+  loadConfig,
+  pixelCompare,
+  ssimCompare,
+  regionCompare,
+} from 'pixelguard';
 
 const __dirname    = path.dirname(fileURLToPath(import.meta.url));
 const BASELINES    = path.resolve(__dirname, '..', 'baselines');
@@ -30,6 +31,16 @@ const RESULTS_DIR  = path.resolve(__dirname, '..', 'results');
  * @returns {Promise<object>} Resultado consolidado.
  */
 export async function runComparisons() {
+  const config = await loadConfig();
+  const { thresholds, masks } = config;
+  const enabledComparators = config.comparators || ['pixel', 'ssim', 'region'];
+
+  const comparatorMap = {
+    pixel:  (base, cur, diffPath) => pixelCompare(base, cur, { ...thresholds.pixel, diffPath }),
+    ssim:   (base, cur, diffPath) => ssimCompare(base, cur, { ...thresholds.ssim, diffPath }),
+    region: (base, cur, diffPath) => regionCompare(base, cur, { ...thresholds.region, masks, diffPath }),
+  };
+
   /* Verificar se há baselines */
   const baselineFiles = fs.existsSync(BASELINES)
     ? fs.readdirSync(BASELINES).filter((f) => f.endsWith('.png'))
@@ -62,40 +73,29 @@ export async function runComparisons() {
     const name = file.replace('.png', '');
     console.log(`  Comparando: ${name}`);
 
-    /* Caminhos das imagens de diff */
-    const diffPixel  = path.join(RESULTS_DIR, 'diffs', 'pixel',  file);
-    const diffSSIM   = path.join(RESULTS_DIR, 'diffs', 'ssim',   file);
-    const diffRegion = path.join(RESULTS_DIR, 'diffs', 'region', file);
+    /* Executar os comparadores habilitados */
+    const techResults = {};
+    const promises = enabledComparators.map(async (tech) => {
+      const diffPath = path.join(RESULTS_DIR, 'diffs', tech, file);
+      techResults[tech] = await comparatorMap[tech](baselinePath, currentPath, diffPath);
+    });
+    await Promise.all(promises);
 
-    /* Executar os três comparadores */
-    const [pixel, ssim, region] = await Promise.all([
-      pixelCompare(baselinePath, currentPath, {
-        ...thresholds.pixel,
-        diffPath: diffPixel,
-      }),
-      ssimCompare(baselinePath, currentPath, {
-        ...thresholds.ssim,
-        diffPath: diffSSIM,
-      }),
-      regionCompare(baselinePath, currentPath, {
-        ...thresholds.region,
-        masks,
-        diffPath: diffRegion,
-      }),
-    ]);
-
-    const anyFailed = !pixel.passed || !ssim.passed || !region.passed;
+    const anyFailed = Object.values(techResults).some(r => !r.passed);
     if (anyFailed) totalFailed++;
 
-    comparisons.push({ imageName: name, results: { pixel, ssim, region } });
+    comparisons.push({ imageName: name, results: techResults });
 
     /* Resumo no console */
     const tag = (r) => r.passed ? 'OK' : 'FAIL';
-    console.log(
-      `    pixel: ${tag(pixel)} (${pixel.diffPercent}%)  ` +
-      `ssim: ${tag(ssim)} (${ssim.score})  ` +
-      `region: ${tag(region)} (${region.failedRegions}/${region.totalRegions} falhas)`,
-    );
+    const parts = enabledComparators.map(tech => {
+      const r = techResults[tech];
+      if (tech === 'pixel')  return `pixel: ${tag(r)} (${r.diffPercent}%)`;
+      if (tech === 'ssim')   return `ssim: ${tag(r)} (${r.score})`;
+      if (tech === 'region') return `region: ${tag(r)} (${r.failedRegions}/${r.totalRegions} falhas)`;
+      return `${tech}: ${tag(r)}`;
+    });
+    console.log(`    ${parts.join('  ')}`);
   }
 
   /* Consolidar */
@@ -103,22 +103,25 @@ export async function runComparisons() {
     totalComparisons: comparisons.length,
     passed: comparisons.length - totalFailed,
     failed: totalFailed,
-    techniques: {
-      pixel:  { passed: 0, failed: 0 },
-      ssim:   { passed: 0, failed: 0 },
-      region: { passed: 0, failed: 0 },
-    },
+    techniques: {},
   };
 
+  for (const tech of enabledComparators) {
+    summary.techniques[tech] = { passed: 0, failed: 0 };
+  }
+
   for (const c of comparisons) {
-    for (const t of ['pixel', 'ssim', 'region']) {
-      c.results[t].passed ? summary.techniques[t].passed++ : summary.techniques[t].failed++;
+    for (const tech of enabledComparators) {
+      if (c.results[tech]) {
+        c.results[tech].passed ? summary.techniques[tech].passed++ : summary.techniques[tech].failed++;
+      }
     }
   }
 
   const output = {
     mode: 'ci',
     timestamp: new Date().toISOString(),
+    comparators: enabledComparators,
     comparisons,
     summary,
   };
@@ -126,11 +129,13 @@ export async function runComparisons() {
   fs.mkdirSync(RESULTS_DIR, { recursive: true });
   fs.writeFileSync(path.join(RESULTS_DIR, 'results.json'), JSON.stringify(output, null, 2));
 
+  const techLabels = { pixel: 'Pixel', ssim: 'SSIM', region: 'Region' };
   console.log('\n=== Resumo ===');
   console.log(`  Total: ${summary.totalComparisons}   OK: ${summary.passed}   FAIL: ${summary.failed}`);
-  console.log(`  Pixel : ${summary.techniques.pixel.passed} OK / ${summary.techniques.pixel.failed} FAIL`);
-  console.log(`  SSIM  : ${summary.techniques.ssim.passed} OK / ${summary.techniques.ssim.failed} FAIL`);
-  console.log(`  Region: ${summary.techniques.region.passed} OK / ${summary.techniques.region.failed} FAIL`);
+  for (const tech of enabledComparators) {
+    const t = summary.techniques[tech];
+    console.log(`  ${(techLabels[tech] || tech).padEnd(7)}: ${t.passed} OK / ${t.failed} FAIL`);
+  }
 
   return output;
 }

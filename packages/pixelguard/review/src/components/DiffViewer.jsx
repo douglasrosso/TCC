@@ -386,7 +386,8 @@ export default function DiffViewer({
   const [zoom, setZoom] = useState(100);
   const [overlayOpacity, setOverlayOpacity] = useState(50);
   const [sliderPosition, setSliderPosition] = useState(50);
-  const [selectedTechnique, setSelectedTechnique] = useState('pixel');
+  const availableTechniques = diff.techniques || [];
+  const [selectedTechnique, setSelectedTechnique] = useState(availableTechniques[0]?.technique || 'pixel');
   const sliderRef = useRef(null);
   const isDragging = useRef(false);
 
@@ -620,9 +621,9 @@ export default function DiffViewer({
                   },
                 }}
               >
-                <ToggleButton value="pixel">Pixel</ToggleButton>
-                <ToggleButton value="ssim">SSIM</ToggleButton>
-                <ToggleButton value="region">Região</ToggleButton>
+                {availableTechniques.map((t) => (
+                  <ToggleButton key={t.technique} value={t.technique}>{t.label}</ToggleButton>
+                ))}
           </ToggleButtonGroup>
           <Box sx={{ width: '1px', height: 16, bgcolor: BORDER }} />
 

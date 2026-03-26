@@ -7,16 +7,16 @@
  *
  * O relógio e Math.random são congelados para garantir determinismo.
  */
-import { chromium }        from 'playwright';
-import path                from 'node:path';
-import fs                  from 'node:fs';
-import { fileURLToPath }   from 'node:url';
-import { createServer }    from 'vite';
-import { viewports, pages } from './config.js';
+import { chromium } from "playwright";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import { createServer } from "vite";
+import { loadConfig } from "pixelguard";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR  = path.resolve(__dirname, '..');
-const PORT      = 3050;
+const ROOT_DIR = path.resolve(__dirname, "..");
+const PORT = 8000;
 
 /**
  * Script injetado antes de cada página para congelar Date e Math.random.
@@ -47,27 +47,31 @@ const FREEZE_SCRIPT = `
  * @returns {Promise<string[]>} Lista de caminhos dos screenshots gerados.
  */
 export async function capture({ outDir, mutation, freeze = true } = {}) {
-  const outputDir = outDir || path.resolve(__dirname, '..', 'results', 'current');
+  const config = await loadConfig();
+  const { viewports, pages } = config;
+  const port = config.port || PORT;
+  const outputDir =
+    outDir || path.resolve(__dirname, "..", "results", "current");
   fs.mkdirSync(outputDir, { recursive: true });
 
   const vite = await createServer({
     root: ROOT_DIR,
-    server: { port: PORT, strictPort: true },
-    logLevel: 'silent',
+    server: { port, strictPort: true },
+    logLevel: "silent",
   });
   await vite.listen();
 
   const browser = await chromium.launch();
-  const paths   = [];
+  const paths = [];
 
   try {
     for (const pg of pages) {
       for (const vp of viewports) {
         const ctx = await browser.newContext({
-          viewport:          { width: vp.width, height: vp.height },
+          viewport: { width: vp.width, height: vp.height },
           deviceScaleFactor: 1,
-          locale:            'pt-BR',
-          timezoneId:        'America/Sao_Paulo',
+          locale: "pt-BR",
+          timezoneId: "America/Sao_Paulo",
         });
 
         const page = await ctx.newPage();
@@ -75,18 +79,21 @@ export async function capture({ outDir, mutation, freeze = true } = {}) {
         // Congelar Date/random ANTES de navegar
         if (freeze) await page.addInitScript({ content: FREEZE_SCRIPT });
 
-        await page.goto(`http://localhost:${PORT}${pg.path}`, { waitUntil: 'networkidle' });
+        await page.goto(`http://localhost:${port}${pg.path}`, {
+          waitUntil: "networkidle",
+        });
 
         // Desativar animações/transições APÓS carregar (para MUI)
         await page.addStyleTag({
-          content: '*, *::before, *::after { animation: none !important; transition: none !important; }',
+          content:
+            "*, *::before, *::after { animation: none !important; transition: none !important; }",
         });
 
         // Injetar mutação, se houver
         if (mutation) {
-          if (mutation.type === 'css') {
+          if (mutation.type === "css") {
             await page.addStyleTag({ content: mutation.content });
-          } else if (mutation.type === 'script') {
+          } else if (mutation.type === "script") {
             await page.evaluate(mutation.content);
           }
           await page.waitForTimeout(300);
@@ -112,15 +119,21 @@ export async function capture({ outDir, mutation, freeze = true } = {}) {
 }
 
 /* ===== Execução direta ===== */
-const running = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+const running =
+  process.argv[1] &&
+  path.resolve(process.argv[1]) ===
+    path.resolve(fileURLToPath(import.meta.url));
 if (running) {
-  const outIdx = process.argv.indexOf('--out');
+  const outIdx = process.argv.indexOf("--out");
   const outDir = outIdx !== -1 ? process.argv[outIdx + 1] : undefined;
 
   capture({ outDir })
     .then((files) => {
       console.log(`Capturas concluidas (${files.length} imagens):`);
-      files.forEach((f) => console.log('  ' + path.basename(f)));
+      files.forEach((f) => console.log("  " + path.basename(f)));
     })
-    .catch((err) => { console.error(err); process.exit(1); });
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 }

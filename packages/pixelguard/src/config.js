@@ -4,31 +4,27 @@
  * Looks for pixelguard.config.js at process.cwd().
  * Falls back to sensible defaults so zero-config works.
  */
-import fs   from 'node:fs';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const DEFAULTS = {
   /** Base URL of the application to test. If not set, PixelGuard will try to start a vite dev server. */
   baseUrl: null,
 
   /** Vite dev server port (used only when baseUrl is null). */
-  port: 3050,
+  port: 8000,
 
   /** Viewports to capture. */
-  viewports: [
-    { name: 'desktop', width: 1366, height: 768 },
-  ],
+  viewports: [{ name: "desktop", width: 1366, height: 768 }],
 
   /** Pages to capture — path relative to baseUrl. */
-  pages: [
-    { name: 'home', path: '/' },
-  ],
+  pages: [{ name: "home", path: "/" }],
 
   /** Threshold settings per technique. */
   thresholds: {
-    pixel:  { tolerance: 0.1, maxDiffPercent: 0.1 },
-    ssim:   { minScore: 0.98, blockSize: 8 },
+    pixel: { tolerance: 0.1, maxDiffPercent: 0.1 },
+    ssim: { minScore: 0.98, blockSize: 8 },
     region: { gridCols: 4, gridRows: 6, maxDiffPercent: 1.0 },
   },
 
@@ -36,19 +32,19 @@ const DEFAULTS = {
   masks: [],
 
   /** Which comparators to run. Subset of ['pixel', 'ssim', 'region']. */
-  comparators: ['pixel', 'ssim', 'region'],
+  comparators: ["pixel", "ssim", "region"],
 
   /** Directory for baseline images (relative to cwd). */
-  baselinesDir: 'baselines',
+  baselinesDir: "baselines",
 
   /** Directory for results output (relative to cwd). */
-  resultsDir: 'results',
+  resultsDir: "results",
 
   /** Freeze Date and Math.random for deterministic captures. */
   freeze: true,
 
   /** Review server port. */
-  reviewPort: 3060,
+  reviewPort: 8080,
 };
 
 /**
@@ -57,7 +53,7 @@ const DEFAULTS = {
  */
 export async function loadConfig() {
   const cwd = process.cwd();
-  const configPath = path.join(cwd, 'pixelguard.config.js');
+  const configPath = path.join(cwd, "pixelguard.config.js");
 
   let userConfig = {};
   if (fs.existsSync(configPath)) {
@@ -70,15 +66,18 @@ export async function loadConfig() {
   // Merge nested thresholds
   if (userConfig.thresholds) {
     config.thresholds = {
-      pixel:  { ...DEFAULTS.thresholds.pixel,  ...userConfig.thresholds.pixel },
-      ssim:   { ...DEFAULTS.thresholds.ssim,   ...userConfig.thresholds.ssim },
-      region: { ...DEFAULTS.thresholds.region,  ...userConfig.thresholds.region },
+      pixel: { ...DEFAULTS.thresholds.pixel, ...userConfig.thresholds.pixel },
+      ssim: { ...DEFAULTS.thresholds.ssim, ...userConfig.thresholds.ssim },
+      region: {
+        ...DEFAULTS.thresholds.region,
+        ...userConfig.thresholds.region,
+      },
     };
   }
 
   // Resolve dirs to absolute
   config.baselinesDir = path.resolve(cwd, config.baselinesDir);
-  config.resultsDir   = path.resolve(cwd, config.resultsDir);
+  config.resultsDir = path.resolve(cwd, config.resultsDir);
 
   return config;
 }
@@ -94,7 +93,7 @@ export default {
   baseUrl: null,
 
   // Vite dev server port (only used when baseUrl is null).
-  port: 3050,
+  port: 8000,
 
   // Viewports to capture screenshots for.
   viewports: [
@@ -129,7 +128,7 @@ export default {
   freeze: true,
 
   // Review UI server port.
-  reviewPort: 3060,
+  reviewPort: 8080,
 };
 `;
 }

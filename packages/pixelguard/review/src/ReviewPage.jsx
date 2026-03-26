@@ -127,12 +127,17 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         commit: meta?.commitShort || (results?.timestamp ? results.timestamp.slice(0, 7) : 'local'),
         author: meta?.actor || status[0]?.reviewedBy || 'local',
         timestamp: results?.timestamp || new Date().toISOString(),
-        totalTests: (results?.comparisons?.length || 0) * 3,
         passed: 0,
         failed: 0,
         pending: 0,
         diffs: [],
       };
+
+      // Detect which comparators are present from first comparison
+      const enabledTechs = results?.comparisons?.[0]
+        ? Object.keys(results.comparisons[0].results)
+        : ['pixel', 'ssim', 'region'];
+      run.totalTests = (results?.comparisons?.length || 0) * enabledTechs.length;
 
       if (results?.comparisons) {
         const techLabels = { pixel: 'Pixel', ssim: 'SSIM', region: 'Região' };
@@ -142,8 +147,9 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
           const reviewStatus = reviewInfo?.reviewStatus || 'pending';
 
           const techniques = [];
-          for (const tech of ['pixel', 'ssim', 'region']) {
+          for (const tech of enabledTechs) {
             const r = comp.results[tech];
+            if (!r) continue;
             let diffPercentage;
             if (tech === 'ssim') {
               diffPercentage = parseFloat(((1 - r.score) * 100).toFixed(2));
@@ -156,7 +162,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             }
             techniques.push({
               technique: tech,
-              label: techLabels[tech],
+              label: techLabels[tech] || tech,
               diffPercentage,
               passed: r.passed,
               diffUrl: `${IMG_BASE}/img/diff/${tech}/${comp.imageName}.png`,
@@ -189,13 +195,16 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
 
       if (scenarios?.scenarios?.length) {
         const techLabels = { pixel: 'Pixel', ssim: 'SSIM', region: 'Região' };
+        const scenarioTechs = scenarios.scenarios[0]
+          ? Object.keys(scenarios.scenarios[0].results)
+          : ['pixel', 'ssim', 'region'];
         const scenarioRun = {
           id: 'run-scenarios',
           branch: 'Cenários de Teste',
           commit: scenarios.timestamp ? scenarios.timestamp.slice(0, 7) : 'local',
           author: 'scenarios',
           timestamp: scenarios.timestamp || new Date().toISOString(),
-          totalTests: scenarios.scenarios.length * 3,
+          totalTests: scenarios.scenarios.length * scenarioTechs.length,
           passed: 0,
           failed: 0,
           pending: 0,
@@ -204,8 +213,9 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
 
         for (const sc of scenarios.scenarios) {
           const techniques = [];
-          for (const tech of ['pixel', 'ssim', 'region']) {
+          for (const tech of scenarioTechs) {
             const r = sc.results[tech];
+            if (!r) continue;
             let diffPercentage;
             if (tech === 'ssim') {
               diffPercentage = parseFloat(((1 - r.score) * 100).toFixed(2));
@@ -218,7 +228,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
             }
             techniques.push({
               technique: tech,
-              label: techLabels[tech],
+              label: techLabels[tech] || tech,
               diffPercentage,
               passed: r.passed,
               diffUrl: `${IMG_BASE}/img/scenarios/diff/${tech}/${sc.id}.png`,
@@ -511,7 +521,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
         <Box sx={{ fontSize: '1.2rem', fontWeight: 600 }}>Erro ao conectar à API</Box>
         <Box sx={{ fontSize: '0.85rem' }}>{error}</Box>
         <Box sx={{ fontSize: '0.8rem', color: SUBTLE }}>
-          Execute: npx pixelguard-review (porta 3060)
+          Execute: npx pixelguard-review (porta 8080)
         </Box>
       </Box>
     );

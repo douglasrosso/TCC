@@ -43,7 +43,7 @@ O PixelGuard automatiza a detecção de regressões visuais em aplicações web.
 ```
 Captura screenshots → Compara com baselines → Gera relatório → Abre review UI
        ↓                      ↓                     ↓                ↓
-   Playwright            3 técnicas           report.html      localhost:3060
+   Playwright            3 técnicas           report.html      localhost:8080
                      (pixel, SSIM, região)
 ```
 
@@ -63,7 +63,7 @@ Captura screenshots → Compara com baselines → Gera relatório → Abre revie
 ┌─────────────────────────────────────────────────────────────┐
 │                      Aplicação React                        │
 │              (src/ — React 19 + MUI 6 + Vite 6)            │
-│                     porta 3050                              │
+│                     porta 8000                              │
 └──────────────────────────┬──────────────────────────────────┘
                            │ Playwright captura
                            ▼
@@ -79,7 +79,7 @@ Captura screenshots → Compara com baselines → Gera relatório → Abre revie
 │    src/comparators/region.js  (grade + máscaras)            │
 │                                                             │
 │  Review UI (embutida):                                      │
-│    review/server/   → HTTP server + REST API (porta 3060)   │
+│    review/server/   → HTTP server + REST API (porta 8080)   │
 │    review/dist/     → SPA React pré-buildada                │
 └──────────────────────────┬──────────────────────────────────┘
                            │ GitHub Statuses API
@@ -147,7 +147,7 @@ Exemplo completo:
 export default {
   // URL base da aplicação (null = auto-start Vite)
   baseUrl: null,
-  port: 3050,
+  port: 8000,
 
   /* Viewports para captura */
   viewports: [
@@ -179,7 +179,7 @@ export default {
   freeze: true,
 
   /* Porta da Review UI */
-  reviewPort: 3060,
+  reviewPort: 8080,
 };
 ```
 
@@ -249,7 +249,7 @@ Este comando executa o pipeline completo via `pixelguard test`:
 npm run vrt:review
 ```
 
-Executa o pipeline completo e em seguida abre a **Review UI** interativa na porta 3060.
+Executa o pipeline completo e em seguida abre a **Review UI** interativa na porta 8080.
 
 ### Primeiro uso — criar baselines iniciais
 
@@ -284,7 +284,7 @@ git commit -m "chore: atualizar baselines"
 npx pixelguard capture     # Captura screenshots → results/current/
 npx pixelguard compare     # Compara com baselines → results/results.json
 npx pixelguard report      # Gera relatório HTML → results/report.html
-npx pixelguard review      # Inicia a Review UI → localhost:3060
+npx pixelguard review      # Inicia a Review UI → localhost:8080
 ```
 
 ---
@@ -305,14 +305,14 @@ npx pixelguard <command>
 | `report` | Gera relatório HTML em `results/report.html` |
 | `update-baselines` | Copia `results/current/` para `baselines/` |
 | `test` | **Pipeline completo:** capture → compare → report |
-| `review` | Inicia a Review UI interativa (porta 3060) |
+| `review` | Inicia a Review UI interativa (porta 8080) |
 
 Opções:
 
 | Opção | Descrição |
 |:------|:----------|
 | `--help`, `-h` | Mostra ajuda |
-| `--port <n>` | Porta para o servidor de review (padrão: 3060) |
+| `--port <n>` | Porta para o servidor de review (padrão: 8080) |
 
 ### Usando em outros projetos
 
@@ -341,7 +341,7 @@ Ou com porta customizada:
 npx pixelguard review --port 4000
 ```
 
-Acesse: **http://localhost:3060**
+Acesse: **http://localhost:8080**
 
 ### Visão geral da interface
 
@@ -600,13 +600,13 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 
 | Comando | Descrição |
 |:--------|:----------|
-| `npm run dev` | Inicia o servidor de desenvolvimento da aplicação de exemplo (porta 3050) |
+| `npm run dev` | Inicia o servidor de desenvolvimento da aplicação de exemplo (porta 8000) |
 | `npm run build` | Build de produção da aplicação de exemplo |
 | `npm run vrt` | **Pipeline completo:** captura → comparação → relatório |
 | `npm run vrt:review` | Pipeline completo + abre Review UI |
 | `npm run update-baselines` | Copia `results/current/` para `baselines/` |
 | `npm run scenarios` | Roda os cenários de teste (mutações controladas) |
-| `npm run review` | Inicia a Review UI (porta 3060) |
+| `npm run review` | Inicia a Review UI (porta 8080) |
 
 ### CLI PixelGuard (uso geral)
 
@@ -618,7 +618,7 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 | `npx pixelguard report` | Gera relatório HTML → `results/report.html` |
 | `npx pixelguard test` | Pipeline completo (capture → compare → report) |
 | `npx pixelguard update-baselines` | Copia current/ → baselines/ |
-| `npx pixelguard review` | Inicia Review UI → localhost:3060 |
+| `npx pixelguard review` | Inicia Review UI → localhost:8080 |
 | `npx pixelguard review --port 4000` | Review UI em porta customizada |
 
 ---
@@ -630,7 +630,7 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 | Propriedade | Tipo | Padrão | Descrição |
 |:------------|:-----|:-------|:----------|
 | `baseUrl` | `string \| null` | `null` | URL da aplicação. `null` = auto-start Vite |
-| `port` | `number` | `3050` | Porta para auto-start do Vite |
+| `port` | `number` | `8000` | Porta para auto-start do Vite |
 | `viewports` | `Array<{ name, width, height }>` | mobile/tablet/desktop | Viewports para captura |
 | `pages` | `Array<{ name, path }>` | `[{ name: 'home', path: '/' }]` | Páginas a capturar |
 | `thresholds.pixel` | `{ tolerance, maxDiffPercent }` | `{ 0.1, 0.1 }` | Limiares do comparador pixel |
@@ -640,7 +640,7 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 | `baselinesDir` | `string` | `'baselines'` | Pasta de baselines (relativa ao cwd) |
 | `resultsDir` | `string` | `'results'` | Pasta de resultados (relativa ao cwd) |
 | `freeze` | `boolean` | `true` | Congela Date/Math.random para determinismo |
-| `reviewPort` | `number` | `3060` | Porta da Review UI |
+| `reviewPort` | `number` | `8080` | Porta da Review UI |
 
 ### Variáveis de ambiente
 
@@ -704,7 +704,7 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 │       │       └── region.js         #       Grade com máscaras
 │       └── review/                   #   Review UI (embutida)
 │           ├── server/               #     Servidor HTTP + REST API
-│           │   ├── index.js          #       Router e servidor (porta 3060)
+│           │   ├── index.js          #       Router e servidor (porta 8080)
 │           │   └── review.js         #       Lógica de approve/reject/reset
 │           ├── dist/                 #     SPA React pré-buildada
 │           └── src/                  #     Código-fonte React (para rebuild)
