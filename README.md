@@ -29,10 +29,12 @@
 7. [PixelGuard CLI](#pixelguard-cli)
 8. [Review UI — Guia Completo](#review-ui--guia-completo)
 9. [Relatório HTML](#relatório-html)
-10. [CI/CD — GitHub Actions](#cicd--github-actions)
-11. [Comandos de Referência](#comandos-de-referência)
-12. [Referência de Configuração](#referência-de-configuração)
-13. [Estrutura do Projeto](#estrutura-do-projeto)
+10. [Aplicação Dashboard (sujeito de teste)](#aplicação-dashboard-sujeito-de-teste)
+11. [Cenários de regressão](#cenários-de-regressão)
+12. [CI/CD — GitHub Actions](#cicd--github-actions)
+13. [Comandos de Referência](#comandos-de-referência)
+14. [Referência de Configuração](#referência-de-configuração)
+15. [Estrutura do Projeto](#estrutura-do-projeto)
 
 ---
 
@@ -349,7 +351,7 @@ Acesse: **http://localhost:8080**
 
 ### Visão geral da interface
 
-![Review UI — Visão geral](docs/images/01-review-overview.png)
+![Review UI — Visão geral](docs/images/review-ui/test-runs.png)
 
 A interface é dividida em **3 painéis redimensionáveis**:
 
@@ -361,7 +363,7 @@ A interface é dividida em **3 painéis redimensionáveis**:
 
 ### Selecionando e visualizando diffs
 
-![Diff selecionado — Side by Side](docs/images/02-review-diff-selected.png)
+![Diff selecionado — Side by Side](docs/images/review-ui/side-by-side.png)
 
 Ao clicar em um test run e depois em uma tela, o **Diff Viewer** exibe 3 imagens lado a lado:
 
@@ -379,25 +381,25 @@ A toolbar do Diff Viewer oferece **3 modos** de visualização:
 
 Mostra baseline, atual e diff lado a lado. Ideal para comparação rápida.
 
-![Side by Side](docs/images/02-review-diff-selected.png)
+![Side by Side](docs/images/review-ui/side-by-side.png)
 
 #### 2. Overlay (sobreposição)
 
 Sobrepõe a imagem atual sobre a baseline com **opacidade ajustável**. Útil para detectar deslocamentos sutis.
 
-![Overlay](docs/images/03-review-overlay.png)
+![Overlay](docs/images/review-ui/overlay.png)
 
 #### 3. Slider (deslizante)
 
 Arraste o cursor horizontal para revelar a imagem atual sobre a baseline. Excelente para comparar regiões específicas.
 
-![Slider](docs/images/04-review-slider.png)
+![Slider](docs/images/review-ui/slider.png)
 
 ### Elementos da interface em detalhe
 
 #### Header
 
-![Header da Review UI](docs/images/05-review-header.png)
+![Header da Review UI](docs/images/review-ui/header.png)
 
 | Elemento | Descrição |
 |:---------|:----------|
@@ -486,7 +488,7 @@ Quando executada em modo CI (via GitHub Pages), a Review UI se comunica com a **
 
 Além da Review UI interativa, o pipeline gera um **relatório HTML estático autocontido**:
 
-![Relatório HTML](docs/images/09-report-html.png)
+![Relatório HTML](docs/images/report/html.png)
 
 O relatório inclui:
 
@@ -499,6 +501,49 @@ O relatório inclui:
 | **Comparações visuais** | Baseline, captura atual e mapas de diff para cada técnica |
 
 O arquivo é gerado em `results/report.html` e pode ser aberto diretamente no navegador.
+
+---
+
+## Aplicação Dashboard (sujeito de teste)
+
+A aplicação React (Material UI) em [`src/`](src) é uma single-page que simula um painel administrativo com tabela de transações, métricas e gráficos. Ela é o alvo principal das comparações da pipeline e é capturada com determinismo (relógio congelado, `Math.random` fixo, animações desativadas).
+
+| Viewport | Captura |
+|:---|:---|
+| Desktop · 1366 × 768 | ![Dashboard desktop](docs/images/dashboard/desktop.png) |
+| Tablet · 768 × 1024 | ![Dashboard tablet](docs/images/dashboard/tablet.png) |
+| Mobile · 360 × 640 | ![Dashboard mobile](docs/images/dashboard/mobile.png) |
+
+---
+
+## Cenários de regressão
+
+Além da tela `dashboard`, o comando `npm run scenarios` executa **13 cenários** projetados para isolar tipos específicos de mudança visual e expor pontos fortes e fracos de cada técnica. Cada composite abaixo mostra, em uma única linha: **Baseline · Atual · Diff Pixel · Diff SSIM · Diff Região**, com o veredicto e a métrica principal de cada técnica.
+
+Os 13 composites são gerados automaticamente a partir de [`results/scenarios/scenarios-results.json`](results/scenarios/scenarios-results.json) pelo script [`scripts/capture-scenarios.js`](scripts/capture-scenarios.js), de modo que ficam sempre sincronizados com a última execução.
+
+| Cenário | Composite | Mutação injetada | Resultado esperado |
+|---|---|---|---|
+| Mudança sutil de cor | [color-subtle.png](docs/images/scenarios/color-subtle.png) | troca de tom em 2 de 6 cards (Δ 22–37 RGB por canal) | Pixel detecta, SSIM tolera |
+| Deslocamento de layout | [layout-shift.png](docs/images/scenarios/layout-shift.png) | margem-topo 24 px na primeira seção | todas detectam |
+| Variação tipográfica | [typography.png](docs/images/scenarios/typography.png) | aumento de `letter-spacing` em blocos de texto | todas detectam |
+| Conteúdo dinâmico (sem máscara) | [dynamic-content.png](docs/images/scenarios/dynamic-content.png) | `Date` e `Math.random` descongelados na captura atual | apenas Região alerta |
+| Conteúdo dinâmico (com máscara) | [dynamic-content-masked.png](docs/images/scenarios/dynamic-content-masked.png) | mesmo cenário acima, com máscara nas células variáveis | tudo PASS — máscara funcionou |
+| Alteração de componente | [component-change.png](docs/images/scenarios/component-change.png) | texto e cor da borda de 1 card | Pixel + Região detectam |
+| Opacidade e transparência | [opacity.png](docs/images/scenarios/opacity.png) | `opacity: 0.92` em 3 cards | nenhuma técnica detecta (limiar restritivo) |
+| Sombra e elevação | [shadow.png](docs/images/scenarios/shadow.png) | `box-shadow` adicionada em 3 cards | nenhuma técnica detecta |
+| Micro-deslocamento (1 px) | [micro-shift.png](docs/images/scenarios/micro-shift.png) | margem-topo de 1 px na primeira seção | todas detectam |
+| Alteração de borda fina | [border-change.png](docs/images/scenarios/border-change.png) | troca de cor de `border: 2px` em 2 cards | Pixel + Região detectam |
+| Remoção de elemento | [element-removal.png](docs/images/scenarios/element-removal.png) | `display: none` em 1 card | Pixel + Região detectam |
+| Troca de família de fonte | [font-swap.png](docs/images/scenarios/font-swap.png) | `font-family` serifada em 2 blocos | todas detectam |
+| Imagem idêntica (controle) | [identical.png](docs/images/scenarios/identical.png) | sem mutação | tudo PASS — sem falsos positivos |
+
+Para regerar os composites:
+
+```bash
+npm run scenarios                     # gera results/scenarios/*
+node scripts\capture-scenarios.js     # gera docs/images/scenarios/*
+```
 
 ---
 
@@ -705,7 +750,7 @@ O `[skip ci]` no commit impede que o workflow entre em loop.
 ├── tests/                            # Scripts de teste
 │   └── scenarios.js                  #   Runner de cenários de mutação
 ├── scripts/
-│   └── capture-figs.js               #   Captura figuras para o LaTeX
+│   └── capture-scenarios.js          #   Gera composites docs/images/scenarios/*
 ├── packages/
 │   └── pixelguard/                   # Pacote npm reutilizável (CLI + Engine + Review)
 │       ├── bin/

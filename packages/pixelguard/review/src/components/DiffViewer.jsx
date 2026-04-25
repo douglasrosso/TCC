@@ -271,7 +271,7 @@ function SideBySideView({ diff, zoom, diffUrl, techniqueLabel }) {
   ];
 
   return (
-    <Box sx={{ display: 'flex', gap: 2, height: '100%', flexDirection: { xs: 'column', lg: 'row' } }}>
+    <Box data-testid="diff-content" sx={{ display: 'flex', gap: 2, height: '100%', flexDirection: { xs: 'column', lg: 'row' } }}>
       {panels.map(({ label, src }) => (
         <Box key={label} sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 0.5 }}>
@@ -633,7 +633,7 @@ export default function DiffViewer({
                 }}
               >
                 {availableTechniques.map((t) => (
-                  <ToggleButton key={t.technique} value={t.technique}>{t.label}</ToggleButton>
+                  <ToggleButton key={t.technique} value={t.technique} data-technique={t.technique}>{t.label}</ToggleButton>
                 ))}
           </ToggleButtonGroup>
           <Box sx={{ width: '1px', height: 16, bgcolor: BORDER }} />
@@ -703,7 +703,7 @@ export default function DiffViewer({
       </Box>}
 
       {/* =============== Image comparison area =============== */}
-      <Box sx={{ flex: 1, overflow: 'auto', bgcolor: '#09090b', p: { xs: 1, sm: 2 } }}>
+      <Box data-testid="diff-area" sx={{ flex: 1, overflow: 'auto', bgcolor: '#09090b', p: { xs: 1, sm: 2 } }}>
         {allPassed && !showImages ? (
           <Box
             sx={{

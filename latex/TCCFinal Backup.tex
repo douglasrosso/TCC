@@ -1,0 +1,370 @@
+%==========================================================================
+% Artigo (versão final) no template UNESC
+% Baseado em: Exemplo de artigo cientifico UNESC (v1.0 - 25/06/2025)
+%==========================================================================
+
+%==========================================================================
+% Pacotes utilizados pela UNESC - não delete as linhas abaixo
+%==========================================================================
+\documentclass{UNESC}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}%\usepackage[latin1]{inputenc}
+\renewcommand{\rmdefault}{phv} % Arial
+\renewcommand{\sfdefault}{phv} % Arial
+\usepackage[brazilian]{babel}
+\usepackage{graphicx}
+%\usepackage{subfigure}
+\usepackage{hyperref}
+\usepackage{quoting}
+\usepackage[labelsep=none]{caption}
+\DeclareCaptionLabelFormat{figuracomtraco}{#1~#2 -}
+\captionsetup[figure]{labelformat=figuracomtraco, labelsep=space}
+\captionsetup[table]{labelformat=simple, labelsep=space, textformat=simple}
+\DeclareCaptionLabelFormat{tabelacomtraco}{#1~#2 -}
+\captionsetup[table]{labelformat=tabelacomtraco}
+\captionsetup{labelsep=none}
+%\renewcommand{\thefigure}{\arabic{figure} - }
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{comment}
+\usepackage[hang,flushmargin]{footmisc}
+\usepackage{array}
+
+\hypersetup{
+  setpagesize  = false,
+  colorlinks   = true,    % Colours links instead of ugly boxes
+  urlcolor     = blue,    % Colour for external hyperlinks
+  linkcolor    = black,   % Colour of internal links
+  citecolor    = black    % Colour of citations
+}
+\urlstyle{same}
+\usepackage{setspace}
+
+\usepackage[alf,recuo=0.0cm,abnt-emphasize=bf]{abntex2cite} 
+
+%\captionsetup[figure]{justification=raggedright}
+
+
+%==========================================================================
+% Dados do artigo: título, autores e filiação
+%==========================================================================
+\title{DETECÇÃO DE REGRESSÕES VISUAIS EM INTEGRAÇÃO CONTÍNUA: IMPLEMENTAÇÃO E ANÁLISE DE TÉCNICAS PARA DETECTAR FALHAS DE INTERFACE}
+\author
+{
+   Douglas Martignago Rosso\footnote{Curso de Ciência da Computação, Universidade do Extremo Sul Catarinense (Unesc), Criciúma - Santa Catarina - Brasil. douglasrosso10@gmail.com},
+   Ana Cláudia Garcia Barbosa\footnote{Orientadora. Curso de Ciência da Computação, Universidade do Extremo Sul Catarinense (Unesc), Criciúma - Santa Catarina - Brasil. agb@unesc.net}
+}
+%==========================================================================
+% Início do texto do artigo
+%==========================================================================
+\begin{document}
+
+\onehalfspacing
+
+\maketitle
+
+\noindent
+\textbf{Resumo:} Este trabalho avalia técnicas de regressão visual em integração contínua, comparando diferença \emph{pixel a pixel}, métrica perceptual SSIM e abordagem por regiões com uso de máscaras. A verificação visual foi automatizada em \emph{pipelines} de CI/CD, com \emph{baseline} sob controle de versão e geração de artefatos rastreáveis (relatório HTML e interface de revisão). Para a avaliação, foram implementados doze cenários de mutação controlada e um cenário de controle, executados em três larguras de visualização. A comparação \emph{pixel a pixel} detectou oito dos doze cenários com mutação, a SSIM detectou quatro e a abordagem por regiões detectou nove, demonstrando perfis complementares de sensibilidade e cobertura. O estudo discute capacidade de detecção, ocorrência de alertas indevidos e esforço de triagem, considerando variações de renderização, alterações de \emph{layout}, conteúdo dinâmico e responsividade. Conclui-se que a combinação das três técnicas no mesmo fluxo favorece decisões de aceite em solicitações de mudança.
+
+\vspace{0.5em}
+\noindent
+\textbf{Palavras-chave:} regressão visual; integração contínua; testes automatizados; SSIM; baseline.
+
+\vspace{1.0em}
+\noindent
+\textbf{ABSTRACT:} This work evaluates visual regression techniques in continuous integration by comparing pixel-by-pixel diff, the SSIM perceptual metric, and a region-based approach with masking. Visual checks were automated in CI/CD pipelines, with baselines under version control and traceable artifacts (HTML report and a review UI). Twelve controlled mutation scenarios and one control scenario were implemented and executed across three viewport widths. The pixel-by-pixel comparison detected eight of twelve mutation scenarios, SSIM detected four, and the region-based approach detected nine, showing complementary sensitivity profiles. The study discusses detection capability, noisy alerts, and triage effort under rendering variability, layout changes, dynamic content, and responsiveness. Combining the three techniques in the same workflow supports accept/reject decisions in pull requests.
+
+\vspace{0.5em}
+\noindent
+\textbf{Keywords:} visual regression; continuous integration; automated testing; SSIM; baseline.
+
+
+\section{INTRODUÇÃO}
+
+A qualidade visual de interfaces web constitui preocupação recorrente em equipes de desenvolvimento que adotam ciclos curtos de entrega. Mudanças de código como ajustes de espaçamento, troca de fontes ou alteração de cores podem modificar a aparência da interface sem afetar a lógica funcional. Quando a versão atual diverge da referência previamente aprovada, configura-se uma regressão visual, ou seja, uma diferença indesejada identificada pela comparação de imagens de tela \cite{tanno2020}. Verificar manualmente cada tela em cada dispositivo consome tempo e está sujeito a falhas humanas, o que motiva o emprego de técnicas automatizadas de comparação de imagens em fluxos de Integração e Entrega Contínuas (CI/CD) \cite{shahin2017,hilton2016ci}.
+
+Testes de software contribuem para qualidade, confiabilidade e manutenção de sistemas \cite{alberto2020,banerjee2013}. A automação aumenta cobertura e repetibilidade, e em escala maior recomenda-se priorizar testes em contextos nos quais risco e impacto são mais altos, permitindo verificações frequentes em ciclos curtos \cite{costa2022}. No recorte de regressão visual, o objetivo é indicar se as mudanças de código afetam padrões de apresentação previamente definidos, por meio de comparação de imagens de tela entre versões \cite{tanno2020,figueiredo2018,bordignon2019,tanoue2018vrt}.
+
+Três famílias de técnicas são empregadas para essa verificação. A diferença \emph{pixel a pixel} marca qualquer variação entre as imagens e revela alterações sutis, mas flutuações de renderização, ajustes de fonte ou diferenças de \emph{layout} podem elevar o número de alertas e o esforço de triagem \cite{tanno2020,figueiredo2018,tanoue2018vrt}. Métricas perceptuais como a SSIM (\emph{Structural Similarity Index}), proposta por \citeonline{wang2004}, comparam luminância, contraste e estrutura, aproximando a avaliação da percepção humana e reduzindo a incidência de alertas em variações menores. A MS-SSIM estende a análise a múltiplas escalas, favorecendo robustez a diferentes resoluções \cite{wang2003msssim}. Abordagens por regiões segmentam a tela em partes independentes, realizam correspondência entre áreas equivalentes e permitem mascaramento de conteúdo dinâmico, reduzindo o impacto de deslocamentos e tornando as imagens de diferenças mais informativas para a triagem \cite{tanno2020}.
+
+Elementos naturalmente variáveis (datas, contadores, dados externos) produzem diferenças recorrentes se não tratados, e recomenda-se aplicar máscaras apenas em regiões inevitavelmente variáveis e adotar política explícita de atualização de \emph{baseline} para manter rastreabilidade e evitar normalização de defeitos \cite{tanno2020,tanoue2018vrt}. O determinismo operacional exige versões fixas de sistema e navegador, resolução e densidade constantes, fontes empacotadas, idioma e fuso horário controlados, animações desativadas e simulação de dados quando necessário \cite{heinonen2020}. Integrar a verificação visual ao fluxo de CI/CD aumenta a rastreabilidade e o retorno de informação, pois imagens de referência, diferenças e relatórios vinculam-se a \emph{commits} e solicitações de mudança, favorecendo a adoção de pontos automatizados de qualidade \cite{shahin2017,hilton2016ci,maia2024}. Em Scrum e Kanban, entregas incrementais e retorno frequente de informação sustentam verificações visuais leves entre versões, e estudos nacionais associam a transformação ágil a ganhos de qualidade e produtividade \cite{bessa2018,costa2023}.
+
+Na literatura, \citeonline{tanno2020} comparam técnicas de detecção de regressão visual em aplicações web, avaliando comparação \emph{pixel a pixel}, abordagens por regiões com segmentação da tela e métricas perceptuais. O estudo identifica que a comparação direta de pixels é sensível a flutuações de renderização e que abordagens por regiões reduzem o impacto de deslocamentos ao segmentar a tela em partes independentes. Os autores recomendam mascaramento de áreas dinâmicas e política explícita de atualização de \emph{baseline} para evitar acúmulo de alertas, mas não executam cenários de mutação controlada com coleta padronizada de métricas por técnica, nem integram as verificações a um \emph{pipeline} de CI/CD com artefatos rastreáveis.
+
+\citeonline{heinonen2020} investiga a integração de testes visuais em \emph{pipelines} de integração contínua, discutindo práticas de determinismo operacional (versões fixas de navegador, resolução constante, desativação de animações) para reduzir variações entre capturas. O estudo indica que o determinismo do ambiente de captura é pré-requisito para a confiabilidade dos resultados de comparação, mas não compara o desempenho de diferentes técnicas de comparação nem avalia cenários específicos de mutação.
+
+\citeonline{tanoue2018vrt} descrevem a aplicação de testes de regressão visual em projetos web, utilizando comparação de imagens com ferramentas de automação de navegador. Os autores relatam ganhos de cobertura e de velocidade de verificação em relação à inspeção manual, mas apontam que a manutenção de \emph{baselines} e a calibragem de limiares são tarefas contínuas que requerem atenção da equipe. O estudo não realiza comparação entre famílias de técnicas sob condições experimentais controladas.
+
+Apesar da contribuição desses trabalhos, a literatura carece de estudos que comparem, sob condições experimentais controladas, as três famílias (pixel a pixel, SSIM e regiões) quanto à capacidade de detecção, à incidência de alertas indevidos e ao suporte à triagem, com artefatos rastreáveis em CI/CD. Não foram identificados trabalhos que combinem cenários de mutação controlada, coleta padronizada de métricas por técnica e evidências vinculadas ao histórico de versões, em diferentes larguras de visualização \cite{tanno2020,wang2004,heinonen2020}.
+
+Este trabalho avalia três técnicas de regressão visual em um fluxo automatizado de CI/CD. Para isso, foi implementada a ferramenta PixelGuard, distribuída como pacote npm reutilizável, que integra captura de telas via Playwright, comparação por três técnicas em paralelo e publicação de evidências (relatório HTML e interface de revisão). Foram construídos doze cenários de mutação controlada e um cenário de controle, executados em três larguras de visualização, com imagens de referência sob controle de versão.
+
+\vspace{0.5em}
+\noindent
+\textbf{Objetivo geral:} Avaliar técnicas de regressão visual quanto à detecção de falhas, à ocorrência de falsos positivos e ao esforço de triagem, com imagens de referência sob controle de versão em CI/CD.
+
+\vspace{0.5em}
+\noindent
+\textbf{Objetivos específicos:}
+\begin{itemize}[leftmargin=2em]
+    \item Identificar cenários e tipos de mudança na interface com risco de regressão visual.
+    \item Implementar um fluxo automatizado de verificação em CI/CD com geração de artefatos rastreáveis.
+    \item Medir o desempenho das técnicas em detecção, falsos positivos e esforço de triagem.
+    \item Analisar robustez diante de variações de renderização, \emph{layout} e conteúdo dinâmico.
+\end{itemize}
+
+\vspace{0.5em}
+\noindent
+\textbf{Justificativa:} A automação de testes amplia cobertura, reduz esforço manual e sustenta a governança da qualidade por meio de registro de evidências \cite{alberto2020,banerjee2013}. Em sistemas de maior porte, manter verificações manuais de regressão consome recursos e é pouco escalável, e recomenda-se priorizar automação em contextos de risco e criticidade \cite{costa2022}. No recorte visual, cada técnica de comparação implica um compromisso entre sensibilidade e ruído de alertas \cite{wang2004,tanno2020}, e a ausência de evidências comparativas dificulta a escolha em contextos de operação contínua. Integrar verificações visuais ao \emph{pipeline}, com ambiente determinístico e políticas de atualização de \emph{baseline}, favorece decisões sustentadas por evidências \cite{shahin2017,heinonen2020}, em linha com práticas ágeis que priorizam fluxo contínuo e \emph{feedback} frequente \cite{bessa2018,costa2023}.
+
+\vspace{0.5em}
+\noindent
+\textbf{Estrutura do trabalho:} Este artigo está organizado em quatro seções. Na Introdução, apresentam-se o problema, os conceitos que sustentam o estudo, os trabalhos correlatos, a lacuna identificada, os objetivos e a justificativa. Em Materiais e Métodos, descrevem-se o desenho experimental, as técnicas, as métricas e a configuração do fluxo. Resultados e Discussão analisa os dados obtidos, e a Conclusão apresenta as considerações finais e recomendações.
+
+
+\section{MATERIAIS E MÉTODOS}
+
+Esta pesquisa é aplicada, pois compara técnicas de detecção de regressão visual e as integra, de forma prática, a fluxos de Integração e Entrega Contínuas (CI/CD). Em termos de objetivos, é exploratória e descritiva: exploratória por ampliar o entendimento sobre abordagens e parâmetros de calibração; descritiva por relatar, de modo organizado, os procedimentos adotados e os resultados obtidos. Quanto aos procedimentos, utiliza experimentação controlada com análise quantitativa, baseada em medidas numéricas, e síntese descritiva. Como base conceitual, adotam-se métricas perceptuais de imagem, em especial a SSIM, proposta por \citeonline{wang2004}, e práticas de operação em pipelines de software discutidas por \citeonline{shahin2017} e \citeonline{heinonen2020}.
+
+\subsection{Objetivo metodológico}
+O objetivo é identificar, em condições controladas, qual técnica de verificação visual oferece melhor equilíbrio entre quatro aspectos: capacidade de detectar alterações que afetam a interface; incidência de alertas indevidos; esforço de triagem, medido como o tempo gasto para analisar cada alerta; e robustez diante de variações comuns de renderização, distribuição dos elementos na tela, conteúdo dinâmico e diferentes larguras de visualização. A motivação técnica para incluir uma métrica perceptual decorre do fato de que, conforme \citeonline{wang2004}, a SSIM considera luminância, contraste e estrutura, aproximando a comparação da percepção humana.
+
+\subsection{Ambiente experimental e determinismo}
+Os testes foram executados em ambiente padronizado para garantir resultados reproduzíveis. Utilizou-se Node.js (v20) e Playwright (Chromium \emph{headless}) para captura de telas, com densidade de pixels fixa, \emph{locale} \texttt{pt-BR} e fuso horário \texttt{America/Sao\_Paulo}. Durante a captura, animações e transições foram desativadas e, para reduzir instabilidades, o relógio e a função \texttt{Math.random} foram congelados por \emph{script} injetado antes do carregamento da página. As capturas foram feitas com \emph{screenshot} \emph{full-page}, e as imagens atuais foram salvas em diretório de saída dedicado. As imagens de referência (\emph{baseline}) permaneceram em diretório próprio sob controle de versão, permitindo auditoria e rastreabilidade. Esses cuidados de determinismo operacional são recomendados para reduzir ruído em verificações automatizadas no \emph{pipeline} \cite{heinonen2020}.
+
+\subsection{Delineamento experimental}
+O delineamento especifica os elementos do experimento e como eles se combinam:
+\begin{enumerate}[label=\alph*),leftmargin=1.5em]
+  \item Cenário avaliado. O cenário central foi uma aplicação \emph{single-page} em React (tela \textit{dashboard}), capturada de forma determinística (congelamento de relógio e \texttt{Math.random}) para reduzir variações entre execuções. Apesar disso, registrou-se também um caso de instabilidade: diferenças de altura em capturas \emph{full-page} (mesma largura, altura levemente diferente), que afetam diretamente a comparabilidade por imagem.
+  \item Técnicas. Três famílias representativas foram comparadas: (i) comparação \emph{pixel a pixel} com tolerância (\texttt{pixelmatch}); (ii) comparação perceptual baseada em SSIM, conforme \citeonline{wang2004}, com implementação em blocos (\texttt{blockSize}); e (iii) abordagem por regiões com segmentação em grade e suporte a máscaras para áreas dinâmicas \cite{tanno2020}.
+  \item Larguras de visualização. Foram utilizados três \emph{viewports} representativos: 360\,px (\textit{mobile}), 768\,px (\textit{tablet}) e 1366\,px (\textit{desktop}). Cada página foi capturada em todas as larguras.
+  \item Máscaras e política de aceitação. A técnica por regiões foi configurada para grade 4\,$\times$\,6, com suporte a mascaramento por célula. Neste recorte, as máscaras permaneceram desativadas (lista vazia) para evidenciar o comportamento de ruído/alertas. A atualização de \emph{baseline} foi tratada como processo explícito e rastreável no fluxo de CI/CD.
+\end{enumerate}
+
+\subsection{Implementação do fluxo (PixelGuard)}
+Para viabilizar a avaliação e a operação em \emph{pipeline}, foi implementada uma ferramenta de regressão visual denominada PixelGuard. A ferramenta foi estruturada como pacote npm reutilizável (\texttt{pixelguard}), instalável em outros projetos por meio do comando \texttt{npm install pixelguard}. O pacote expõe uma interface de linha de comando (CLI) com oito comandos (\texttt{init}, \texttt{capture}, \texttt{compare}, \texttt{report}, \texttt{update-baselines}, \texttt{test}, \texttt{review} e \texttt{deploy}) e uma API programática que permite importar as funções de captura, comparação, geração de relatório, atualização de \emph{baselines} e \emph{deploy} em \emph{scripts} personalizados. Toda a configuração é centralizada em um arquivo \texttt{pixelguard.config.js} na raiz do projeto consumidor, que define páginas, \emph{viewports}, limiares por técnica e máscaras de regiões dinâmicas.
+
+Na etapa de captura, a aplicação é servida via Vite (ou em URL externa já em execução) e o Playwright abre um navegador Chromium \emph{headless} para realizar capturas \emph{full-page} em cada combinação de página e \emph{viewport}. Para reduzir instabilidades entre execuções, um \emph{script} injetado antes do carregamento da página congela a data (\texttt{new Date()} retorna \texttt{2025-06-15T10:00:00}), substitui \texttt{Math.random} por um gerador pseudoaleatório com semente fixa e injeta CSS que desativa animações e transições. O contexto do navegador é configurado com \emph{locale} \texttt{pt-BR}, fuso horário \texttt{America/Sao\_Paulo} e \texttt{deviceScaleFactor} igual a 1. As capturas são salvas como PNG no diretório de resultados, com nomenclatura padronizada (\texttt{pagina-viewport-largura.png}).
+
+Na etapa de comparação, cada imagem atual é confrontada com a respectiva \emph{baseline}. Os três comparadores, configuráveis no arquivo de configuração, são executados em paralelo para cada par de imagens: (i) \emph{pixel a pixel} via \texttt{pixelmatch} com tolerância 0,1 e limite de 0,1\% de diferença; (ii) SSIM com limiar mínimo 0,98, tamanho de bloco 8 e implementação própria em JavaScript; e (iii) regiões com grade 4\,$\times$\,6, limite de 1,0\% por célula e suporte a mascaramento de células com conteúdo dinâmico. As imagens de diferença (\emph{diffs}) são salvas em subdiretórios separados por técnica, e o resultado consolidado é exportado em formato JSON.
+
+Na etapa de evidências, um relatório HTML autocontido é gerado com resumo por técnica (aprovação ou reprovação), imagens de \emph{baseline}, captura atual e \emph{diffs}, metadados do \emph{commit} e indicadores numéricos. Adicionalmente, uma interface de revisão (\emph{Review UI}), construída em React com tema escuro, permite inspecionar cada comparação por meio de três modos de visualização: lado a lado, sobreposição com opacidade ajustável e controle deslizante. A interface possui atalhos de teclado (\texttt{A} para aprovar, \texttt{R} para rejeitar, setas para navegar) e aplica aprovação automática quando todas as técnicas aprovam uma captura, dispensando revisão manual nesse caso. Quando executada em modo CI, a \emph{Review UI} comunica-se com a API de \emph{Statuses} do GitHub para definir o estado do \emph{commit} (\emph{success}, \emph{failure} ou \emph{pending}), controlando o bloqueio ou a liberação de \emph{merge} na solicitação de mudança.
+
+O comando \texttt{deploy} constrói a \emph{Review UI} e monta uma pasta estática com os resultados, as imagens e os metadados do fluxo, pronta para publicação em GitHub Pages. O fluxo de CI/CD foi implementado em três \emph{workflows} do GitHub Actions: (i) verificação visual em cada \emph{pull request} (captura, comparação, \emph{deploy} de evidências e definição de \emph{status}); (ii) controle por comentário no \emph{pull request} (\texttt{/approve-visual}, \texttt{/reject-visual}, \texttt{/reset-visual}); e (iii) atualização automática de \emph{baselines} após \emph{merge} na \emph{branch} principal, com \emph{commit} rastreável.
+
+
+\subsection{Avaliação por cenários de regressão}
+Além da comparação com a tela \textit{dashboard}, foram implementadas doze páginas de cenário na aplicação, cada uma projetada para isolar um tipo de alteração e expor pontos fortes e fracos de cada técnica. A cada cenário corresponde uma mutação controlada, injetada via CSS ou \emph{script} durante a captura, e uma imagem de referência capturada nas mesmas condições, exceto pela mutação. Os cenários utilizaram \emph{viewport} fixo de 1366\,$\times$\,768\,px (captura por área do \emph{viewport}, sem \emph{full-page}) para eliminar variações de dimensão entre capturas. Um cenário adicional de controle (imagem idêntica) foi incluído para verificar a ausência de falsos positivos.
+
+Os cenários são:
+\begin{enumerate}[label=\alph*),leftmargin=1.5em]
+  \item Mudança sutil de cor: alteração do tom de dois cards em uma grade de seis, com diferença de 22 a 37 unidades RGB por canal. Avalia sensibilidade a variações cromáticas que preservam a composição estrutural.
+  \item Deslocamento de \emph{layout}: inserção de 24\,px de margem superior na primeira seção de conteúdo, deslocando as demais para baixo.
+  \item Variação tipográfica: aumento de \texttt{letter-spacing} em blocos de texto, produzindo diferenças de anti-aliasing distribuídas sem alterar a estrutura de \emph{layout}.
+  \item Conteúdo dinâmico: captura de referência com congelamento de \texttt{Date} e \texttt{Math.random} versus captura atual sem congelamento, de modo que valores dinâmicos (data, hora, contadores) diferem naturalmente. Executado sem máscaras e com máscaras nas células que contêm conteúdo variável.
+  \item Alteração localizada de componente: modificação do texto e da cor de borda de um único card em grade de seis, mantendo os demais inalterados.
+  \item Opacidade e transparência: redução de \texttt{opacity} para 0,92 em três de seis cards com fundo colorido, produzindo mudança uniforme e sutil em muitos pixels simultaneamente.
+  \item Sombra e elevação: adição de \texttt{box-shadow} em três de seis cards planos, criando gradientes suaves nas bordas sem alterar conteúdo nem posicionamento.
+  \item Micro-deslocamento (1\,px): inserção de apenas 1\,px de margem superior na primeira seção, testando o limiar mínimo de detecção de cada técnica.
+  \item Alteração de borda fina: troca de cor de \texttt{border} (2\,px) em dois de seis cards, afetando poucos pixels mas modificando a identidade visual do componente.
+  \item Remoção de elemento: ocultação (\texttt{display: none}) de um card em grade de seis, provocando reposicionamento de elementos adjacentes e espaço vazio.
+  \item Troca de família de fonte: substituição da \texttt{font-family} de dois blocos de texto por fonte serifada, alterando métricas tipográficas (largura de glifos, \emph{kerning}) sem mudar o tamanho nominal.
+  \item Imagem idêntica (controle): captura de página estática sem mutação em baseline e current, ambas com congelamento. Avalia se alguma técnica produz falso positivo.
+\end{enumerate}
+
+Para cada cenário, as imagens foram comparadas pelos três métodos com os mesmos limiares da avaliação principal. Os resultados foram consolidados em arquivo JSON de cenários.
+
+\subsection{Métricas e coleta}
+Foram coletados indicadores gerados automaticamente pelas técnicas e pelo próprio fluxo de execução. Para a comparação \emph{pixel a pixel}, registrou-se o percentual de pixels diferentes e a contagem de pixels divergentes. Para SSIM, registrou-se o \emph{score} de similaridade estrutural e a proporção de blocos com baixa similaridade. Para a abordagem por regiões, registraram-se a quantidade de células reprovadas e o total de células, além do percentual de diferença por célula. Também foram registrados erros operacionais (p.ex., dimensões diferentes entre \emph{baseline} e captura atual) e o tempo de execução por técnica.
+
+Métricas clássicas como taxa de detecção, taxa de alertas indevidos e tempo de triagem cronometrado dependem de um conjunto rotulado de alterações (mudanças injetadas vs. não relevantes) e de protocolo de triagem com coleta de tempo. Como o foco desta execução foi validar o fluxo ponta a ponta e obter evidências rastreáveis por técnica, esses indicadores foram tratados como diretrizes de avaliação e como recomendações para expansão do experimento.
+
+\subsection{Procedimentos de análise}
+Os resultados foram comparados entre técnicas e entre as diferentes larguras de visualização (\textit{mobile}, \textit{tablet} e \textit{desktop}). A análise discutiu o comportamento relativo de sensibilidade e a interpretabilidade das evidências (imagens de \emph{diff} e contagens/\emph{scores}), combinando detecção de mudanças com redução de ruído operacional. Para interpretar diferenças entre as abordagens, considerou-se a literatura sobre comparação perceptual, como a de \citeonline{wang2004}, e sobre operação em fluxos contínuos de integração e entrega, a exemplo de \citeonline{shahin2017}.
+
+\subsection{Validade e limitações}
+Foram documentadas ameaças à validade interna, como viés na seleção de telas e sensibilidade dos limiares de aceitação, e à validade externa, como a possibilidade de generalização para outros tipos de aplicações e ambientes. Também foram registradas dependências do ambiente (fontes, \emph{renderers} e resolução) e as medidas adotadas para impedir que variações não controladas influenciassem os resultados. Conforme destacam \citeonline{tanno2020} e \citeonline{tanoue2018vrt}, o uso de máscaras reduz ruído, mas sua calibragem inadequada pode ocultar defeitos; por isso, quando utilizadas, devem ser restritas a regiões inevitavelmente variáveis e revisadas a cada atualização de \emph{baseline}.
+
+
+\section{RESULTADOS E DISCUSSÃO}
+
+Esta seção apresenta os resultados obtidos a partir da execução automatizada do fluxo de regressão visual, com geração de artefatos rastreáveis. Foram comparadas três capturas da tela \textit{dashboard}, uma por \emph{viewport} (\textit{mobile}, \textit{tablet} e \textit{desktop}), totalizando três comparações consolidadas em arquivo JSON de resultados.
+
+\subsection{Resumo numérico das comparações}
+A Tabela \ref{tab:resumo-resultados} sintetiza os indicadores produzidos por cada técnica para a tela \textit{dashboard}, após a atualização das imagens de referência. As três capturas apresentaram aprovação em todas as técnicas, confirmando que, quando as \emph{baselines} estão atualizadas e o ambiente é determinístico, o \emph{pipeline} não produz alertas indevidos.
+
+\begin{table}[H]
+\centering
+\caption{Resumo das comparações da tela \textit{dashboard}}
+\label{tab:resumo-resultados}
+\small
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Imagem} & \textbf{Pixel} & \textbf{SSIM} & \textbf{Regiões} \\
+\hline
+dashboard-desktop-1366w & PASS (0\%) & PASS (1,0000) & PASS (0/24) \\
+dashboard-mobile-360w & PASS (0\%) & PASS (1,0000) & PASS (0/24) \\
+dashboard-tablet-768w & PASS (0\%) & PASS (1,0000) & PASS (0/24) \\
+\hline
+\end{tabular}
+\vspace{-0.2cm}
+\hspace{1cm}\footnotesize Fonte: Elaborado pelo autor.
+\end{table}
+
+Os três \emph{viewports} registraram 0\% de pixels diferentes, \emph{score} SSIM igual a 1,0 e 0 regiões reprovadas em 24. Esse resultado valida as medidas de determinismo adotadas (congelamento de relógio, gerador pseudoaleatório com semente fixa, desativação de animações, controle de \emph{locale} e fuso horário) e demonstra que o \emph{pipeline} opera sem falsos positivos quando \emph{baselines} e capturas atuais são produzidas sob as mesmas condições. A capacidade de detecção das técnicas é avaliada em profundidade nos cenários de mutação controlada, apresentados na subseção seguinte.
+
+\subsection{Evidências visuais e triagem}
+O fluxo gerou imagens de diferenças para as três técnicas (pixel, SSIM e regiões), além de um relatório HTML com resumo e evidências. A Figura \ref{fig:report-html} exemplifica o formato do relatório, que consolida o resultado por técnica e apresenta as imagens necessárias para inspeção.
+
+\begin{figure}[H]
+\centering  
+\caption{Relatório HTML gerado automaticamente com resumo e evidências visuais}
+\vspace{-0.2cm} 
+\label{fig:report-html}
+\includegraphics[width=0.95\linewidth]{Figs/09-report-html.png} 
+\flushleft
+\vspace{-0.2cm} 
+\hspace{0.9cm} \footnotesize Fonte: Elaborado pelo autor.
+\end{figure}
+
+Além do relatório, a interface de revisão (\emph{Review UI}) foi utilizada para suportar triagem, permitindo selecionar uma captura e alternar entre técnicas de \emph{diff}. A Figura \ref{fig:review-overview} ilustra a tela de revisão, que organiza lista de diferenças, visualização e painel de decisão.
+
+\begin{figure}[H]
+\centering  
+\caption{Interface de revisão (Review UI) para triagem de regressões visuais}
+\vspace{-0.2cm} 
+\label{fig:review-overview}
+\includegraphics[width=0.95\linewidth]{Figs/01-review-overview.png} 
+\flushleft
+\vspace{-0.2cm} 
+\hspace{0.9cm} \footnotesize Fonte: Elaborado pelo autor.
+\end{figure}
+
+\subsection{Discussão: sensibilidade, ruído e operação em CI/CD}
+Os resultados reforçam aspectos recorrentes na literatura \cite{tanno2020,wang2004}. A comparação \emph{pixel a pixel} é sensível e tende a sinalizar diferenças, o que pode aumentar falsos positivos quando há instabilidades de renderização. A SSIM, por capturar similaridade estrutural, tende a se comportar de forma mais alinhada ao julgamento humano em variações leves, embora ainda dependa de limiares e do modo de agregação (por blocos). A abordagem por regiões favorece a triagem ao isolar espacialmente áreas afetadas e permite mascarar regiões inevitavelmente variáveis, reduzindo ruído sem ocultar defeitos quando bem configurada.
+
+No plano operacional, a integração em CI/CD foi estruturada em GitHub Actions, com extração de \emph{baselines} da \emph{branch} principal, execução de captura e comparação, e publicação de evidências (artefatos e página de revisão em GitHub Pages). A verificação na tela \textit{dashboard} com \emph{baselines} atualizadas confirmou que o \emph{pipeline} não produz alertas quando capturas e referências são geradas pelo mesmo ambiente determinístico. A avaliação dos cenários de mutação controlada, que introduzem diferenças concretas, permite isolar a contribuição de cada técnica.
+
+
+
+\subsection{Comparação por cenários de regressão}
+A Tabela~\ref{tab:cenarios} apresenta os resultados da avaliação por cenários. Cada linha corresponde a um tipo de mutação controlada, e as colunas indicam o veredicto e a métrica principal de cada técnica.
+
+\begin{table}[H]
+\centering
+\caption{Resultados por cenário de regressão (\emph{viewport} 1366\,$\times$\,768\,px)}
+\label{tab:cenarios}
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Cenário} & \textbf{Pixel (\%diff)} & \textbf{SSIM (score)} & \textbf{Regiões (falhas)} \\
+\hline
+Mudança sutil de cor       & FAIL (5,854\%) & PASS (0,9976) & FAIL (8/24) \\
+Deslocamento de layout     & FAIL (0,637\%) & FAIL (0,8762) & FAIL (15/24) \\
+Variação tipográfica       & FAIL (2,186\%) & FAIL (0,9269) & FAIL (13/24) \\
+Conteúdo dinâm. (s/ másc.) & PASS (0,066\%) & PASS (0,9982) & FAIL (1/24) \\
+Conteúdo dinâm. (c/ másc.) & PASS (0,066\%) & PASS (0,9982) & PASS (0/24) \\
+Alteração de componente    & FAIL (0,128\%) & PASS (0,9924) & FAIL (1/24) \\
+Opacidade e transparência  & PASS (0\%)     & PASS (0,9996) & PASS (0/24) \\
+Sombra e elevação          & PASS (0\%)     & PASS (0,9953) & PASS (0/24) \\
+Micro-deslocamento (1\,px) & FAIL (0,198\%) & FAIL (0,9316) & FAIL (14/24) \\
+Alteração de borda fina    & FAIL (0,273\%) & PASS (0,9998) & FAIL (4/24) \\
+Remoção de elemento        & FAIL (0,399\%) & PASS (0,9822) & FAIL (3/24) \\
+Troca de família de fonte  & FAIL (2,614\%) & FAIL (0,8886) & FAIL (14/24) \\
+Imagem idêntica (controle) & PASS (0\%)     & PASS (1,0000) & PASS (0/24) \\
+\hline
+\end{tabular}
+\vspace{-0.2cm}
+\hspace{1cm}\footnotesize Fonte: Elaborado pelo autor.
+\end{table}
+
+O cenário de controle (imagem idêntica) confirmou que nenhuma técnica produziu falso positivo quando baseline e current são capturas determinísticas da mesma página sem mutação: pixel reportou 0\% de diferença, SSIM obteve \emph{score} 1,0 e regiões registrou 0 falhas. Esse resultado valida a configuração de congelamento e determinismo adotada no experimento.
+
+No cenário de mudança de cor, a SSIM obteve \emph{score} 0,9976 (PASS), enquanto a comparação \emph{pixel a pixel} registrou 5,854\% de diferença (FAIL) e as regiões reprovaram 8 de 24 células. Esse resultado demonstra que a SSIM tolera variações cromáticas que preservam a composição estrutural: luminância, contraste e formas permanecem similares, e o \emph{score} reflete essa proximidade perceptual \cite{wang2004}. A comparação pixel a pixel detecta a variação independentemente de ser perceptível, o que pode gerar alertas desnecessários em ajustes de paleta de cores.
+
+Os cenários de opacidade e sombra revelaram um comportamento relevante: nenhuma das três técnicas detectou as mutações (todos PASS). A redução de opacidade para 0,92 e a adição de \texttt{box-shadow} produziram diferenças visuais perceptíveis ao olho humano, mas insuficientes para ultrapassar os limiares configurados. No caso de opacidade, o pixel registrou 0\% de diferença, o que indica que a tolerância de 0,1 do \texttt{pixelmatch} absorveu integralmente a variação dos canais de cor. Esses cenários evidenciam que a calibragem dos limiares influencia diretamente a capacidade de detecção e que técnicas com configuração mais permissiva podem deixar passar alterações que um revisor humano notaria.
+
+No cenário de micro-deslocamento (1\,px), a inserção de margin de apenas 1 pixel causou reprovação nas três técnicas: pixel 0,198\%, SSIM 0,9316 e 14 regiões reprovadas. Apesar da alteração mínima, o deslocamento em cascata afetou grande parte da página. A SSIM degradou significativamente (de 1,0 para 0,93), demonstrando alta sensibilidade a rearranjos estruturais mesmo quando o deslocamento é mínimo. Esse resultado contrasta com o cenário de layout (24\,px), onde a SSIM registrou 0,8762, e confirma que qualquer deslocamento, independentemente da magnitude, tende a causar reprovação generalizada.
+
+No cenário de alteração de borda fina, a troca de cor de \texttt{border} em dois cards afetou poucos pixels (0,273\%, FAIL), mas a SSIM manteve \emph{score} 0,9998 (PASS), o mais alto entre os cenários com mutação. A abordagem por regiões identificou 4 células (FAIL), demonstrando capacidade de localizar alterações que a SSIM considerou estruturalmente insignificantes. Esse cenário evidencia que mudanças de poucos pixels geometricamente distribuídos desafiam métricas perceptuais mas são detectadas por comparação direta e por segmentação espacial.
+
+No cenário de remoção de elemento, a ocultação de um card causou pixel 0,399\% (FAIL), SSIM 0,9822 (PASS) e 3 regiões reprovadas (FAIL). A SSIM tolerou a remoção porque a estrutura global da grade de cards permaneceu preservada, com um espaço vazio ocupando a posição do card removido. A abordagem por regiões isolou as 3 células afetadas (a posição do card removido e as adjacentes que foram reposicionadas), fornecendo informação espacial para triagem.
+
+Na alteração localizada de componente, 0,128\% pixel (FAIL), SSIM 0,9924 (PASS) e 1 célula reprovada em 24 (FAIL). A SSIM tolerou a mudança porque a estrutura global permaneceu preservada. A abordagem por regiões isolou exatamente uma célula, informando a posição espacial do componente modificado, dado não disponível na comparação pixel a pixel.
+
+No cenário de troca de família de fonte, a substituição por fonte serifada provocou reprovação nas três técnicas: pixel 2,614\%, SSIM 0,8886 e 14 regiões. A troca de \texttt{font-family} altera a forma dos glifos de maneira mais profunda que o \texttt{letter-spacing} do cenário de variação tipográfica, o que se reflete no \emph{score} SSIM inferior (0,8886 vs. 0,9269). Ambas as técnicas de texto produziram reprovação generalizada, o que reforça a dificuldade de tratar alterações tipográficas sem máscaras quando elas afetam múltiplas regiões da página.
+
+No cenário de deslocamento, a inserção de margem causou reprovação nas três técnicas, mas com representações distintas: o pixel registrou 0,637\%, a SSIM degradou para 0,8762 e as regiões identificaram 15 de 24 células afetadas. O \emph{score} SSIM captura a severidade do deslocamento de forma mais informativa que o percentual de pixels, e a abordagem por regiões indica quais linhas da grade foram afetadas, favorecendo a localização do problema durante a triagem.
+
+No cenário de conteúdo dinâmico sem máscaras, pixel (0,066\%) e SSIM (0,9982) aprovaram, enquanto as regiões identificaram 1 célula com diferença acima do limiar. Com a aplicação de 10 máscaras nas células da coluna dinâmica, a abordagem por regiões passou a aprovar (0 falhas, 10 células mascaradas), demonstrando que a segmentação por grade com mascaramento seletivo permite tratar conteúdo naturalmente variável sem ocultar defeitos em áreas estáticas \cite{tanno2020}.
+
+\subsection{Síntese comparativa}
+A avaliação por treze cenários (doze com mutação e um de controle) evidenciou que cada técnica possui perfil distinto de detecção e complementaridade. A Tabela~\ref{tab:sintese} resume o comportamento por tipo de alteração.
+
+\begin{table}[H]
+\centering
+\caption{Síntese de detecção por técnica e tipo de alteração}
+\label{tab:sintese}
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Tipo de alteração} & \textbf{Pixel} & \textbf{SSIM} & \textbf{Regiões} \\
+\hline
+Cor sutil          & Detecta & Não detecta & Detecta \\
+Deslocamento       & Detecta & Detecta     & Detecta \\
+Tipografia         & Detecta & Detecta     & Detecta \\
+Dinâmico (s/ másc.)& Não detecta & Não detecta & Detecta \\
+Dinâmico (c/ másc.)& Não detecta & Não detecta & Não detecta \\
+Componente local   & Detecta & Não detecta & Detecta \\
+Opacidade          & Não detecta & Não detecta & Não detecta \\
+Sombra             & Não detecta & Não detecta & Não detecta \\
+Micro-shift (1px)  & Detecta & Detecta     & Detecta \\
+Borda fina         & Detecta & Não detecta & Detecta \\
+Remoção de elemento& Detecta & Não detecta & Detecta \\
+Troca de fonte     & Detecta & Detecta     & Detecta \\
+Controle (idêntico)& Sem falso+ & Sem falso+ & Sem falso+ \\
+\hline
+\end{tabular}
+\vspace{-0.2cm}
+\hspace{1cm}\footnotesize Fonte: Elaborado pelo autor.
+\end{table}
+
+A comparação \emph{pixel a pixel} detectou alterações em oito dos doze cenários com mutação. Falhou em detectar opacidade, sombra e conteúdo dinâmico (ambas as configurações), cujas diferenças ficaram abaixo da tolerância configurada (0,1\%). Nos cenários detectados, o percentual de diferença variou de 0,128\% (alteração de componente) a 5,854\% (mudança de cor), fornecendo intensidade sem localização espacial.
+
+A SSIM detectou quatro dos doze cenários com mutação: deslocamento (0,8762), tipografia (0,9269), micro-shift (0,9316) e troca de fonte (0,8886). Nos demais cenários com mutação, o \emph{score} permaneceu acima de 0,98, classificando a alteração como estruturalmente insignificante. Esse comportamento é coerente com o modelo proposto por \citeonline{wang2004}: a SSIM avalia a integridade da estrutura local e tende a tolerar variações que não afetam contornos, bordas e padrões espaciais. Na prática, essa tolerância reduz alertas em alterações cosméticas (cor, opacidade, borda), mas pode ocultar defeitos que um revisor humano consideraria relevantes (remoção de elemento, componente alterado).
+
+A abordagem por regiões detectou nove dos doze cenários com mutação, o maior número entre as técnicas. Sua contribuição diferenciada é a localização espacial: nos cenários de componente localizado (1/24), remoção (3/24) e borda (4/24), identificou exatamente as células afetadas, informação que o pixel e a SSIM não fornecem. No cenário de conteúdo dinâmico, foi a técnica que demonstrou tratamento por mascaramento seletivo.
+
+Os cenários de opacidade e sombra constituem uma limitação comum de detecção: nenhuma técnica identificou as mutações com os limiares configurados. Isso indica que a sensibilidade do \emph{pipeline} depende da calibragem dos parâmetros de aceitação, e que alterações de baixo contraste podem exigir limiares mais restritivos ou técnicas complementares.
+
+Nenhuma técnica isolada respondeu aos doze cenários com mutação. A combinação das três no mesmo fluxo oferece detecção de variações pontuais por pixel, avaliação de severidade perceptual por SSIM, e localização com tratamento de áreas dinâmicas por regiões.
+
+\section{CONCLUSÃO}
+
+Este trabalho comparou três técnicas de regressão visual, diferença \emph{pixel a pixel}, SSIM e abordagem por regiões, em um fluxo automatizado de CI/CD, com geração de artefatos rastreáveis e imagens de referência sob controle de versão. A implementação da ferramenta PixelGuard, distribuída como pacote npm reutilizável com CLI, API programática e interface de revisão, e a execução de treze cenários controlados permitiram avaliar cada técnica quanto à detecção de falhas, à ocorrência de alertas indevidos e ao suporte à triagem, respondendo ao objetivo geral da pesquisa. O desenvolvimento do trabalho possibilitou tratar cada um dos objetivos específicos conforme descrito a seguir.
+
+Quanto ao primeiro objetivo específico, identificar cenários e tipos de mudança com risco de regressão visual, o experimento avaliou doze tipos de alteração em páginas de cenário dedicadas: mudança sutil de cor, deslocamento de \emph{layout}, variação tipográfica, conteúdo dinâmico (com e sem máscaras), alteração localizada de componente, opacidade, sombra, micro-deslocamento, alteração de borda, remoção de elemento e troca de família de fonte, além de um cenário de controle sem mutação. Essa cobertura abrangeu alterações cromáticas, estruturais, tipográficas e de visibilidade, expondo como cada classe de mudança desafia as técnicas de forma distinta. Na verificação com a tela \textit{dashboard} em três \emph{viewports}, após a atualização das \emph{baselines}, todas as técnicas aprovaram as capturas com indicadores perfeitos (0\% de diferença, SSIM 1,0 e 0 regiões reprovadas), confirmando que o ambiente determinístico e a política de atualização de referência mantêm o \emph{pipeline} livre de alertas indevidos.
+
+Em relação ao segundo objetivo específico, implementar um fluxo automatizado de verificação em CI/CD, a ferramenta PixelGuard foi construída como pacote npm reutilizável com três etapas (captura, comparação e publicação de evidências), CLI com oito comandos, API programática e interface de revisão com três modos de visualização (lado a lado, sobreposição e controle deslizante), além de aprovação automática e atalhos de teclado. O fluxo foi integrado ao GitHub Actions por meio de três \emph{workflows} (verificação em \emph{pull requests}, controle por comentário e atualização automática de \emph{baselines}), com publicação de evidências em GitHub Pages e bloqueio de \emph{merge} via API de \emph{Statuses}. Com essa estrutura, os artefatos do teste visual ficaram acessíveis e rastreáveis ao longo do ciclo de desenvolvimento.
+
+Para o terceiro objetivo específico, medir o desempenho das técnicas em detecção, falsos positivos e esforço de triagem, foram coletados indicadores automatizados para treze cenários. A comparação \emph{pixel a pixel} detectou oito dos doze cenários com mutação. A SSIM detectou quatro cenários (deslocamento, tipografia, micro-shift e troca de fonte), com \emph{scores} que diferenciaram severidade de 0,8762 (deslocamento) a 0,9316 (micro-shift). A abordagem por regiões detectou nove cenários, demonstrando a cobertura mais alta, e forneceu localização espacial das alterações. Os cenários de opacidade e sombra não foram detectados por nenhuma técnica com os limiares configurados, evidenciando a dependência da calibragem na capacidade de detecção. O cenário de controle confirmou a ausência de falsos positivos nas três técnicas. Métricas de taxa de detecção cronometrada não foram calculadas, pois dependem de protocolo com coleta de tempo, o que constitui uma limitação do escopo do experimento.
+
+Sobre o quarto objetivo específico, analisar robustez diante de variações de renderização, \emph{layout} e conteúdo dinâmico, a avaliação revelou perfis complementares. A SSIM mostrou-se tolerante a alterações cosméticas (cor, borda, opacidade, remoção) que preservam a estrutura global, enquanto a comparação pixel a pixel detectou parte dessas alterações (cor, borda e remoção) por meio da contagem de diferenças pontuais. A abordagem por regiões demonstrou capacidade de localização espacial e tratamento de conteúdo dinâmico por mascaramento. No micro-deslocamento de 1\,px, todas as técnicas reprovaram, confirmando que rearranjos em cascata afetam a comparabilidade independentemente da amplitude da alteração original.
+
+Entre as dificuldades encontradas, garantir determinismo nas capturas exigiu atenção ao longo de todo o desenvolvimento. Congelar relógio, função \texttt{Math.random}, animações e transições reduziu variações entre execuções, e a atualização das \emph{baselines} após estabilização do ambiente resolveu as divergências de dimensão observadas em capturas \emph{full-page}. Os cenários de opacidade e sombra evidenciaram que a escolha dos limiares influencia diretamente a capacidade de detecção: a tolerância de 0,1 do \texttt{pixelmatch} e o limiar de 0,98 da SSIM absorveram integralmente essas variações. Outra limitação é o uso de uma aplicação como objeto do experimento, o que restringe a generalização dos resultados para aplicações de diferentes domínios. A adição de doze páginas de cenário ampliou a cobertura de tipos de alteração, mas o escopo permanece limitado a uma aplicação React \emph{single-page}.
+
+A partir dos resultados obtidos, conclui-se que nenhuma técnica isolada responde aos diferentes cenários de regressão visual. A comparação \emph{pixel a pixel} é sensível a variações pontuais, porém não informa a relevância perceptual nem a localização da diferença. A SSIM resume a avaliação em um \emph{score} que se aproxima da percepção humana, conforme descrito por \citeonline{wang2004}, mas sua tolerância pode ocultar alterações funcionais como remoção de elemento e troca de componente. A abordagem por regiões isola espacialmente as áreas afetadas e permite mascaramento, o que facilita a triagem quando configurada de forma adequada \cite{tanno2020}. Combinar técnicas no mesmo fluxo, com artefatos vinculados ao histórico de versões, oferece informação complementar e favorece decisões de aceite ou rejeição em \emph{pull requests}.
+
+Como trabalhos futuros, recomendam-se pesquisas que investiguem: (i) o efeito de limiares de aceitação mais restritivos sobre a detecção de alterações de baixo contraste (opacidade, sombra e gradientes), quantificando o compromisso entre sensibilidade e volume de alertas; (ii) o efeito de estratégias de enquadramento (captura por componente, altura fixa e normalização de dimensões) sobre a estabilidade das comparações entre execuções; (iii) a relação entre calibração de máscaras e redução de alertas indevidos em cenários com conteúdo dinâmico, avaliando se o ganho na triagem compensa o risco de ocultar defeitos; (iv) a comparação entre métricas perceptuais (SSIM, MS-SSIM e métricas baseadas em \emph{deep features}) quanto à capacidade de distinguir alterações funcionais de variações de renderização; e (v) a coleta de métricas de tempo de triagem por técnica e por tipo de mudança, com protocolo controlado, para quantificar o esforço operacional em cenários com volume de telas e frequência de execução compatíveis com equipes ágeis.
+
+\bibliographystyle{abntex2-unesc}
+\renewcommand{\refname}{REFERÊNCIAS}
+\bibliography{referencias}
+
+\end{document}
