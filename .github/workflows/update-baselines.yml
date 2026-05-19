@@ -4,6 +4,7 @@ name: Atualizar Baselines
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,7 +15,7 @@ concurrency:
 
 jobs:
   update-baselines:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    if: "github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
