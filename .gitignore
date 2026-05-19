@@ -18,4 +18,8 @@ deploy/
 Thumbs.db
 *.swp
 
+# Editor / ferramentas locais
+.vscode/
+.claude/
+
 .env
