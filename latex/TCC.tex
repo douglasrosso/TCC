@@ -1,0 +1,338 @@
+%==========================================================================
+% Exemplo de artigo cientifico UNESC
+%
+% v0.0 versão em 20/09/2023 por Marlon Oliveira
+
+%==========================================================================
+
+%==========================================================================
+% Pacotes utilizados pela UNESC - não delete as linhas abaixo
+%==========================================================================
+\documentclass{UNESC}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}%\usepackage[latin1]{inputenc}
+\renewcommand{\rmdefault}{phv} % Arial
+\renewcommand{\sfdefault}{phv} % Arial
+\usepackage[brazilian]{babel}
+\usepackage{graphicx}
+%\usepackage{subfigure}
+\usepackage{hyperref}
+\usepackage{quoting}
+\usepackage[labelsep=none]{caption}
+\DeclareCaptionLabelFormat{figuracomtraco}{#1~#2 -}
+\captionsetup[figure]{labelformat=figuracomtraco, labelsep=space}
+\usepackage{array}
+
+\captionsetup[table]{labelformat=simple, labelsep=space, textformat=simple}
+\DeclareCaptionLabelFormat{tabelacomtraco}{#1~#2 -}
+\captionsetup[table]{labelformat=tabelacomtraco}
+\captionsetup{labelsep=none}
+%\renewcommand{\thefigure}{\arabic{figure} - }
+\usepackage{enumitem}
+\usepackage{float}
+
+\hypersetup{
+  setpagesize  = false,
+  colorlinks   = true,    % Colours links instead of ugly boxes
+  urlcolor     = blue,    % Colour for external hyperlinks
+  linkcolor    = black,   % Colour of internal links
+  citecolor    = black    % Colour of citations
+}
+\urlstyle{same}
+\usepackage{setspace}
+
+\usepackage[alf,recuo=0.0cm,abnt-emphasize=bf]{abntex2cite} 
+\usepackage{verbatim}
+\usepackage{tabularx}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+%\captionsetup[figure]{justification=raggedright}
+
+%==========================================================================
+% ALTERAÇÕES NECESSÁRIAS PARA O PROJETO INOVADOR II / TCC3
+%==========================================================================
+% A \section{INTRODUÇÃO} não deve ter subsections, tudo deve ser em texto corrido. 
+%==========================================================================
+% Dados do artigo: título, autores e filiação
+%==========================================================================
+\title{DETECÇÃO DE REGRESSÕES VISUAIS EM INTEGRAÇÃO CONTÍNUA: IMPLEMENTAÇÃO E ANÁLISE DE TÉCNICAS PARA DETECTAR FALHAS DE INTERFACE}
+\author
+{
+   Douglas Martignago Rosso\footnote{Curso de Ciência da Computação, Universidade do Extremo Sul Catarinense (Unesc), Criciúma - Santa Catarina - Brasil. douglasrosso10@gmail.com},
+   Ana Cláudia Garcia Barbosa\footnote{Orientadora. Curso de Ciência da Computação, Universidade do Extremo Sul Catarinense (Unesc), Criciúma - Santa Catarina - Brasil. agb@unesc.net}
+}
+%==========================================================================
+% Início do texto do artigo
+%==========================================================================
+\begin{document}
+
+\onehalfspacing
+
+\maketitle
+%\thispagestyle{fancy}
+%\vspace{6pt}
+
+%%%%%
+% Remover comentário para Projeto Inovador II / TCC III
+%\begin{abstract}
+%Deve ter uma sequência de frases concisas e objetivas em parágrafo único, sem enumeração de tópicos, de 100 a 250 palavras, seguido, logo abaixo, das palavras representativas do conteúdo do trabalho, isto é, palavras-chave e/ou descritores, conforme a \citeonline{ABNT2021}. 
+%\end{abstract}
+
+%\vspace{1pt}
+
+%\begin{keywords}
+%Elemento obrigatório. Devem ser separadas entre si por ponto e vírgula e finalizadas por ponto, com as iniciais em letra minúscula, com exceção dos substantivos próprios e nomes científicos. 
+%\end{keywords}
+
+%\vspace{1pt}
+
+%\begin{abstractinenglish}
+%{Tradução do resumo em língua vernácula para outro idioma de propagação internacional (em inglês ABSTRACT, em francês RESUMÉ, em espanhol RESUMEN). }
+%\end{abstractinenglish}
+
+%\vspace{1pt}
+
+%\begin{keywordsenglish}
+%{keyword 1; keyword 2; keyword 3.} 
+%\end{keywordsenglish}
+
+\section{INTRODUÇÃO}
+{
+Em ambientes corporativos mais complexos, a necessidade de garantir qualidade em ciclos curtos de desenvolvimento incentiva a adoção de testes automatizados em áreas de maior risco e impacto. Conforme destacam \citeonline{costa2022}, essa prática aumenta eficiência, confiabilidade e velocidade de validação, favorecendo entregas contínuas e estáveis.
+
+As interfaces evoluem com frequência. Mudanças de posicionamento de elementos, ajustes tipográficos ou inclusão de componentes podem alterar a apresentação visual sem modificar a lógica. Quando a versão atual diverge da referência aprovada, caracteriza-se uma regressão visual, e a verificação compara a captura recente com a imagem de referência para decidir se a alteração afeta padrões de qualidade, como descrevem \citeonline{tanno2020}.
+
+A comparação \emph{pixel a pixel} é sensível a variações mínimas, porém, como observa \citeonline{tanno2020}, tende a produzir muitos alertas diante de deslocamentos globais e pequenas flutuações de renderização. Para mitigar esse ruído, são úteis a segmentação por regiões, a correspondência entre versões e o uso criterioso de máscaras em elementos naturalmente dinâmicos. Além disso, métricas perceptuais como a SSIM aproximam a comparação da percepção humana ao considerar luminância, contraste e estrutura \cite{wang2004,wang2003msssim}.
+
+Na prática, o teste visual integra o fluxo de Integração e Entrega Contínuas, com geração de artefatos e vinculação dos resultados a \emph{commits}, evitando que diferenças indesejadas avancem no processo de construção. Revisões e estudos observacionais, como os de \citeonline{shahin2017} e \citeonline{hilton2016ci}, associam CI/CD a ciclos mais frequentes e retorno de informação mais rápido \cite{regoneto2021,silva2023ic}, o que reforça o papel de pontos automatizados de checagem de qualidade em pipelines \cite{maia2024}.
+
+Esse tipo de verificação é compatível com metodologias ágeis, como Scrum e Kanban, que valorizam fluxo contínuo, entregas incrementais e \emph{feedback} frequente \cite{bessa2018}. Relatos nacionais, como o de \citeonline{costa2023}, indicam ganhos de qualidade e produtividade com a transformação ágil, o que favorece a inserção de checagens visuais no cotidiano das equipes. Assim, este artigo propõe avaliar três técnicas de regressão visual: comparação \emph{pixel a pixel}, comparação perceptual por SSIM e abordagem por regiões, considerando detecção de defeitos, ruído de alertas indevidos, custo operacional e adequação a mudanças de estilo, à distribuição de elementos, ao conteúdo dinâmico e à responsividade. A avaliação será automatizada em \emph{pipelines} de CI/CD: a cada \emph{commit}, tarefas geram e comparam capturas, aplicam as métricas e máscaras definidas, consolidam resultados e publicam relatórios. As referências ficam sob controle de versão, garantindo auditoria e rastreabilidade ao longo da evolução do código.
+}
+
+\subsection{Objetivo Geral}
+{
+Avaliar técnicas de regressão visual em equipes ágeis quanto à detecção de falhas, à ocorrência de falsos positivos e ao esforço de triagem, com imagens de referência sob controle de versão na CI/CD.
+}
+
+\subsection{Objetivos Específicos}
+{
+\begin{itemize}[leftmargin=2em]
+    \item Identificar cenários e tipos de mudança na interface com maior risco de regressão visual.
+    \item Implementar um fluxo automatizado de verificação em CI/CD para geração de artefatos rastreáveis.
+    \item Mensurar desempenho das técnicas em detecção, falsos positivos e esforço de triagem.
+    \item Analisar robustez diante de variações de renderização, \emph{layout} e conteúdo dinâmico.
+\end{itemize}
+}
+\subsection{Justificativa}
+{
+A automação de testes amplia cobertura, reduz esforço manual e mitiga erros quando há registro de evidências e análise de \emph{logs} que sustentam a governança da qualidade \cite{alberto2020,banerjee2013}. Em organizações com integração e entrega contínuas, decisões de liberação dependem de \emph{feedback} rápido e rastreável, o que reforça o papel dos testes automatizados no fluxo \cite{shahin2017}. Do ponto de vista prático, combinar automação, evidências reproduzíveis e visibilidade do processo favorece decisões técnicas mais informadas.
+
+Em sistemas de maior porte, manter testes de regressão exclusivamente manuais é caro e pouco escalável. Estudos de caso, como o de \citeonline{costa2022}, recomendam priorizar a automação por risco, criticidade e esforço de manutenção. No recorte visual, imagens de diferenças \emph{pixel a pixel} aumentam o número de falsos positivos diante de variações sutis e deslocamentos, enquanto medidas perceptuais como a SSIM atenuam esse efeito \cite{wang2004,ding2022}, e técnicas \emph{region-based} segmentam e casam regiões para salientar diferenças essenciais. Em áreas dinâmicas, máscaras reduzem alertas desnecessários sem ocultar defeitos relevantes \cite{tanno2020}. Em cenários reais, uma calibragem cuidadosa de limiares (valor numérico de tolerância), máscaras e segmentação tende a produzir relatórios mais úteis para a triagem.
+
+Segundo \citeonline{shahin2017,hilton2016ci,regoneto2021,lima2021,silva2023ic}, integrar a verificação visual e outros testes automatizados ao \emph{pipeline} favorece rastreabilidade, pois imagens de referência e relatórios ficam vinculados a \emph{commits}, \emph{branches} e solicitações de mudança \cite{maia2024}. Essa integração exige ambiente determinístico (sistema operacional, fontes e \emph{renderers}), critérios explícitos de aceitação e políticas de atualização de \emph{baseline} (imagem de referência aprovada que serve como padrão de comparação). 
+
+No plano de implantação, recomenda-se, conforme \citeonline{heinonen2020}, estabilizar dados de teste, definir sementes (valores de inicialização) e padronizar o ambiente, a fim de evitar instabilidades e elevar a previsibilidade do \emph{pipeline}. Essa abordagem é coerente com Scrum e Kanban, que priorizam fluxo contínuo, entregas incrementais e \emph{feedback} frequente \cite{bessa2018}. Nesse contexto, testes visuais automatizados funcionam como \emph{gate} (ponto de checagem/critério de aprovação) leve de qualidade entre versões, sem comprometer a cadência, quando bem calibrados.
+
+O que se pretende com a análise é produzir evidências comparativas para escolher e integrar ao CI/CD a opção técnica que melhor equilibre capacidade de detecção de defeitos, ruído de falsos positivos, esforço de triagem e robustez frente a variações de renderização, \emph{layout} e conteúdo dinâmico. Para isso, serão confrontadas três estratégias representativas, a saber, comparação \emph{pixel a pixel}, comparação perceptual baseada em SSIM e correspondência por regiões com uso de máscaras, em cenários estáticos e dinâmicos, com coleta padronizada de métricas e geração de artefatos rastreáveis. Espera-se consolidar diretrizes práticas, incluindo máscaras, segmentação, manutenção de \emph{baseline} e limiares, e integrar ao \emph{pipeline} a alternativa adequada ao contexto estudado.
+}
+
+%% -------------------------------------------------------------
+\subsection{Estrutura do Trabalho}
+%% -------------------------------------------------------------
+Este artigo está organizado em cinco seções. Na Introdução, apresenta-se o problema de regressão visual, a motivação para automação e a integração com CI/CD, além dos objetivos e da justificativa. Em seguida, as bases conceituais são desenvolvidas nas seções: Testes de software e automação; Regressão visual (comparação pixel a pixel, métricas perceptuais e abordagens por regiões, com conteúdo dinâmico, \emph{baseline} e determinismo); Integração a fluxos de CI/CD; Métodos ágeis e o papel do feedback. A seção de Trabalhos Correlatos compara soluções e relatos da literatura, destacando lacunas. Por fim, em Trabalho Proposto e Metodologia, descrevem-se o desenho experimental, os cenários (estáticos e dinâmicos), as técnicas analisadas, as métricas e a configuração do fluxo.
+
+%% -------------------------------------------------------------
+\section{FUNDAMENTAÇÃO TEÓRICA}
+%% -------------------------------------------------------------
+
+Esta seção reúne os conceitos que sustentam o estudo: princípios de testes e automação; definição de regressão visual e comparação entre três famílias de técnicas (diferença \emph{pixel a pixel}, métricas perceptuais SSIM/MS-SSIM e abordagens por regiões), com tratamento de conteúdo dinâmico, manutenção de \emph{baseline} e necessidade de determinismo; integração em \emph{pipelines} de CI/CD; e a relação com métodos ágeis.
+
+\subsection{Testes de software e automação}
+
+De acordo com \citeonline{alberto2020} e \citeonline{banerjee2013}, testes de software contribuem para qualidade, confiabilidade e manutenção. A automação aumenta cobertura e repetibilidade e apoia a governança do processo. Em escala maior, prioriza-se automatizar onde risco e impacto são mais altos, viabilizando verificações frequentes em ciclos curtos \cite{costa2022}.
+
+\subsection{Regressão visual}
+
+Regressão visual é a diferença indesejada na apresentação da interface entre versões, identificada por comparação de imagens de tela \cite{tanno2020,figueiredo2018,bordignon2019,tanoue2018vrt}. O objetivo é indicar se as mudanças afetam padrões de qualidade previamente definidos, conforme discutem \citeonline{tanno2020}.
+
+\subsubsection{Comparação pixel a pixel}
+A diferença \emph{pixel a pixel} marca qualquer variação entre as imagens e, por isso, revela alterações sutis. Contudo, conforme destacam \citeonline{tanno2020,figueiredo2018,tanoue2018vrt}, pequenas flutuações de renderização, ajustes de fonte ou diferenças sutis de layout podem elevar o número de alertas e aumentar o esforço de triagem.
+
+\subsubsection{Métricas perceptuais: SSIM e MS-SSIM}
+Métricas perceptuais aproximam a avaliação da percepção humana. A SSIM, proposta por \citeonline{wang2004}, compara luminância, contraste e estrutura e costuma ser mais tolerante a variações pequenas que a diferença \emph{pixel a pixel}. A MS-SSIM estende a análise a múltiplas escalas, o que favorece robustez a diferentes resoluções e níveis de detalhe \cite{wang2003msssim}. Na prática, limiares de aceitação e máscaras são combinados para equilibrar sensibilidade e ruído.
+
+\subsubsection{Abordagens por regiões}
+Abordagens por regiões segmentam a tela, realizam correspondência entre partes equivalentes e enfatizam apenas diferenças essenciais. Essa estratégia, segundo \citeonline{tanno2020}, reduz o impacto de deslocamentos e pequenas mudanças de renderização, tornando as imagens de diferenças mais informativas para a triagem.
+
+\subsubsection{Conteúdo dinâmico, baseline e determinismo}
+Elementos naturalmente variáveis (datas, contadores, banners, dados externos) produzem diferenças recorrentes se não tratados. Conforme indicam \citeonline{tanno2020} e \citeonline{tanoue2018vrt}, recomenda-se aplicar máscaras apenas em regiões inevitavelmente variáveis e adotar política explícita de atualização de \emph{baseline} para manter rastreabilidade e evitar normalização de defeitos. Como a comparação ocorre entre execuções distintas, o determinismo operacional é essencial: versões fixas de sistema, navegador e controladores, resolução e densidade constantes, fontes empacotadas, idioma e fuso horário controlados, animações desativadas e simulação de dados quando necessário \cite{heinonen2020}.
+
+\subsection{Integração a pipelines de CI/CD}
+
+Integrar a verificação visual ao fluxo de CI/CD aumenta a rastreabilidade e acelera o retorno de informação: imagens de referência, diferenças e relatórios vinculam-se a \emph{commits}, \emph{branches} e solicitações de mudança. Em sua revisão, \citeonline{shahin2017} e \citeonline{hilton2016ci} associam integrações frequentes a ciclos mais curtos e \emph{feedback} rápido, o que favorece a adoção de pontos automatizados de qualidade \cite{maia2024}.
+
+\subsection{Métodos ágeis e o papel do feedback}
+
+Em Scrum e Kanban, fluxo contínuo, entregas incrementais e retorno frequente de informação sustentam verificações visuais leves entre versões \cite{bessa2018}. Estudos nacionais, como o de \citeonline{costa2023}, relacionam a transformação ágil a ganhos de qualidade e produtividade, o que reforça a aderência prática dessa abordagem.
+
+\subsection{Síntese e lacuna}
+
+Há espaço para comparar, sob condições controladas, três classes de técnicas, diferença \emph{pixel a pixel}, SSIM/MS-SSIM e abordagens por regiões, considerando detecção, alertas indevidos e esforço de triagem, com integração efetiva ao CI/CD e artefatos rastreáveis \cite{tanno2020,wang2004,wang2003msssim,heinonen2020}. Este trabalho aborda essa lacuna com um experimento em cenários estáticos e dinâmicos e com coleta padronizada de métricas.
+
+%% -------------------------------------------------------------
+\section{Trabalhos Correlatos}
+%% -------------------------------------------------------------
+
+A literatura nacional e internacional oferece bases técnicas para testes visuais e sua operação em fluxos de desenvolvimento. A seguir, sintetizam-se alguns trabalhos que dialogam com este estudo quanto à comparação por imagem, uso de métricas perceptuais e prática em Integração/Entrega Contínuas.
+
+Em mapeamento sistemático sobre testes de interfaces gráficas, \citeonline{banerjee2013} discutem abordagens, ferramentas e desafios para automação de GUI, destacando a importância de aumentar a cobertura e reduzir o esforço manual em cenários complexos. Em um estudo de caso nacional, \citeonline{alberto2020} relatam a implantação de automação de testes em um contexto organizacional real, descrevendo ganhos de rastreabilidade, padronização do processo e redução de retrabalho, o que reforça a relevância prática de estratégias automatizadas de verificação.
+
+\citeonline{wang2004} introduzem a SSIM como métrica perceptual que considera luminância, contraste e estrutura, aproximando a avaliação da percepção humana e reduzindo falsos positivos em relação à diferença \emph{pixel a pixel}. Posteriormente, \citeonline{ding2022} propõem uma formulação que unifica estrutura e textura na avaliação de qualidade de imagem, enquanto \citeonline{zhang2018lpips} exploram o uso de \emph{deep features} como métricas perceptuais mais alinhadas ao julgamento humano. Esses trabalhos oferecem base conceitual para empregar medidas perceptuais em testes de regressão visual.
+
+Em revisão extensa, \citeonline{shahin2017} sintetizam abordagens, ferramentas, desafios e práticas de Integração/Entrega Contínuas, relacionando integrações frequentes a ciclos mais curtos e \emph{feedback} acelerado. Complementarmente, \citeonline{hilton2016ci} analisam o uso de integração contínua em projetos de código aberto, evidenciando benefícios e custos associados à automação. No contexto nacional, estudos aplicados como os de \citeonline{maia2024} descrevem a construção de pipelines de CI/CD com testes automatizados em sistemas reais, reforçando a importância de ligar artefatos de teste a \emph{commits}, padronizar o ambiente de execução e utilizar a esteira como ponto de checagem de qualidade.
+
+Em revisão ampla, \citeonline{shahin2017} relacionam integrações frequentes a ciclos mais curtos e \emph{feedback} acelerado, o que sustenta o uso de pontos automatizados de qualidade, incluindo verificação visual.
+
+Em aplicações Android, \citeonline{figueiredo2018} descrevem a utilização de comparação de imagens em um processo de testes regressivos visuais, combinando automação e testes exploratórios em um ambiente ágil. De forma complementar, \citeonline{bordignon2019} realizam um estudo de caso com ferramentas de \emph{Visual GUI Testing} para verificar requisitos não funcionais em interfaces gráficas, destacando desafios práticos semelhantes aos relatados na literatura internacional. Ainda em âmbitos nacionais, \citeonline{lima2021} sintetizam a adoção de técnicas de teste de regressão automatizado em projetos Android, enquanto \citeonline{quirino2025} analisam empiricamente os \emph{plugins} de teste mais utilizados em Pytest, Jest e Cypress, incluindo extensões de regressão visual —, e \citeonline{regoneto2021,silva2023ic} investigam a relação entre integração contínua e qualidade de software em projetos industriais.
+
+%% -------------------------------------------------------------
+\section{Trabalho Proposto}
+%% -------------------------------------------------------------
+
+Propõe-se implementar e comparar três técnicas de regressão visual, 
+integradas como ponto de checagem no fluxo de Integração e Entrega Contínuas:
+\begin{enumerate}[label=\alph*),leftmargin=1.5em]
+    \item Diferença \emph{pixel a pixel} com limiar de tolerância;
+    \item Comparação perceptual baseada em SSIM;
+    \item Abordagem por regiões com segmentação, correspondência e máscaras.
+\end{enumerate}
+O experimento, executado em ambiente controlado, avaliará detecção de defeitos, alertas indevidos, tempo de triagem e robustez a variações de renderização, distribuição de elementos, conteúdo dinâmico e larguras de visualização. A execução no pipeline gerará artefatos rastreáveis (baseline, imagens de diferenças e relatórios) vinculados a \emph{commits}, a partir dos quais serão derivadas diretrizes de calibração (limiares, máscaras e atualização de baseline) para apoio a equipes ágeis.
+
+%% -------------------------------------------------------------
+\subsection{Metodologia}
+%% -------------------------------------------------------------
+Esta pesquisa é aplicada, pois compara técnicas de detecção de regressão visual e as integra, de forma prática, a fluxos de Integração e Entrega Contínuas (CI/CD). Em termos de objetivos, é exploratória e descritiva: exploratória por ampliar o entendimento sobre abordagens e parâmetros de calibração; descritiva por relatar, de modo organizado, os procedimentos adotados e os resultados obtidos. Quanto aos procedimentos, utiliza experimentação controlada com análise quantitativa, baseada em medidas numéricas, e síntese descritiva. Como base conceitual, adotam-se métricas perceptuais de imagem, notadamente a SSIM, proposta por \citeonline{wang2004}, e práticas de operação em pipelines de software discutidas por \citeonline{shahin2017} e \citeonline{heinonen2020}.
+
+\subsubsection{Objetivo metodológico}
+O objetivo é identificar, em condições controladas, qual técnica de verificação visual oferece melhor equilíbrio entre quatro aspectos: capacidade de detectar alterações realmente relevantes; incidência de alertas indevidos; esforço de triagem, medido como o tempo gasto para analisar cada alerta; e robustez diante de variações comuns de renderização, distribuição dos elementos na tela, conteúdo dinâmico e diferentes larguras de visualização. A motivação técnica para incluir uma métrica perceptual decorre do fato de que, conforme \citeonline{wang2004}, a SSIM considera luminância, contraste e estrutura, aproximando a comparação da percepção humana.
+
+\subsubsection{Ambiente experimental e determinismo}
+Os testes serão executados em ambiente padronizado para garantir resultados confiáveis e reproduzíveis. Serão fixadas as versões do sistema operacional, do navegador e do driver; a resolução e a densidade de pixels permanecerão constantes; as fontes serão empacotadas e carregadas localmente; idioma e fuso horário serão mantidos fixos; animações e transições visuais serão desativadas durante a captura; quando pertinente, o relógio lógico será congelado e as respostas de rede serão simuladas para produzir dados previsíveis. Tais cuidados de determinismo operacional são recomendados em integrações de qualidade no \emph{pipeline} como apontam \citeonline{heinonen2020}, \citeonline{maia2024} e \citeonline{silva2023ic}. As imagens de referência, isto é, a \emph{baseline} que serve como padrão de comparação, ficarão sob controle de versão, com política explícita de atualização para manter a rastreabilidade.
+
+\subsubsection{Delineamento experimental}
+O delineamento especifica os elementos do experimento e como eles se combinam:
+\begin{enumerate}[label=\alph*),leftmargin=1.5em]
+    \item Cenários. Serão avaliados dois conjuntos de telas. O conjunto estático não contém elementos que mudem entre execuções, o que permite medir a sensibilidade das técnicas a pequenas variações de renderização. O conjunto dinâmico inclui regiões previsivelmente variáveis, como datas, contadores e banners, exigindo o uso de máscaras e políticas claras de atualização de \emph{baseline} para evitar alertas indevidos, como discutem \citeonline{tanno2020}, \citeonline{tanoue2018vrt} e \citeonline{figueiredo2018}.
+    \item Técnicas. Três famílias representativas serão comparadas: comparação \emph{pixel a pixel} com limiar de tolerância, que aceita pequenas diferenças numéricas; comparação perceptual baseada em SSIM, adequada quando se pretende aproximar a avaliação da percepção humana, nos termos de \citeonline{wang2004}; e abordagem por regiões, que segmenta a tela, estabelece correspondência entre partes equivalentes e utiliza máscaras para ignorar apenas áreas inevitavelmente variáveis, reduzindo ruído na triagem \cite{tanno2020}.
+    \item Larguras de visualização. Serão empregados pelo menos três valores representativos, como 360\,px para dispositivos móveis, 768\,px para faixas intermediárias e 1366\,px para desktop. Essa variação permite observar efeitos de responsividade e mudanças de layout em diferentes larguras.
+    \item Alterações controladas. Serão injetadas mudanças que simulam defeitos visuais observáveis na prática: variações tipográficas de tamanho e fonte, pequenos deslocamentos de componentes, alterações de cor e quebras de layout. Essas mudanças fornecem um conjunto de “verdades conhecidas” para estimar detecção e ruído de alertas.
+\end{enumerate}
+
+\subsubsection{Métricas e coleta}
+Serão mensurados quatro indicadores principais. A taxa de detecção é a proporção das alterações injetadas corretamente identificadas. A taxa de alertas indevidos corresponde a notificações geradas quando não houve mudança funcional. O tempo de triagem por caso mensura o esforço para analisar e decidir cada alerta. A estabilidade sob repetição verifica a consistência dos resultados em execuções sucessivas sob as mesmas condições. Sempre que possível, a coleta será automatizada e consolidada em tabelas, e os artefatos de evidência, como imagens de referência, imagens de diferenças e relatórios, permanecerão vinculados a registros de mudança, o que, conforme \citeonline{heinonen2020}, reforça auditoria e rastreabilidade.
+
+\subsubsection{Procedimentos de análise}
+Os resultados serão comparados entre técnicas, entre os cenários estático e dinâmico e entre as diferentes larguras de visualização. A análise discutirá desempenho relativo, custo de triagem e recomendações de adoção, conciliando sensibilidade a mudanças relevantes com redução do ruído operacional. Para interpretar diferenças entre as abordagens, considera-se a literatura sobre comparação perceptual, como a de \citeonline{wang2004}, e sobre operação em fluxos contínuos de integração e entrega, a exemplo de \citeonline{shahin2017}.
+
+\subsubsection{Validade e limitações}
+Serão documentadas ameaças à validade interna, como viés na seleção de telas e sensibilidade dos limiares de aceitação, e à validade externa, como a possibilidade de generalização para outros tipos de aplicações e ambientes. Também serão registradas dependências do ambiente, por exemplo fontes e renderizadores, e as medidas adotadas para impedir que variações não controladas influenciem os resultados. Conforme destacam \citeonline{tanno2020} e \citeonline{tanoue2018vrt}, o uso criterioso de máscaras reduz ruído, mas sua calibragem inadequada pode ocultar defeitos, por isso, as máscaras serão restritas a regiões inevitavelmente variáveis e revisadas a cada atualização de \emph{baseline}.
+
+A metodologia combina ambiente estável, cenários controlados e métricas objetivas para comparar três abordagens de verificação visual. O desenho prioriza reprodutibilidade, pois as mesmas condições conduzem aos mesmos resultados; rastreabilidade, com artefatos ligados ao histórico de mudanças; e utilidade prática em CI/CD. A partir dos resultados e da literatura correlata \cite{wang2004,tanno2020,shahin2017,heinonen2020}, serão propostas diretrizes de calibração, abrangendo limiares, máscaras e atualização de \emph{baseline}, além de recomendações de adoção para equipes ágeis.
+
+
+\subsection{Recursos Necessários}
+%%--------------------------------------------------------------
+Todos os recursos estão disponibilizados em ferramentas gratuitas encontradas na internet e/ou nos laboratórios de Ciência da Computação da UNESC e em recursos próprios do acadêmico.
+
+ \begin{enumerate}
+  \item Hardware
+\begin{itemize}
+  \item Computador (16\,GB RAM, SSD 256\,GB+, i5/Ryzen 5+), com acesso à internet.
+\end{itemize}
+
+  \item Software
+\begin{itemize}
+  \item Git e GitHub (versionamento e \textit{baseline}); Docker (ambiente reprodutível).
+  \item Node.js (LTS) e Visual Studio Code.
+  \item Storybook (componentes isolados) e Playwright \textit{ou} Puppeteer (captura de telas).
+  \item Pixel a pixel: Loki; alternativas: Pixelmatch, Resemble.js.
+  \item Perceptual (SSIM/MS-SSIM): Python (scikit-image/OpenCV, pytorch-msssim) \textit{ou} JavaScript (ssim.js, OpenCV.js).
+  \item Por regiões: comparação por componente (Storybook) e, opcionalmente, segmentação/alinhamento com OpenCV/OpenCV.js + diff por região.
+  \item GitHub Actions (CI/CD).
+\end{itemize}
+ \end{enumerate}
+
+%%--------------------------------------------------------------
+\subsection{Cronograma}
+%%--------------------------------------------------------------
+Para garantir a organização e o cumprimento das etapas desta pesquisa,
+foi elaborado um cronograma com as principais atividades a serem desenvolvidas ao
+longo do estudo. A Tabela \ref{quad:cronograma} apresenta a distribuição dessas etapas ao longo do período previsto para a realização do projeto.
+
+\begin{table}[H]
+\centering
+\caption{Cronograma}
+\label{quad:cronograma}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+
+\begin{tabularx}{\linewidth}{|Y|*{6}{>{\centering\arraybackslash}p{0.95cm}|}}
+\hline
+\textbf{Etapa} & \multicolumn{6}{c|}{\textbf{2026\,|\,1}} \\ \hline
+ & \textbf{Fev} & \textbf{Mar} & \textbf{Abr} & \textbf{Maio} & \textbf{Jun} & \textbf{Jul} \\ \hline
+
+Planejamento: levantamento, mapeamento e protocolo              & X & X &   &   &   &   \\ \hline
+Preparação: cenários, dados de teste e ambiente padronizado     & X & X &   &   &   &   \\ \hline
+Implementação: pipeline CI/CD, baseline e máscaras              &   & X & X &   &   &   \\ \hline
+Implementação das técnicas (pixel a pixel, SSIM, por regiões)   &   & X & X &   &   &   \\ \hline
+Execução dos experimentos e coleta automática de métricas        &   &   & X & X &   &   \\ \hline
+Análise comparativa e diretrizes de calibração                   &   &   &   & X & X &   \\ \hline
+Redação do artigo (TCC~3)                                        &   &   & X & X & X &   \\ \hline
+Apresentação                                                     &   &   &   &   &   & X \\ \hline
+
+\multicolumn{7}{l}{\footnotesize Fonte: elaborado pelo autor.}
+\end{tabularx}
+\end{table}
+
+\begin{comment}
+
+%-----------------------------------------------
+% Comentar para o Projeto em diante.
+%-----------------------------------------------
+\section{\small ASSINATURAS E TERMO DE ORIENTAÇÃO}
+%-----------------------------------------------
+
+\noindent\begin{tabular}{ | m{25em}  | m{2.5cm} | } 
+  \hline
+  ALUNO: &DATA: \\
+  & \\ 
+  & \\ 
+  \hline
+  PROFESSOR ORIENTADOR:&DATA: \\
+  & \\ 
+  & \\ 
+  \hline
+  PROFESSOR CO-ORIENTADOR: &DATA:\\
+  & \\ 
+  & \\ 
+  \hline
+\end{tabular}
+\end{comment}
+%-----------------------------------------------
+% ESTRUTURA DO TCC Final.
+%-----------------------------------------------
+%\section{INTRODUÇÃO}
+%\section{TRABALHOS CORRELATOS} % opcional
+%\section{MATERIAIS E MÉTODOS}
+%\section{DISCUSSÃO E RESULTADOS}
+%\section{CONCLUSÃO}
+
+\bibliographystyle{abntex2-unesc}
+\renewcommand{\refname}{REFERÊNCIAS}
+\bibliography{referencias} % arquivo referencias.bib que contém as referências bibliográficas utilizadas no artigo
+
+%\include{apendice_a}
+%\include{anexo_a}
+
+\end{document} 

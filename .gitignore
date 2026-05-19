@@ -1,0 +1,25 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+
+# Resultados de testes visuais (gerados pelo capture/compare)
+results/
+
+# Deploy temporário para GitHub Pages
+deploy/
+
+# Logs
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.swp
+
+# Editor / ferramentas locais
+.vscode/
+.claude/
+
+.env
