@@ -11,7 +11,7 @@ export default function HeroBanner() {
       sx={{
         background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%)',
         color: '#fff',
-        py: { xs: 3, sm: 4 },
+        py: { xs: 1.5, sm: 2 },
         px: { xs: 2, sm: 3 },
       }}
     >
