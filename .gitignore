@@ -23,3 +23,7 @@ Thumbs.db
 .claude/
 
 .env
+
+# Materiais locais — não versionados
+slides/
+results-battery/
