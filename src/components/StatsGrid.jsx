@@ -11,7 +11,7 @@ import SentimentSatisfiedAltRoundedIcon from '@mui/icons-material/SentimentSatis
 const stats = [
   { title: 'Usuários Ativos', value: '1.247', delta: '+12%', period: 'vs. mês anterior', Icon: PeopleAltRoundedIcon,                  accent: '#3b82f6', bg: '#eff6ff' },
   { title: 'Pedidos',          value: '3.891', delta: '+8%',  period: 'vs. mês anterior', Icon: ShoppingCartRoundedIcon,               accent: '#8b5cf6', bg: '#f5f3ff' },
-  { title: 'Receita',          value: 'R$ 48.520', delta: '+15%', period: 'vs. mês anterior', Icon: AttachMoneyRoundedIcon,             accent: '#059669', bg: '#ecfdf5' },
+  { title: 'Receita',          value: 'R$ 48.520', delta: '+15%', period: 'vs. mês anterior', Icon: AttachMoneyRoundedIcon,             accent: '#0284c7', bg: '#e0f2fe' },
   { title: 'Satisfação',       value: '94%',   delta: '+2%',  period: 'vs. mês anterior', Icon: SentimentSatisfiedAltRoundedIcon,      accent: '#f59e0b', bg: '#fffbeb' },
 ];
 
