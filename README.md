@@ -518,7 +518,7 @@ A aplicação React (Material UI) em [`src/`](src) é uma single-page que simula
 
 ## Cenários de regressão
 
-Além da tela `dashboard`, o comando `npm run scenarios` executa **13 cenários** projetados para isolar tipos específicos de mudança visual e expor pontos fortes e fracos de cada técnica. Cada composite abaixo mostra, em uma única linha: **Baseline · Atual · Diff Pixel · Diff SSIM · Diff Região**, com o veredicto e a métrica principal de cada técnica.
+Além da tela `dashboard`, o comando `npm run scenarios` executa **13 cenários** projetados para isolar tipos específicos de mudança visual e expor pontos fortes e fracos de cada técnica. Cada composite abaixo mostra, em uma única linha: **Baseline · Atual · Diff Pixel · Diff SSIM · Diff Região**, com o veredito e a métrica principal de cada técnica.
 
 Os 13 composites são gerados automaticamente a partir de [`results/scenarios/scenarios-results.json`](results/scenarios/scenarios-results.json) pelo script [`scripts/capture-scenarios.js`](scripts/capture-scenarios.js), de modo que ficam sempre sincronizados com a última execução.
 

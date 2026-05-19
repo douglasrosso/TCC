@@ -87,7 +87,7 @@ técnicas de comparação:
 
 Cada cenário em [`docs/images/scenarios/`](images/scenarios) é um composite
 horizontal com cinco painéis: **Baseline · Atual · Diff Pixel · Diff SSIM ·
-Diff Região**, com o veredicto (PASS / FAIL) e a métrica principal de cada
+Diff Região**, com o veredito (PASS / FAIL) e a métrica principal de cada
 técnica abaixo do título da coluna.
 
 Os 13 composites são gerados automaticamente a partir de

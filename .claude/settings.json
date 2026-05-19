@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -L -o lima2023.pdf \"https://journals-sol.sbc.org.br/index.php/jserd/article/download/2142/2887\" --max-time 60 -s -w \"%{http_code} %{size_download}\\\\n\")",
+      "Bash(curl -L \"https://journals-sol.sbc.org.br/index.php/jserd/article/view/2142\" --max-time 20 -s)",
+      "Bash(grep -n '``\\\\|'\\\\''\\\\|\".*\\\\\\\\cite\\\\|\\\\\\\\cite.*\"' \"c:/Users/dougl/OneDrive/Desktop/TCC/latex/TCCFinal.tex\")",
+      "Bash(grep -o '\\\\\\\\citeonline{[^}]*}\\\\|\\\\\\\\cite{[^}]*}' \"c:/Users/dougl/OneDrive/Desktop/TCC/latex/TCCFinal.tex\")",
+      "Bash(npx playwright *)",
+      "Bash(node tests/scenarios.js)",
+      "Bash(node -e ' *)",
+      "Bash(cp -r results/scenarios/baseline results-battery/2026-05-19/baseline)",
+      "Bash(cp -r results/scenarios/current results-battery/2026-05-19/current)",
+      "Bash(cp -r results/scenarios/diffs results-battery/2026-05-19/diffs)",
+      "Bash(npx pixelguard *)"
+    ]
+  }
+}
