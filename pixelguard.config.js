@@ -10,6 +10,9 @@ export default {
   // Páginas monitoradas (path relativo à URL base)
   pages: [{ name: 'dashboard', path: '/' }],
 
+  // Técnicas de comparação executadas em paralelo
+  comparators: ['pixel', 'ssim', 'region'],
+
   // Limiares de aceitação por técnica — valores adotados no estudo
   thresholds: {
     pixel: {
