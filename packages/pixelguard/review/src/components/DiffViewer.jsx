@@ -490,7 +490,7 @@ export default function DiffViewer({
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25, flexWrap: 'wrap' }}>
               {diff.techniques?.map((t) => (
-                <TechBadge key={t.technique} label={t.label} percentage={t.diffPercentage} passed={t.passed} />
+                <TechBadge key={t.technique} label={t.label} percentage={t.diffPercentage} passed={t.passed} executionMs={t.executionMs} />
               ))}
               <StatusBadge status={diff.status} />
             </Box>
@@ -744,7 +744,7 @@ export default function DiffViewer({
               {availableTechniques.map((t) => (
                 <Chip
                   key={t.technique}
-                  label={`${t.label} ${t.diffPercentage}%`}
+                  label={`${t.label} ${t.diffPercentage}%${t.executionMs != null ? ` · ${t.executionMs}ms` : ''}`}
                   size="small"
                   sx={{
                     fontSize: '0.72rem',

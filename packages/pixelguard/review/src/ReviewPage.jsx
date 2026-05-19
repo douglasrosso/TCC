@@ -164,6 +164,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
               label: techLabels[tech] || tech,
               diffPercentage,
               passed: r.passed,
+              executionMs: r.executionMs ?? null,
               diffUrl: `${IMG_BASE}/img/diff/${tech}/${comp.imageName}.png`,
             });
             if (r.passed) run.passed++;
@@ -233,6 +234,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
               label: techLabels[tech] || tech,
               diffPercentage,
               passed: r.passed,
+              executionMs: r.executionMs ?? null,
               diffUrl: `${IMG_BASE}/img/scenarios/diff/${tech}/${sc.id}.png`,
             });
             if (r.passed) scenarioRun.passed++;

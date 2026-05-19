@@ -241,18 +241,28 @@ jobs:
                 body += `| ${emoji} ${label} | ${icon} | ${t.passed} | ${t.failed} |\n`;
               }
 
-              // Detalhes por tela
-              if (hasDiffs && data.comparisons) {
-                body += `\n<details>\n<summary>📋 <b>Detalhes por tela</b></summary>\n\n`;
+              // Detalhes por tela — sempre exibe, aberto quando há diffs
+              if (data.comparisons) {
+                const openAttr = hasDiffs ? ' open' : '';
+                body += `\n<details${openAttr}>\n<summary>📋 <b>Detalhes por tela</b></summary>\n\n`;
                 body += `| Tela | Pixel | SSIM | Região |\n`;
                 body += `|:-----|:-----:|:----:|:------:|\n`;
                 for (const c of data.comparisons) {
-                  const p = c.results.pixel;
+                  const p  = c.results.pixel;
                   const ss = c.results.ssim;
-                  const r = c.results.region;
-                  const pIcon = p.passed ? '✅' : (p.error ? `❌ dim.` : `❌ ${p.diffPercent}%`);
-                  const sIcon = ss.passed ? '✅' : (ss.error ? `❌ dim.` : `❌ ${ss.score}`);
-                  const rIcon = r.passed ? '✅' : (r.error ? `❌ dim.` : `❌ ${r.failedRegions}/${r.totalRegions}`);
+                  const r  = c.results.region;
+                  const pMs  = p.executionMs  != null ? ` (${p.executionMs}ms)`  : '';
+                  const ssMs = ss.executionMs != null ? ` (${ss.executionMs}ms)` : '';
+                  const rMs  = r.executionMs  != null ? ` (${r.executionMs}ms)`  : '';
+                  const pIcon  = p.error  ? `❌ dim.`
+                    : p.passed  ? `✅ ${Number(p.diffPercent).toFixed(2)}%${pMs}`
+                    : `❌ ${Number(p.diffPercent).toFixed(2)}%${pMs}`;
+                  const sIcon  = ss.error ? `❌ dim.`
+                    : ss.passed ? `✅ ${ss.score}${ssMs}`
+                    : `❌ ${ss.score}${ssMs}`;
+                  const rIcon  = r.error  ? `❌ dim.`
+                    : r.passed  ? `✅ ${r.failedRegions}/${r.totalRegions}${rMs}`
+                    : `❌ ${r.failedRegions}/${r.totalRegions}${rMs}`;
                   body += `| \`${c.imageName}\` | ${pIcon} | ${sIcon} | ${rIcon} |\n`;
                 }
                 body += `\n</details>\n`;

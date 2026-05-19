@@ -82,12 +82,13 @@ export function StatusBadge({ status }) {
  * `size="sm"` → compact list style (h16, 0.55rem)
  * `size="md"` (default) → viewer header style (h20, 0.65rem)
  */
-export function TechBadge({ label, percentage, passed, size = 'md' }) {
+export function TechBadge({ label, percentage, passed, executionMs = null, size = 'md' }) {
   const c = techColor(percentage, passed);
   const compact = size === 'sm';
+  const timeStr = executionMs != null ? ` · ${executionMs}ms` : '';
   return (
     <Chip
-      label={`${label} ${percentage.toFixed(1)}%`}
+      label={`${label} ${percentage.toFixed(1)}%${timeStr}`}
       size="small"
       variant="outlined"
       sx={{
