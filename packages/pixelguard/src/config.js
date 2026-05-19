@@ -75,6 +75,11 @@ export async function loadConfig() {
     };
   }
 
+  // Allow CI to override baselines directory without changing pixelguard.config.js
+  if (process.env.PIXELGUARD_BASELINES_DIR) {
+    config.baselinesDir = process.env.PIXELGUARD_BASELINES_DIR;
+  }
+
   // Resolve dirs to absolute
   config.baselinesDir = path.resolve(cwd, config.baselinesDir);
   config.resultsDir = path.resolve(cwd, config.resultsDir);
