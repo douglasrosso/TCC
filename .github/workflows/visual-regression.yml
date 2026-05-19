@@ -28,15 +28,15 @@ jobs:
       - name: Carregar baselines da main
         run: |
           git fetch origin main --depth=1
-          git checkout origin/main -- baselines/ 2>/dev/null || true
-          if [ -d baselines ] && ls baselines/*.png 1>/dev/null 2>&1; then
+          git checkout origin/main -- baselines-ci/ 2>/dev/null || true
+          if [ -d baselines-ci ] && ls baselines-ci/*.png 1>/dev/null 2>&1; then
             echo "has_baselines=true" >> "$GITHUB_ENV"
-            echo "📁 Baselines encontradas:"
-            ls -1 baselines/*.png
+            echo "📁 Baselines CI encontradas:"
+            ls -1 baselines-ci/*.png
           else
             echo "has_baselines=false" >> "$GITHUB_ENV"
-            echo "⚠️ Nenhuma baseline — first run"
-            mkdir -p baselines
+            echo "⚠️ Nenhuma baseline CI — rode 'Atualizar Baselines' manualmente"
+            mkdir -p baselines-ci
           fi
 
       - name: Setup Node.js
@@ -54,9 +54,13 @@ jobs:
       # ── Captura + Comparação ───────────────────────────
       - name: Capturar screenshots
         run: npx pixelguard capture
+        env:
+          PIXELGUARD_BASELINES_DIR: baselines-ci
 
       - name: Comparar com baselines
         id: compare
+        env:
+          PIXELGUARD_BASELINES_DIR: baselines-ci
         run: |
           if [ "$has_baselines" = "false" ]; then
             echo "has_diffs=false" >> $GITHUB_OUTPUT
@@ -246,9 +250,9 @@ jobs:
                   const p = c.results.pixel;
                   const ss = c.results.ssim;
                   const r = c.results.region;
-                  const pIcon = p.passed ? '✅' : `❌ ${p.diffPercent}%`;
-                  const sIcon = ss.passed ? '✅' : `❌ ${ss.score}`;
-                  const rIcon = r.passed ? '✅' : `❌ ${r.failedRegions}/${r.totalRegions}`;
+                  const pIcon = p.passed ? '✅' : (p.error ? `❌ dim.` : `❌ ${p.diffPercent}%`);
+                  const sIcon = ss.passed ? '✅' : (ss.error ? `❌ dim.` : `❌ ${ss.score}`);
+                  const rIcon = r.passed ? '✅' : (r.error ? `❌ dim.` : `❌ ${r.failedRegions}/${r.totalRegions}`);
                   body += `| \`${c.imageName}\` | ${pIcon} | ${sIcon} | ${rIcon} |\n`;
                 }
                 body += `\n</details>\n`;
