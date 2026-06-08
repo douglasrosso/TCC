@@ -118,7 +118,7 @@ async function main() {
 
       if (results.summary.failed > 0) {
         console.log(`\n${results.summary.failed} comparison(s) failed.`);
-        process.exit(1);
+        if (!process.argv.includes('--no-fail')) process.exit(1);
       }
       break;
     }

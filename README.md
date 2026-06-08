@@ -274,10 +274,10 @@ Isso instala tudo que o projeto precisa, incluindo o browser usado para capturar
 Execute o pipeline de testes visuais:
 
 ```bash
-npm run vrt:review
+npm run review:local
 ```
 
-Aguarde o processo terminar (cerca de 20–30 segundos). A **Review UI** abrirá automaticamente em **http://localhost:8080**.
+Aguarde o processo terminar (cerca de 20–30 segundos). Quando aparecer a mensagem `PixelGuard Review Server — http://localhost:8080` no terminal, abra **http://localhost:8080** no navegador.
 
 Como nada foi alterado, todas as comparações passam: a interface mostra tudo aprovado, sem diferenças detectadas.
 
@@ -304,10 +304,10 @@ Salve o arquivo.
 Execute os testes de novo:
 
 ```bash
-npm run vrt:review
+npm run review:local
 ```
 
-Desta vez a Review UI abrirá mostrando as diferenças: a cor do HeroBanner mudou de azul/roxo para vermelho/laranja. Você pode usar os modos **Side by Side**, **Overlay** ou **Slider** para comparar a imagem de referência com a captura atual.
+Quando aparecer `PixelGuard Review Server — http://localhost:8080` no terminal, abra **http://localhost:8080** no navegador. A Review UI mostrará as diferenças: a cor do HeroBanner mudou de azul/roxo para vermelho/laranja. Você pode usar os modos **Side by Side**, **Overlay** ou **Slider** para comparar a imagem de referência com a captura atual.
 
 ### Passo 6 — Aceitar a mudança como nova referência
 
@@ -710,7 +710,7 @@ export default {
 {
   "scripts": {
     "vrt":             "npx pixelguard test",
-    "vrt:review":      "npx pixelguard test && npx pixelguard review",
+    "review:local":    "npx pixelguard test --no-fail && npx pixelguard review",
     "update-baselines": "npx pixelguard update-baselines"
   }
 }
@@ -752,7 +752,7 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 | `npm run dev` | Inicia o servidor de desenvolvimento (porta 8000) |
 | `npm run build` | Build de produção |
 | `npm run vrt` | **Pipeline completo:** captura → comparação → relatório |
-| `npm run vrt:review` | Pipeline completo + abre Review UI (porta 8080) |
+| `npm run review:local` | Pipeline completo + abre Review UI (porta 8080) |
 | `npm run update-baselines` | Copia `results/current/` → `baselines/` |
 | `npm run deploy` | Build da Review UI + monta deploy estático |
 | `npm run scenarios` | Roda os 13 cenários de mutação |
