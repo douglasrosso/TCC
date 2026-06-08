@@ -21,24 +21,23 @@
 ## Índice
 
 1. [Visão Geral](#visão-geral)
-2. [Quick Start (5 minutos)](#quick-start-5-minutos)
-3. [Arquitetura](#arquitetura)
-4. [Pré-requisitos](#pré-requisitos)
-5. [Instalação e Configuração Local](#instalação-e-configuração-local)
-6. [Arquivo pixelguard.config.js](#arquivo-pixelguardconfigjs)
-7. [Uso Local — Dashboard MVP](#uso-local--dashboard-mvp)
-8. [PixelGuard CLI](#pixelguard-cli)
-9. [Review UI — Guia Completo](#review-ui--guia-completo)
-10. [Relatório HTML](#relatório-html)
-11. [Aplicação Dashboard (sujeito de teste)](#aplicação-dashboard-sujeito-de-teste)
-12. [Cenários de regressão](#cenários-de-regressão)
-13. [Configuração do Repositório GitHub do Zero](#configuração-do-repositório-github-do-zero)
-14. [CI/CD — GitHub Actions](#cicd--github-actions)
-15. [Usando PixelGuard em Outro Projeto](#usando-pixelguard-em-outro-projeto)
-16. [Comandos de Referência](#comandos-de-referência)
-17. [Referência de Configuração](#referência-de-configuração)
-18. [Estrutura do Projeto](#estrutura-do-projeto)
-19. [Determinismo](#determinismo)
+2. [Arquitetura](#arquitetura)
+3. [Pré-requisitos](#pré-requisitos)
+4. [Instalação e Configuração Local](#instalação-e-configuração-local)
+5. [Arquivo pixelguard.config.js](#arquivo-pixelguardconfigjs)
+6. [Uso Local — Dashboard MVP](#uso-local--dashboard-mvp)
+7. [PixelGuard CLI](#pixelguard-cli)
+8. [Review UI — Guia Completo](#review-ui--guia-completo)
+9. [Relatório HTML](#relatório-html)
+10. [Aplicação Dashboard (sujeito de teste)](#aplicação-dashboard-sujeito-de-teste)
+11. [Cenários de regressão](#cenários-de-regressão)
+12. [Configuração do Repositório GitHub do Zero](#configuração-do-repositório-github-do-zero)
+13. [CI/CD — GitHub Actions](#cicd--github-actions)
+14. [Usando PixelGuard em Outro Projeto](#usando-pixelguard-em-outro-projeto)
+15. [Comandos de Referência](#comandos-de-referência)
+16. [Referência de Configuração](#referência-de-configuração)
+17. [Estrutura do Projeto](#estrutura-do-projeto)
+18. [Determinismo](#determinismo)
 
 ---
 
@@ -60,34 +59,6 @@ Captura screenshots → Compara com baselines → Gera relatório → Abre revie
 | **Pixel a pixel** | Compara cada pixel individualmente usando [pixelmatch](https://github.com/mapbox/pixelmatch). Detecta até alterações de 1px. | Alta |
 | **SSIM** | Structural Similarity Index — métrica perceptual que avalia luminância, contraste e estrutura (Wang et al., 2004). Aproxima a visão humana. | Média |
 | **Regiões** | Divide a imagem em grade (4×6), compara cada célula de forma independente e permite mascarar áreas dinâmicas (datas, contadores). | Configurável |
-
----
-
-## Quick Start (5 minutos)
-
-Para quem quer rodar o projeto localmente do zero:
-
-```bash
-npm install
-npx playwright install chromium
-
-# 1. Rodar o dashboard
-npm run dev
-# → http://localhost:8000
-
-# 2. Pipeline completo de testes visuais (em outro terminal)
-npm run vrt
-
-# 3. Ver o resultado
-#    Abra results/report.html no navegador
-#    Ou execute npm run vrt:review para a UI interativa
-
-# 4. (Opcional) Review UI interativa
-npm run review
-# → http://localhost:8080
-```
-
-> **Nota:** Na primeira vez, como não há baselines de referência, o pipeline cria os screenshots mas não gera diffs. Crie as baselines com `npm run update-baselines` e depois rode `npm run vrt` novamente para ver a comparação.
 
 ---
 
@@ -154,25 +125,15 @@ cd TCC
 npm install
 ```
 
-O pacote `pixelguard` está no diretório `packages/pixelguard/` e é instalado localmente como `file:packages/pixelguard`. Não é necessário nenhuma instalação adicional.
+Instala todas as dependências do projeto e o browser Chromium usado pelo Playwright para capturar screenshots. Não é necessário nenhum passo adicional.
 
-### 3. Instalar o navegador do Playwright
+### 3. Criar as baselines iniciais
 
-```bash
-npx playwright install chromium
-```
-
-> O Playwright usa Chromium headless para capturar screenshots. Só é necessário instalar uma vez.
-
-### 4. Criar as baselines iniciais
-
-Na primeira vez, gere as imagens de referência:
+Necessário apenas se as imagens de referência em `baselines/` ainda não existirem:
 
 ```bash
-npx pixelguard capture   # captura screenshots → results/current/
-npm run update-baselines # copia current/ → baselines/
-git add baselines/
-git commit -m "chore: criar baselines iniciais"
+npm run vrt              # captura os screenshots iniciais
+npm run update-baselines # define os screenshots como referência
 ```
 
 ---
@@ -318,34 +279,71 @@ masks: [
 
 ## Uso Local — Dashboard MVP
 
+> Siga os passos abaixo na ordem. É necessário ter [Node.js ≥ 20](https://nodejs.org) e [Git](https://git-scm.com) instalados na máquina.
+
+### Passo 1 — Clonar o projeto
+
+Abra o terminal e execute:
+
 ```bash
-# 1. Instalar e subir o dashboard
-npm install
-npm run dev
-# → http://localhost:8000
+git clone https://github.com/douglasrosso/TCC.git
+cd TCC
 ```
 
-Para ver o pipeline em ação, faça uma alteração visual — por exemplo, abra [src/components/HeroBanner.jsx](src/components/HeroBanner.jsx) e troque a cor do gradiente:
+### Passo 2 — Instalar as dependências
+
+```bash
+npm install
+```
+
+Isso instala tudo que o projeto precisa, incluindo o browser usado para capturar screenshots.
+
+### Passo 3 — Ver os testes passando (sem nenhuma alteração)
+
+Execute o pipeline de testes visuais:
+
+```bash
+npm run vrt:review
+```
+
+Aguarde o processo terminar (cerca de 20–30 segundos). A **Review UI** abrirá automaticamente em **http://localhost:8080**.
+
+Como nada foi alterado, todas as comparações passam: a interface mostra tudo aprovado, sem diferenças detectadas.
+
+> Pressione `Ctrl+C` no terminal para encerrar a Review UI quando quiser continuar.
+
+### Passo 4 — Fazer uma alteração visual
+
+Para simular uma regressão visual, faça uma mudança visível. Abra o arquivo [src/components/HeroBanner.jsx](src/components/HeroBanner.jsx) e localize a linha do gradiente:
 
 ```jsx
-// antes
 background: 'linear-gradient(135deg, #1a237e 0%, #4a148c 100%)',
-// depois
+```
+
+Substitua por:
+
+```jsx
 background: 'linear-gradient(135deg, #b71c1c 0%, #e65100 100%)',
 ```
 
+Salve o arquivo.
+
+### Passo 5 — Rodar novamente e ver o diff
+
+Execute os testes de novo:
+
 ```bash
-# 2. Rodar o teste e abrir a Review UI
 npm run vrt:review
-# → http://localhost:8080
 ```
 
-Se a alteração foi intencional, atualize as baselines:
+Desta vez a Review UI abrirá mostrando as diferenças: a cor do HeroBanner mudou de azul/roxo para vermelho/laranja. Você pode usar os modos **Side by Side**, **Overlay** ou **Slider** para comparar a imagem de referência com a captura atual.
+
+### Passo 6 — Aceitar a mudança como nova referência
+
+Se a alteração foi intencional e você quer que ela vire a nova referência para comparações futuras:
 
 ```bash
-# 3. Aceitar como nova baseline
 npm run update-baselines
-git add baselines/ && git commit -m "chore: atualizar baselines"
 ```
 
 ---
@@ -386,7 +384,7 @@ A Review UI é uma aplicação React com tema escuro que permite analisar difere
 ### Abrindo a Review UI
 
 ```bash
-npx pixelguard review
+npm run review
 # → http://localhost:8080
 
 # Porta customizada
