@@ -36,8 +36,8 @@ export async function captureBaseline(options = {}) {
   console.log(`  Criando worktree de origin/${baseBranch}...`);
   execSync(`git worktree add "${worktreePath}" origin/${baseBranch}`);
 
-  // Link node_modules so the worktree's Vite can resolve dependencies without npm install.
-  // Uses 'junction' on Windows (no elevation required) and 'dir' symlink elsewhere.
+  // Vincula node_modules ao worktree para que o Vite resolva dependências sem npm install.
+  // Usa 'junction' no Windows (sem privilégios de admin) e symlink 'dir' em outros SOs.
   const nodeModulesSrc = path.resolve(process.cwd(), 'node_modules');
   const nodeModulesDst = path.join(worktreePath, 'node_modules');
   const symlinkType = process.platform === 'win32' ? 'junction' : 'dir';
@@ -52,9 +52,9 @@ export async function captureBaseline(options = {}) {
     console.log(`    ${files.length} screenshots de baseline capturados.`);
     return files;
   } finally {
-    // Remove only the junction/symlink — NOT the target node_modules.
-    // On Windows: `rmdir` removes a junction link without touching its target.
-    // On Unix: `fs.unlinkSync` removes a symlink without touching its target.
+    // Remove apenas o junction/symlink — NÃO o node_modules de origem.
+    // No Windows: `rmdir` remove o link sem tocar no alvo.
+    // No Unix: `fs.unlinkSync` remove o symlink sem tocar no alvo.
     try {
       if (process.platform === 'win32') {
         execSync(`rmdir "${nodeModulesDst}"`, { stdio: 'pipe' });
