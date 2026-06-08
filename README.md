@@ -23,21 +23,20 @@
 1. [Visão Geral](#visão-geral)
 2. [Arquitetura](#arquitetura)
 3. [Pré-requisitos](#pré-requisitos)
-4. [Instalação e Configuração Local](#instalação-e-configuração-local)
+4. [Uso Local — Dashboard MVP](#uso-local--dashboard-mvp)
 5. [Arquivo pixelguard.config.js](#arquivo-pixelguardconfigjs)
-6. [Uso Local — Dashboard MVP](#uso-local--dashboard-mvp)
-7. [PixelGuard CLI](#pixelguard-cli)
-8. [Review UI — Guia Completo](#review-ui--guia-completo)
-9. [Relatório HTML](#relatório-html)
-10. [Aplicação Dashboard (sujeito de teste)](#aplicação-dashboard-sujeito-de-teste)
-11. [Cenários de regressão](#cenários-de-regressão)
-12. [Configuração do Repositório GitHub do Zero](#configuração-do-repositório-github-do-zero)
-13. [CI/CD — GitHub Actions](#cicd--github-actions)
-14. [Usando PixelGuard em Outro Projeto](#usando-pixelguard-em-outro-projeto)
-15. [Comandos de Referência](#comandos-de-referência)
-16. [Referência de Configuração](#referência-de-configuração)
-17. [Estrutura do Projeto](#estrutura-do-projeto)
-18. [Determinismo](#determinismo)
+6. [PixelGuard CLI](#pixelguard-cli)
+7. [Review UI — Guia Completo](#review-ui--guia-completo)
+8. [Relatório HTML](#relatório-html)
+9. [Aplicação Dashboard (sujeito de teste)](#aplicação-dashboard-sujeito-de-teste)
+10. [Cenários de regressão](#cenários-de-regressão)
+11. [Configuração do Repositório GitHub do Zero](#configuração-do-repositório-github-do-zero)
+12. [CI/CD — GitHub Actions](#cicd--github-actions)
+13. [Usando PixelGuard em Outro Projeto](#usando-pixelguard-em-outro-projeto)
+14. [Comandos de Referência](#comandos-de-referência)
+15. [Referência de Configuração](#referência-de-configuração)
+16. [Estrutura do Projeto](#estrutura-do-projeto)
+17. [Determinismo](#determinismo)
 
 ---
 
@@ -107,34 +106,6 @@ Captura screenshots → Compara com baselines → Gera relatório → Abre revie
 | **npm** | ≥ 9 | Gerenciador de pacotes |
 | **Git** | Qualquer | Controle de versão |
 | **Conta GitHub** | — | CI/CD e GitHub Pages |
-
----
-
-## Instalação e Configuração Local
-
-### 1. Clonar o repositório
-
-```bash
-git clone https://github.com/douglasrosso/TCC.git
-cd TCC
-```
-
-### 2. Instalar dependências
-
-```bash
-npm install
-```
-
-Instala todas as dependências do projeto e o browser Chromium usado pelo Playwright para capturar screenshots. Não é necessário nenhum passo adicional.
-
-### 3. Criar as baselines iniciais
-
-Necessário apenas se as imagens de referência em `baselines/` ainda não existirem:
-
-```bash
-npm run vrt              # captura os screenshots iniciais
-npm run update-baselines # define os screenshots como referência
-```
 
 ---
 
@@ -279,7 +250,7 @@ masks: [
 
 ## Uso Local — Dashboard MVP
 
-> Siga os passos abaixo na ordem. É necessário ter [Node.js ≥ 20](https://nodejs.org) e [Git](https://git-scm.com) instalados na máquina.
+> Siga os passos abaixo na ordem. É necessário ter [Node.js ≥ 20](https://nodejs.org) e [Git](https://git-scm.com) instalados — consulte a seção [Pré-requisitos](#pré-requisitos) se necessário.
 
 ### Passo 1 — Clonar o projeto
 
