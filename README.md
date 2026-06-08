@@ -92,7 +92,6 @@ Captura screenshots → Compara com baselines → Gera relatório → Abre revie
 │                    GitHub Actions                           │
 │  visual-regression.yml  → Check em PRs                     │
 │  approve-visual.yml     → Comandos via comentário          │
-│  update-baselines.yml   → Atualiza baselines pós-merge     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -288,7 +287,7 @@ Como nada foi alterado, todas as comparações passam: a interface mostra tudo a
 Para simular uma regressão visual, faça uma mudança visível. Abra o arquivo [src/components/HeroBanner.jsx](src/components/HeroBanner.jsx) e localize a linha do gradiente:
 
 ```jsx
-background: 'linear-gradient(135deg, #1a237e 0%, #4a148c 100%)',
+background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%)',
 ```
 
 Substitua por:
@@ -564,15 +563,6 @@ Para que o merge seja **efetivamente bloqueado** quando houver diferenças visua
 6. (Recomendado) Marque ✅ **Do not allow bypassing the above settings**
 7. Clique em **Create**
 
-### Passo 7 — Criar as baselines de CI
-
-Após o primeiro merge na `main`, o workflow `update-baselines.yml` executa automaticamente e cria as baselines em `baselines-ci/`. Você pode também disparar manualmente:
-
-1. Vá em **Actions → Atualizar Baselines**
-2. Clique em **Run workflow → Run workflow**
-
-Após isso, qualquer PR aberto para `main` rodará o check visual completo.
-
 ### Resumo das configurações do repositório
 
 | Configuração | Local | Valor |
@@ -581,11 +571,13 @@ Após isso, qualquer PR aberto para `main` rodará o check visual completo.
 | GitHub Pages | Settings → Pages | Branch: `gh-pages`, pasta: `/ (root)` |
 | Branch protection | Settings → Branches | Status check: `visual-regression/review` obrigatório para `main` |
 
+> Nenhuma baseline precisa ser criada manualmente. O workflow captura a baseline de `origin/main` via git worktree a cada execução — sempre atualizada, nunca desatualizada.
+
 ---
 
 ## CI/CD — GitHub Actions
 
-O projeto inclui **3 workflows** que automatizam o fluxo completo.
+O projeto inclui **2 workflows** que automatizam o fluxo completo.
 
 ### Workflow 1: Visual Regression Check
 
@@ -598,10 +590,11 @@ O projeto inclui **3 workflows** que automatizam o fluxo completo.
 PR aberto/atualizado
     │
     ├── Checkout do código
-    ├── Carregar baselines da main (baselines-ci/)
     ├── npm ci + instalar Chromium
-    ├── Capturar screenshots (PIXELGUARD_BASELINES_DIR=baselines-ci)
-    ├── Comparar com baselines (3 técnicas em paralelo)
+    ├── npx pixelguard test --no-fail
+    │       ├── git fetch origin/main + worktree → captura baseline
+    │       ├── captura screenshots da branch atual
+    │       └── compara com 3 técnicas em paralelo
     ├── Gerar meta.json (dados do CI + token XOR-encriptado)
     ├── Build Review UI + montar pasta deploy/
     ├── Deploy para GitHub Pages (branch gh-pages)
@@ -609,6 +602,8 @@ PR aberto/atualizado
     ├── Comentar no PR com tabela de resultados
     └── Upload artefatos (results/ — 30 dias)
 ```
+
+> A baseline é capturada dinamicamente de `origin/main` via git worktree a cada execução. Nenhuma imagem é armazenada no repositório.
 
 **Resultado no PR:**
 - **Sem diferenças** → Status `success`, merge liberado
@@ -633,24 +628,6 @@ Permite controlar o status do PR sem abrir a Review UI:
 | `/reset-visual` | Reseta para pendente | `pending` — review necessário |
 
 Cada comando gera uma reação emoji no comentário e um comentário de confirmação automático.
-
-### Workflow 3: Atualizar Baselines
-
-**Arquivo:** `.github/workflows/update-baselines.yml`  
-**Trigger:** Push na `main` (após merge) ou disparo manual
-
-**Fluxo:**
-
-```
-Merge na main
-    │
-    ├── Checkout (com VRT_TOKEN para poder commitar)
-    ├── npm ci + instalar Chromium
-    ├── Capturar screenshots atuais (PIXELGUARD_BASELINES_DIR=baselines-ci)
-    ├── Copiar current/ → baselines-ci/
-    └── git commit "chore: atualizar baselines visuais [skip ci]"
-        └── [skip ci] impede loop infinito
-```
 
 ---
 
@@ -716,27 +693,23 @@ export default {
 }
 ```
 
-### Criar baselines e rodar o pipeline
+### Rodar o pipeline de testes
 
 ```bash
-# 1. Suba sua aplicação (em outro terminal)
-npm run dev
-
-# 2. Criar baselines iniciais
-npx pixelguard capture
-npm run update-baselines
-git add baselines/
-git commit -m "chore: criar baselines iniciais"
-
-# 3. Rodar o pipeline de testes
+# Pipeline completo — baseline capturada de origin/main automaticamente
 npm run vrt
+
+# Pipeline + abre Review UI
+npm run review:local
 ```
+
+Nenhuma baseline precisa ser criada ou commitada — o PixelGuard captura a baseline de `origin/main` via git worktree a cada execução.
 
 ### Adicionar os workflows de CI
 
-Copie os 3 arquivos de `.github/workflows/` deste repositório para o seu projeto. Ajuste apenas:
+Copie os 2 arquivos de `.github/workflows/` deste repositório para o seu projeto (`visual-regression.yml` e `approve-visual.yml`). Ajuste apenas:
 
-1. **`visual-regression.yml` e `update-baselines.yml`** — se seu servidor de dev não for Vite na porta 8000, ajuste o `baseUrl` no `pixelguard.config.js`
+1. **`visual-regression.yml`** — se seu servidor de dev não for Vite na porta 8000, ajuste o `baseUrl` no `pixelguard.config.js`
 2. **Branch `main`** — substitua pelo nome da sua branch principal se for diferente
 
 Siga os passos da seção [Configuração do Repositório GitHub do Zero](#configuração-do-repositório-github-do-zero) para configurar o PAT, o secret, o GitHub Pages e a branch protection.
@@ -790,7 +763,8 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 | `thresholds.ssim` | `{ minScore, blockSize }` | `{ 0.99, 8 }` | Limiares do comparador SSIM |
 | `thresholds.region` | `{ gridCols, gridRows, maxDiffPercent }` | `{ 4, 6, 1.0 }` | Limiares do comparador de regiões |
 | `masks` | `Array<{ row, col }>` | `[]` | Células da grade a ignorar |
-| `baselinesDir` | `string` | `'baselines'` | Pasta de baselines (relativa ao cwd) |
+| `baseBranch` | `string` | `'main'` | Branch remota usada como baseline (capturada via worktree) |
+| `baselinesDir` | `string` | `'baselines'` | Pasta de baselines locais (relativa ao cwd) |
 | `resultsDir` | `string` | `'results'` | Pasta de resultados (relativa ao cwd) |
 | `freeze` | `boolean` | `true` | Congela `Date`/`Math.random` para determinismo |
 | `reviewPort` | `number` | `8080` | Porta da Review UI |
@@ -807,7 +781,7 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 
 | Secret | Obrigatório | Permissões necessárias |
 |:-------|:-----------|:-----------------------|
-| `VRT_TOKEN` | Sim | `contents:write`, `statuses:write`, `pull-requests:write`, `pages:write` |
+| `VRT_TOKEN` | Sim | `statuses:write`, `pull-requests:write`, `pages:write` |
 
 ---
 
@@ -819,8 +793,6 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 ├── vite.config.js                    # Configuração do Vite
 ├── index.html                        # Entry point HTML
 │
-├── baselines/                        # Baselines locais (commitadas)
-├── baselines-ci/                     # Baselines do CI (atualizadas automaticamente)
 ├── results/                          # Saída do pipeline (não commitado)
 │   ├── current/                      #   Screenshots atuais
 │   ├── diffs/                        #   Mapas de diferença
@@ -893,8 +865,7 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 │
 ├── .github/workflows/
 │   ├── visual-regression.yml         # Check visual em PRs
-│   ├── approve-visual.yml            # Comandos via comentário no PR
-│   └── update-baselines.yml          # Atualiza baselines após merge
+│   └── approve-visual.yml            # Comandos via comentário no PR
 │
 └── scripts/                          # Utilitários de documentação
     ├── capture-scenarios.js          #   Gera composites docs/images/scenarios/

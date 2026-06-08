@@ -167,6 +167,14 @@ async function main() {
       }
 
       console.log(`Starting review server on port ${port}...`);
+      // Prefer results/baseline/ (dynamic worktree capture) over config.baselinesDir
+      const dynamicBaseline = path.join(config.resultsDir, "baseline");
+      const baselinesDir =
+        fs.existsSync(dynamicBaseline) &&
+        fs.readdirSync(dynamicBaseline).some((f) => f.endsWith(".png"))
+          ? dynamicBaseline
+          : config.baselinesDir;
+
       const { spawn } = await import("node:child_process");
       const child = spawn("node", [reviewServer, "--port", String(port)], {
         cwd: process.cwd(),
@@ -174,7 +182,7 @@ async function main() {
         env: {
           ...process.env,
           PIXELGUARD_RESULTS_DIR: config.resultsDir,
-          PIXELGUARD_BASELINES_DIR: config.baselinesDir,
+          PIXELGUARD_BASELINES_DIR: baselinesDir,
         },
       });
       child.on("exit", (code) => process.exit(code || 0));
