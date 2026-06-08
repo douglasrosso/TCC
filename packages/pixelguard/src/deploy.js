@@ -25,7 +25,13 @@ export async function buildDeploy({ prNumber, outDir, config } = {}) {
   if (!config) config = await loadConfig();
 
   const resultsDir = path.resolve(config.resultsDir || 'results');
-  const baselinesDir = path.resolve(config.baselinesDir || 'baselines');
+  // Prefer results/baseline/ (dynamic worktree capture) over config.baselinesDir
+  const dynamicBaseline = path.join(resultsDir, 'baseline');
+  const baselinesDir =
+    fs.existsSync(dynamicBaseline) &&
+    fs.readdirSync(dynamicBaseline).some((f) => f.endsWith('.png'))
+      ? dynamicBaseline
+      : path.resolve(config.baselinesDir || 'baselines');
   const deployBase = outDir || path.resolve(process.cwd(), 'deploy');
   const deployDir = path.join(deployBase, `pr-${prNumber || '0'}`);
   fs.mkdirSync(deployDir, { recursive: true });
