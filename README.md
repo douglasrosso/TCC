@@ -276,7 +276,7 @@ Execute o pipeline de testes visuais:
 npm run review:local
 ```
 
-Aguarde o processo terminar (cerca de 20–30 segundos). Quando aparecer a mensagem `PixelGuard Review Server — http://localhost:8080` no terminal, abra **http://localhost:8080** no navegador.
+Aguarde o processo terminar (cerca de 60–90 segundos — inclui captura da baseline de `origin/main` via git worktree). Quando aparecer a mensagem `PixelGuard Review Server — http://localhost:8080` no terminal, abra **http://localhost:8080** no navegador.
 
 Como nada foi alterado, todas as comparações passam: a interface mostra tudo aprovado, sem diferenças detectadas.
 
@@ -310,11 +310,7 @@ Quando aparecer `PixelGuard Review Server — http://localhost:8080` no terminal
 
 ### Passo 6 — Aceitar a mudança como nova referência
 
-Se a alteração foi intencional e você quer que ela vire a nova referência para comparações futuras:
-
-```bash
-npm run update-baselines
-```
+Se a alteração foi intencional, basta fazer merge para a `main`. Na próxima execução do pipeline, o PixelGuard capturará a baseline diretamente de `origin/main` — a mudança já será o novo estado de referência automaticamente. Nenhum comando adicional é necessário.
 
 ---
 
@@ -331,7 +327,7 @@ npx pixelguard <command>
 | `compare` | Compara capturas com baselines usando as 3 técnicas em paralelo |
 | `report` | Gera relatório HTML autocontido em `results/report.html` |
 | `update-baselines` | Copia `results/current/` → `baselines/` |
-| `test` | **Pipeline completo:** capture → compare → report |
+| `test` | **Pipeline completo:** captura baseline de `origin/main` → capture → compare → report |
 | `review` | Inicia a Review UI interativa (porta 8080) |
 | `deploy` | Build da Review UI + monta pasta de deploy estático para GitHub Pages |
 
@@ -512,7 +508,7 @@ git push -u origin main
 
 ### Passo 3 — Criar um Personal Access Token (PAT)
 
-O CI precisa de um token com permissões para commitar baselines, escrever status de PR e publicar no GitHub Pages.
+O CI precisa de um token com permissões para publicar no GitHub Pages, escrever status de PR e registrar logs na branch `vrt-logs`.
 
 1. Acesse **GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained tokens**
 2. Clique em **Generate new token**
@@ -537,7 +533,7 @@ O CI precisa de um token com permissões para commitar baselines, escrever statu
    - **Value:** cole o token copiado no passo anterior
 4. Clique em **Add secret**
 
-> Sem este secret, os 3 workflows falharão ao tentar commitar baselines, criar status de commit ou publicar no GitHub Pages.
+> Sem este secret, os workflows falharão ao tentar publicar no GitHub Pages, criar status de commit ou gravar logs na branch `vrt-logs`.
 
 ### Passo 5 — Habilitar GitHub Pages
 
@@ -567,7 +563,7 @@ Para que o merge seja **efetivamente bloqueado** quando houver diferenças visua
 
 | Configuração | Local | Valor |
 |:-------------|:------|:------|
-| Secret `VRT_TOKEN` | Settings → Secrets → Actions | Fine-grained PAT com contents/statuses/pull-requests/pages write |
+| Secret `VRT_TOKEN` | Settings → Secrets → Actions | Fine-grained PAT com `contents`, `statuses`, `pull-requests` e `pages` write |
 | GitHub Pages | Settings → Pages | Branch: `gh-pages`, pasta: `/ (root)` |
 | Branch protection | Settings → Branches | Status check: `visual-regression/review` obrigatório para `main` |
 
@@ -577,7 +573,7 @@ Para que o merge seja **efetivamente bloqueado** quando houver diferenças visua
 
 ## CI/CD — GitHub Actions
 
-O projeto inclui **2 workflows** que automatizam o fluxo completo.
+O projeto inclui **3 workflows** que automatizam o fluxo completo.
 
 ### Workflow 1: Visual Regression Check
 
@@ -629,6 +625,25 @@ Permite controlar o status do PR sem abrir a Review UI:
 
 Cada comando gera uma reação emoji no comentário e um comentário de confirmação automático.
 
+### Workflow 3: Log de Regressões Aprovadas
+
+**Arquivo:** `.github/workflows/vrt-log.yml`  
+**Trigger:** Pull Request fechada com merge para `main`
+
+Registra na branch `vrt-logs` apenas as PRs que foram mergeadas **com diffs visuais detectados** — para auditoria futura de regressões aprovadas.
+
+```
+PR mergeada
+    │
+    ├── Busca o artefato da run de visual-regression.yml deste PR
+    ├── Se failed == 0 → não registra nada
+    └── Se failed > 0 → commit em vrt-logs/pr-{N}/
+            ├── results.json  (resultados completos)
+            └── summary.md   (branch, commit, autor, técnicas, qtd diffs)
+```
+
+> Consulte o histórico acessando a branch `vrt-logs` no GitHub.
+
 ---
 
 ## Usando PixelGuard em Outro Projeto
@@ -678,6 +693,9 @@ export default {
     ssim:   { minScore: 0.99, blockSize: 8         },
     region: { gridCols: 4, gridRows: 6, maxDiffPercent: 1.0 },
   },
+
+  // Branch remota usada como baseline — capturada via git worktree a cada run
+  baseBranch: 'main',
 };
 ```
 
@@ -781,7 +799,7 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 
 | Secret | Obrigatório | Permissões necessárias |
 |:-------|:-----------|:-----------------------|
-| `VRT_TOKEN` | Sim | `statuses:write`, `pull-requests:write`, `pages:write` |
+| `VRT_TOKEN` | Sim | `contents:write`, `statuses:write`, `pull-requests:write`, `pages:write` |
 
 ---
 
@@ -838,6 +856,7 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 │       ├── src/                      #   Engine de comparação
 │       │   ├── config.js             #     Loader do pixelguard.config.js
 │       │   ├── capture.js            #     Captura com Playwright
+│       │   ├── capture-baseline.js   #     Captura baseline de origin/baseBranch via worktree
 │       │   ├── compare.js            #     Orquestrador de comparação
 │       │   ├── report.js             #     Gerador de relatório HTML
 │       │   ├── update-baselines.js   #     Copia current → baselines
@@ -865,7 +884,8 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 │
 ├── .github/workflows/
 │   ├── visual-regression.yml         # Check visual em PRs
-│   └── approve-visual.yml            # Comandos via comentário no PR
+│   ├── approve-visual.yml            # Comandos via comentário no PR
+│   └── vrt-log.yml                   # Log de regressões aprovadas (branch vrt-logs)
 │
 └── scripts/                          # Utilitários de documentação
     ├── capture-scenarios.js          #   Gera composites docs/images/scenarios/
