@@ -98,26 +98,32 @@ async function main() {
     case "test": {
       console.log("=== PixelGuard: Full pipeline ===\n");
 
-      console.log("1/3 Capturing screenshots...");
-      const { capture } = await import("../src/capture.js");
       const { loadConfig } = await import("../src/config.js");
       const config = await loadConfig();
 
+      console.log(`0/4 Capturando baseline de origin/${config.baseBranch || 'main'}...`);
+      const { captureBaseline } = await import("../src/capture-baseline.js");
+      await captureBaseline({ config });
+      console.log();
+
+      console.log("1/4 Capturando screenshots da branch atual...");
+      const { capture } = await import("../src/capture.js");
       const files = await capture({ config });
-      console.log(`    ${files.length} screenshots captured.\n`);
+      console.log(`    ${files.length} screenshots capturados.\n`);
 
-      console.log("2/3 Running comparisons...");
+      console.log("2/4 Comparando...");
       const { runComparisons } = await import("../src/compare.js");
-      const results = await runComparisons({ config });
+      const baselineDir = path.join(config.resultsDir, 'baseline');
+      const results = await runComparisons({ config, baselineDir });
 
-      console.log("\n3/3 Generating report...");
+      console.log("\n3/4 Gerando relatório...");
       const { generateReport } = await import("../src/report.js");
       await generateReport({ config });
 
-      console.log("\nDone! Open results/report.html to see your report.");
+      console.log("\nPronto! Abra results/report.html para ver o relatório.");
 
       if (results.summary.failed > 0) {
-        console.log(`\n${results.summary.failed} comparison(s) failed.`);
+        console.log(`\n${results.summary.failed} comparação(ões) com falha.`);
         if (!process.argv.includes('--no-fail')) process.exit(1);
       }
       break;

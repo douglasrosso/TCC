@@ -13,6 +13,9 @@ export default {
   // Técnicas de comparação executadas em paralelo
   comparators: ['pixel', 'ssim', 'region'],
 
+  // Branch remota usada como baseline visual — capturada via git worktree no mesmo ambiente
+  baseBranch: 'main',
+
   // Limiares de aceitação por técnica — valores adotados no estudo
   thresholds: {
     pixel: {
