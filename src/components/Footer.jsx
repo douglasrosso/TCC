@@ -11,11 +11,11 @@ export default function Footer() {
         px: 2,
         mt: 'auto',
         borderTop: '1px solid',
-        borderColor: 'divider',
-        bgcolor: '#fff',
+        borderColor: 'rgba(255,255,255,0.08)',
+        bgcolor: '#0f172a',
       }}
     >
-      <Typography variant="caption" color="text.secondary">
+      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
         &copy; 2025 VRT Demo &mdash; Trabalho de Conclusão de Curso
       </Typography>
     </Box>
