@@ -4,14 +4,15 @@
   "description": "Comparativo de técnicas de regressão visual: pixel-a-pixel, SSIM e regiões",
   "type": "module",
   "scripts": {
+    "postinstall": "playwright install chromium",
     "dev": "vite",
     "build": "vite build",
-    "vrt": "npx pixelguard test",
-    "vrt:review": "npx pixelguard test && npm run review",
-    "update-baselines": "npx pixelguard update-baselines",
+    "vrt": "pixelguard test",
+    "vrt:review": "pixelguard test && npm run review",
+    "update-baselines": "pixelguard update-baselines",
     "scenarios": "node tests/scenarios.js",
-    "review": "npx pixelguard review",
-    "deploy": "npx pixelguard deploy"
+    "review": "pixelguard review",
+    "deploy": "pixelguard deploy"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",

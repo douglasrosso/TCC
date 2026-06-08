@@ -318,53 +318,34 @@ masks: [
 
 ## Uso Local — Dashboard MVP
 
-### 1. Instalar dependências
-
 ```bash
+# 1. Instalar e subir o dashboard
 npm install
-npx playwright install chromium
-```
-
-### 2. Subir o dashboard
-
-```bash
 npm run dev
+# → http://localhost:8000
 ```
 
-Acesse **http://localhost:8000** para ver o dashboard.
-
-### 3. Simular uma alteração visual
-
-Para ver o pipeline em ação, faça uma mudança visível em algum componente. Por exemplo, abra [src/components/HeroBanner.jsx](src/components/HeroBanner.jsx) e troque a cor do gradiente:
+Para ver o pipeline em ação, faça uma alteração visual — por exemplo, abra [src/components/HeroBanner.jsx](src/components/HeroBanner.jsx) e troque a cor do gradiente:
 
 ```jsx
 // antes
 background: 'linear-gradient(135deg, #1a237e 0%, #4a148c 100%)',
-
-// depois — troque para qualquer outra cor
+// depois
 background: 'linear-gradient(135deg, #b71c1c 0%, #e65100 100%)',
 ```
 
-Salve o arquivo e confirme a mudança em **http://localhost:8000**.
-
-### 4. Rodar o teste visual
-
-Em outro terminal, execute:
-
 ```bash
+# 2. Rodar o teste e abrir a Review UI
 npm run vrt:review
+# → http://localhost:8080
 ```
-
-O pipeline captura screenshots, compara com as baselines e abre a **Review UI** em **http://localhost:8080** com as diferenças destacadas.
-
-### 5. Aceitar as mudanças como nova baseline
 
 Se a alteração foi intencional, atualize as baselines:
 
 ```bash
+# 3. Aceitar como nova baseline
 npm run update-baselines
-git add baselines/
-git commit -m "chore: atualizar baselines"
+git add baselines/ && git commit -m "chore: atualizar baselines"
 ```
 
 ---
