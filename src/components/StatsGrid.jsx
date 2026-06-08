@@ -2,6 +2,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
 import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded';
 import ShoppingCartRoundedIcon from '@mui/icons-material/ShoppingCartRounded';
@@ -17,39 +18,44 @@ const stats = [
 
 export default function StatsGrid() {
   return (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2.5 }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
       {stats.map((s) => (
-        <Box key={s.title} sx={{ flex: '1 1 200px', minWidth: 0 }}>
-          <Card data-testid={`stat-${s.title}`} sx={{ height: '100%' }}>
-            <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-              {/* Ícone + Título */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                <Box sx={{ width: 40, height: 40, borderRadius: 2, bgcolor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <s.Icon sx={{ fontSize: 22, color: s.accent }} />
-                </Box>
-                <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>
-                  {s.title}
-                </Typography>
+        <Card
+          key={s.title}
+          data-testid={`stat-${s.title}`}
+          elevation={0}
+          sx={{ borderLeft: `4px solid ${s.accent}`, borderRadius: 2, bgcolor: '#fff' }}
+        >
+          <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
+            {/* Ícone + Título */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+              <Box sx={{ width: 44, height: 44, borderRadius: '50%', bgcolor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <s.Icon sx={{ fontSize: 24, color: s.accent }} />
               </Box>
-
-              {/* Valor */}
-              <Typography variant="h5" fontWeight={700} sx={{ color: 'text.primary', mb: 0.75 }}>
-                {s.value}
+              <Typography variant="subtitle1" fontWeight={600} sx={{ lineHeight: 1.2 }}>
+                {s.title}
               </Typography>
+            </Box>
 
-              {/* Delta */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <TrendingUpRoundedIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                <Typography variant="caption" fontWeight={600} sx={{ color: 'success.main' }}>
-                  {s.delta}
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.25 }}>
-                  {s.period}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Box>
+            {/* Valor */}
+            <Typography variant="h4" fontWeight={800} sx={{ color: s.accent, mb: 1 }}>
+              {s.value}
+            </Typography>
+
+            <Divider sx={{ mb: 1 }} />
+
+            {/* Delta */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TrendingUpRoundedIcon sx={{ fontSize: 16, color: 'success.main' }} />
+              <Typography variant="caption" fontWeight={600} sx={{ color: 'success.main' }}>
+                {s.delta}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.25 }}>
+                {s.period}
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
       ))}
     </Box>
   );
