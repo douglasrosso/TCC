@@ -167,7 +167,7 @@ async function main() {
       }
 
       console.log(`Starting review server on port ${port}...`);
-      // Prefer results/baseline/ (dynamic worktree capture) over config.baselinesDir
+      // Prefere results/baseline/ (captura dinâmica via worktree) se existir
       const dynamicBaseline = path.join(config.resultsDir, "baseline");
       const baselinesDir =
         fs.existsSync(dynamicBaseline) &&

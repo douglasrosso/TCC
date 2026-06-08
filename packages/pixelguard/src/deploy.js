@@ -25,7 +25,7 @@ export async function buildDeploy({ prNumber, outDir, config } = {}) {
   if (!config) config = await loadConfig();
 
   const resultsDir = path.resolve(config.resultsDir || 'results');
-  // Prefer results/baseline/ (dynamic worktree capture) over config.baselinesDir
+  // Prefere results/baseline/ (captura dinâmica via worktree) se existir
   const dynamicBaseline = path.join(resultsDir, 'baseline');
   const baselinesDir =
     fs.existsSync(dynamicBaseline) &&
