@@ -47,12 +47,13 @@ export async function capture(options = {}) {
 
   let vite = null;
   let serverUrl = config.baseUrl;
+  const viteRoot = options.root || process.cwd();
 
   // Auto-start Vite if no baseUrl
   if (!serverUrl) {
     const { createServer } = await import('vite');
     vite = await createServer({
-      root: process.cwd(),
+      root: viteRoot,
       server: { port: config.port, strictPort: true },
       logLevel: 'silent',
     });
@@ -84,6 +85,9 @@ export async function capture(options = {}) {
         await page.addStyleTag({
           content: '*, *::before, *::after { animation: none !important; transition: none !important; }',
         });
+
+        // Wait for all web fonts to finish loading so layout is stable
+        await page.evaluate(() => document.fonts.ready);
 
         // Inject mutation if provided
         if (mutation) {

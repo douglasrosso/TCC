@@ -7,6 +7,10 @@ dist/
 # Resultados de testes visuais (gerados pelo capture/compare)
 results/
 
+# Baselines locais — geradas dinamicamente de origin/baseBranch, não commitadas
+baselines/
+baselines-ci/
+
 # Deploy temporário para GitHub Pages
 deploy/
 
@@ -23,3 +27,9 @@ Thumbs.db
 .claude/
 
 .env
+
+# Materiais locais — não versionados
+slides/
+results-battery/
+latex/
+scripts/

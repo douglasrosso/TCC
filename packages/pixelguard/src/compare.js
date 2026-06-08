@@ -22,7 +22,8 @@ import { loadConfig } from './config.js';
  */
 export async function runComparisons(options = {}) {
   const config = options.config || await loadConfig();
-  const BASELINES   = config.baselinesDir;
+  // options.baselineDir overrides config — used when baselines are captured from a git worktree
+  const BASELINES   = options.baselineDir || config.baselinesDir;
   const CURRENT_DIR = path.join(config.resultsDir, 'current');
   const RESULTS_DIR = config.resultsDir;
   const { thresholds, masks } = config;

@@ -1,0 +1,118 @@
+name: Registrar Regressão Visual
+
+# Roda apenas quando uma PR com diffs visuais é mergeada na main
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  log:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout (com token para poder criar branch vrt-logs)
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.VRT_TOKEN }}
+          fetch-depth: 0
+
+      - name: Encontrar run da regressão visual deste PR
+        id: find-run
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.VRT_TOKEN }}
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'visual-regression.yml',
+              head_sha: context.payload.pull_request.head.sha,
+              per_page: 1,
+            });
+            if (!data.workflow_runs.length) {
+              core.setOutput('has_run', 'false');
+              return;
+            }
+            core.setOutput('has_run', 'true');
+            core.setOutput('run_id', String(data.workflow_runs[0].id));
+
+      - name: Baixar artefato de resultados
+        if: steps.find-run.outputs.has_run == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: visual-regression-results
+          run-id: ${{ steps.find-run.outputs.run_id }}
+          github-token: ${{ secrets.VRT_TOKEN }}
+          path: artifact/
+
+      - name: Verificar diffs e gravar log
+        if: steps.find-run.outputs.has_run == 'true'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BRANCH: ${{ github.head_ref }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_ACTOR: ${{ github.actor }}
+          PR_MERGED_AT: ${{ github.event.pull_request.merged_at }}
+        run: |
+          if [ ! -f artifact/results.json ]; then
+            echo "Sem results.json — nada a registrar"
+            exit 0
+          fi
+
+          FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('artifact/results.json')); console.log(r.summary.failed)")
+          if [ "$FAILED" -eq 0 ]; then
+            echo "Sem diffs visuais — PR limpa, nada a registrar"
+            exit 0
+          fi
+
+          echo "$FAILED diff(s) detectado(s) — registrando no vrt-logs..."
+
+          # Criar ou fazer checkout da branch vrt-logs
+          git fetch origin vrt-logs 2>/dev/null \
+            && git checkout vrt-logs \
+            || { git checkout --orphan vrt-logs && git rm -rf . --quiet && git commit --allow-empty -m "chore: inicializar branch vrt-logs"; }
+
+          # Criar entrada do PR
+          mkdir -p "pr-${PR_NUMBER}"
+          cp artifact/results.json "pr-${PR_NUMBER}/results.json"
+
+          node -e "
+            const fs = require('fs');
+            const r = JSON.parse(fs.readFileSync('artifact/results.json'));
+            const pr = process.env.PR_NUMBER;
+            const sha = process.env.PR_SHA;
+            const lines = [
+              '# PR #' + pr + ' — ' + process.env.PR_TITLE,
+              '',
+              '| | |',
+              '|---|---|',
+              '| **Branch** | \`' + process.env.PR_BRANCH + '\` |',
+              '| **Commit** | \`' + sha.slice(0,7) + '\` |',
+              '| **Autor** | @' + process.env.PR_ACTOR + ' |',
+              '| **Merged em** | ' + process.env.PR_MERGED_AT + ' |',
+              '| **Diffs** | ' + r.summary.failed + ' de ' + r.summary.totalComparisons + ' tela(s) |',
+              '',
+              '## Resultados por Técnica',
+              '',
+              '| Técnica | OK | FAIL |',
+              '|:--------|:--:|:----:|',
+            ];
+            for (const [k, v] of Object.entries(r.summary.techniques)) {
+              lines.push('| ' + k + ' | ' + v.passed + ' | ' + v.failed + ' |');
+            }
+            fs.writeFileSync('pr-' + pr + '/summary.md', lines.join('\n') + '\n');
+          "
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "pr-${PR_NUMBER}/"
+          git commit -m "log: PR #${PR_NUMBER} mergeada com ${FAILED} diff(s) visual(is)"
+          git push origin vrt-logs
