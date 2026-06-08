@@ -113,17 +113,44 @@ de modo que ficam sempre sincronizados com a última execução de
 
 ---
 
-## Reproduzindo as imagens
+## Rodando localmente
 
-Pré-requisitos: dependências instaladas (`npm install`) e Playwright/Chromium
-baixado (`npx playwright install chromium`).
+Pré-requisitos: dependências instaladas (`npm install`) — o Chromium é baixado automaticamente via `postinstall`.
+
+### Cenários de regressão (13 cenários)
 
 ```powershell
-# Composites por cenário (esta pasta docs/images/scenarios/)
-npm run scenarios                     # gera results/scenarios/*
-node scripts\capture-scenarios.js
+npm run scenarios    # captura baseline + mutação, compara → results/scenarios/
+npm run review       # sobe o servidor → http://localhost:8080
 ```
 
-As capturas de Dashboard, Review UI e relatório HTML foram produzidas
-manualmente via Playwright com a Review UI ativa em `http://localhost:8080`
-e o dashboard em `http://localhost:5173`.
+O Review carrega os cenários automaticamente. Na aba **"Cenários de Teste"** você vê cada cenário com baseline, atual e diffs das três técnicas.
+
+### Pipeline completo de VRT (aplicação dashboard)
+
+```powershell
+npm run vrt          # capture → compare → report  (gera results/report.html)
+npm run review       # mesma interface, aba "local"
+```
+
+Ou os dois em sequência sem travar no código de saída:
+
+```powershell
+npm run review:local # pixelguard test --no-fail && pixelguard review
+```
+
+### Composites para documentação (esta pasta)
+
+```powershell
+node scripts\capture-scenarios.js   # gera docs/images/scenarios/*.png
+```
+
+### Atalhos na Review UI
+
+| Tecla | Ação |
+|---|---|
+| `←` / `→` | Navegar entre capturas |
+| `A` | Aprovar diff |
+| `R` | Rejeitar diff (só para falhas) |
+
+Modos de visualização: **Lado a Lado**, **Sobreposição** e **Slider**.

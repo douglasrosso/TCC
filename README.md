@@ -484,7 +484,16 @@ O comando `npm run scenarios` executa **13 cenários** que isolam tipos específ
 | Troca de família de fonte | `font-family` serifada em 2 blocos | Todas detectam |
 | Imagem idêntica (controle) | Sem mutação | Tudo PASS — sem falsos positivos |
 
-Para regerar os composites de documentação:
+### Rodar os cenários e ver no Review
+
+```bash
+npm run scenarios    # captura baseline + mutação, compara → results/scenarios/
+npm run review       # sobe o servidor → http://localhost:8080
+```
+
+Na aba **"Cenários de Teste"** da Review UI você vê cada cenário com baseline, atual e diffs das três técnicas.
+
+### Regerar os composites de documentação
 
 ```bash
 npm run scenarios                     # gera results/scenarios/*
