@@ -103,7 +103,10 @@ async function main() {
 
       console.log(`0/4 Capturando baseline de origin/${config.baseBranch || 'main'}...`);
       const { captureBaseline } = await import("../src/capture-baseline.js");
-      await captureBaseline({ config });
+      const { baselineDir, method } = await captureBaseline({ config });
+      if (method === 'local') {
+        console.log(`    Baselines locais: ${baselineDir}`);
+      }
       console.log();
 
       console.log("1/4 Capturando screenshots da branch atual...");
@@ -113,7 +116,6 @@ async function main() {
 
       console.log("2/4 Comparando...");
       const { runComparisons } = await import("../src/compare.js");
-      const baselineDir = path.join(config.resultsDir, 'baseline');
       const results = await runComparisons({ config, baselineDir });
 
       console.log("\n3/4 Gerando relatório...");

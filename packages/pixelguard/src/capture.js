@@ -81,6 +81,10 @@ export async function capture(options = {}) {
 
         await page.goto(`${serverUrl}${pg.path}`, { waitUntil: 'networkidle' });
 
+        // Wait for the app root to have content — guards against Vite cold-start
+        // on a fresh machine where compilation may not finish before networkidle fires.
+        await page.waitForSelector('#root > *', { timeout: 30000 });
+
         // Disable animations
         await page.addStyleTag({
           content: '*, *::before, *::after { animation: none !important; transition: none !important; }',

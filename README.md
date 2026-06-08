@@ -92,6 +92,7 @@ Captura screenshots → Compara com baselines → Gera relatório → Abre revie
 │                    GitHub Actions                           │
 │  visual-regression.yml  → Check em PRs                     │
 │  approve-visual.yml     → Comandos via comentário          │
+│  vrt-log.yml            → Log de regressões aprovadas      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -126,6 +127,9 @@ export default {
 
   // Páginas monitoradas (path relativo à URL base)
   pages: [{ name: 'dashboard', path: '/' }],
+
+  // Branch remota usada como baseline — capturada via git worktree a cada run
+  baseBranch: 'main',
 
   // Técnicas de comparação executadas em paralelo
   comparators: ['pixel', 'ssim', 'region'],
@@ -199,6 +203,9 @@ export default {
   // Diretórios (relativos ao cwd)
   baselinesDir: 'baselines',
   resultsDir:   'results',
+
+  // Branch remota usada como baseline — capturada via git worktree a cada run
+  baseBranch: 'main',
 
   // Congelar Date/Math.random para capturas determinísticas
   freeze: true,
@@ -336,6 +343,7 @@ npx pixelguard <command>
 | Opção | Descrição |
 |:------|:----------|
 | `--help`, `-h` | Mostra ajuda |
+| `--no-fail` | Não encerra com código de erro mesmo quando há diffs (usado no `review:local`) |
 | `--port <n>` | Porta para o servidor de review (padrão: 8080) |
 | `--build` | Força rebuild da Review UI antes de iniciar |
 | `--pr <n>` | Número do PR para nomear a pasta de deploy |
@@ -537,12 +545,19 @@ O CI precisa de um token com permissões para publicar no GitHub Pages, escrever
 
 ### Passo 5 — Habilitar GitHub Pages
 
-1. No repositório, vá em **Settings → Pages**
-2. Em **Source**, selecione **Deploy from a branch**
-3. Em **Branch**, selecione `gh-pages` / `/ (root)`
-4. Clique em **Save**
+A branch `gh-pages` é criada automaticamente pelo workflow na primeira execução. Por isso, siga esta ordem:
 
-> A branch `gh-pages` é criada automaticamente na primeira execução do workflow de PR. Até lá, a configuração fica salva mas inativa.
+1. Crie um PR de teste (pode ser qualquer alteração mínima) para disparar o workflow
+2. Aguarde o workflow `Visual Regression Check` concluir — ele criará a branch `gh-pages`
+3. No repositório, vá em **Settings → Pages**
+4. Em **Source**, selecione **Deploy from a branch**
+5. Em **Branch**, selecione `gh-pages` / `/ (root)`
+6. Clique em **Save**
+
+A URL da Review UI de cada PR ficará disponível em:
+```
+https://SEU_USUARIO.github.io/SEU_REPO/pr-{NUMERO}/
+```
 
 ### Passo 6 — Configurar Branch Protection (recomendado)
 
@@ -704,9 +719,8 @@ export default {
 ```json
 {
   "scripts": {
-    "vrt":             "npx pixelguard test",
-    "review:local":    "npx pixelguard test --no-fail && npx pixelguard review",
-    "update-baselines": "npx pixelguard update-baselines"
+    "vrt":          "npx pixelguard test",
+    "review:local": "npx pixelguard test --no-fail && npx pixelguard review"
   }
 }
 ```
@@ -723,9 +737,38 @@ npm run review:local
 
 Nenhuma baseline precisa ser criada ou commitada — o PixelGuard captura a baseline de `origin/main` via git worktree a cada execução.
 
+#### Modo sem remote (fallback local)
+
+O PixelGuard tem dois cenários distintos em que opera sem worktree, ambos usando a pasta `baselines/` como referência:
+
+**Situação 1 — Projeto ainda não publicado (sem `origin`)**
+
+O repositório existe só localmente, sem remote configurado. Crie as baselines antes do primeiro push:
+
+```bash
+npx pixelguard capture          # captura o estado atual como referência
+npx pixelguard update-baselines # copia para baselines/
+```
+
+A partir daí `npm run vrt` funciona normalmente usando `baselines/` como referência. Após publicar e configurar o remote, o worktree passa a ser usado automaticamente — as baselines locais viram fallback apenas.
+
+**Situação 2 — Remote existe, mas você quer comparar localmente**
+
+Remote configurado, mas você está sem internet ou quer testar sem depender do fetch. O fluxo é o mesmo: capture o estado que deve ser a referência e salve como baseline:
+
+```bash
+git checkout main
+npx pixelguard capture          # captura main como referência
+npx pixelguard update-baselines # salva em baselines/
+git checkout minha-branch
+npm run vrt                     # compara contra baselines/ locais
+```
+
+> Neste caso o PixelGuard ainda tentará o worktree primeiro. Se o fetch falhar, cai automaticamente para `baselines/` e avisa no console. Quando a conexão voltar, o worktree volta a ser usado sem nenhuma configuração extra.
+
 ### Adicionar os workflows de CI
 
-Copie os 2 arquivos de `.github/workflows/` deste repositório para o seu projeto (`visual-regression.yml` e `approve-visual.yml`). Ajuste apenas:
+Copie os arquivos de `.github/workflows/` deste repositório para o seu projeto. Os essenciais são `visual-regression.yml` e `approve-visual.yml`; `vrt-log.yml` é opcional (registra auditoria de regressões aprovadas). Ajuste apenas:
 
 1. **`visual-regression.yml`** — se seu servidor de dev não for Vite na porta 8000, ajuste o `baseUrl` no `pixelguard.config.js`
 2. **Branch `main`** — substitua pelo nome da sua branch principal se for diferente
@@ -744,7 +787,7 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 | `npm run build` | Build de produção |
 | `npm run vrt` | **Pipeline completo:** captura → comparação → relatório |
 | `npm run review:local` | Pipeline completo + abre Review UI (porta 8080) |
-| `npm run update-baselines` | Copia `results/current/` → `baselines/` |
+| `npm run update-baselines` | Copia `results/current/` → `baselines/` (uso local; CI usa worktree automaticamente) |
 | `npm run deploy` | Build da Review UI + monta deploy estático |
 | `npm run scenarios` | Roda os 13 cenários de mutação |
 | `npm run review` | Inicia a Review UI (porta 8080) |
@@ -758,7 +801,7 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 | `npx pixelguard compare` | Compara com baselines → `results/results.json` |
 | `npx pixelguard report` | Gera relatório HTML → `results/report.html` |
 | `npx pixelguard test` | Pipeline completo (capture → compare → report) |
-| `npx pixelguard update-baselines` | Copia current/ → baselines/ |
+| `npx pixelguard update-baselines` | Copia current/ → baselines/ (uso local; CI usa worktree automaticamente) |
 | `npx pixelguard review` | Inicia Review UI → localhost:8080 |
 | `npx pixelguard review --port 4000` | Review UI em porta customizada |
 | `npx pixelguard review --build` | Rebuild da UI antes de iniciar |
@@ -782,7 +825,7 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 | `thresholds.region` | `{ gridCols, gridRows, maxDiffPercent }` | `{ 4, 6, 1.0 }` | Limiares do comparador de regiões |
 | `masks` | `Array<{ row, col }>` | `[]` | Células da grade a ignorar |
 | `baseBranch` | `string` | `'main'` | Branch remota usada como baseline (capturada via worktree) |
-| `baselinesDir` | `string` | `'baselines'` | Pasta de baselines locais (relativa ao cwd) |
+| `baselinesDir` | `string` | `'baselines'` | Pasta de baselines locais — usada como fallback quando não há git remote |
 | `resultsDir` | `string` | `'results'` | Pasta de resultados (relativa ao cwd) |
 | `freeze` | `boolean` | `true` | Congela `Date`/`Math.random` para determinismo |
 | `reviewPort` | `number` | `8080` | Porta da Review UI |
@@ -832,7 +875,7 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 │   │   ├── InfoSidebar.jsx
 │   │   ├── ActivityFeed.jsx
 │   │   └── Footer.jsx
-│   └── scenarios/                    #   12 cenários de mutação para testes
+│   └── scenarios/                    #   12 arquivos de cenário (11 de mutação + 1 controle)
 │       ├── ScenarioColor.jsx
 │       ├── ScenarioLayout.jsx
 │       ├── ScenarioTypography.jsx
@@ -847,7 +890,7 @@ Siga os passos da seção [Configuração do Repositório GitHub do Zero](#confi
 │       └── ScenarioIdentical.jsx
 │
 ├── tests/
-│   └── scenarios.js                  # Runner dos 13 cenários de mutação
+│   └── scenarios.js                  # Runner dos 13 cenários (dynamic executa 2×: s/ e c/ máscara)
 │
 ├── packages/
 │   └── pixelguard/                   # Pacote npm reutilizável
