@@ -16,8 +16,16 @@ import { execSync } from 'node:child_process';
 import { capture } from './capture.js';
 import { loadConfig } from './config.js';
 
-function tryExec(cmd) {
-  try { execSync(cmd, { stdio: 'pipe' }); return true; } catch { return false; }
+// Prevent git from blocking on credential prompts; fail fast instead.
+const NO_PROMPT_ENV = {
+  ...process.env,
+  GIT_TERMINAL_PROMPT: '0',
+  GIT_ASKPASS: 'echo',
+  GCM_INTERACTIVE: 'never',
+};
+
+function tryExec(cmd, opts = {}) {
+  try { execSync(cmd, { stdio: 'pipe', ...opts }); return true; } catch { return false; }
 }
 
 /**
@@ -37,11 +45,11 @@ export async function captureBaseline(options = {}) {
   const worktreePath = path.join(os.tmpdir(), `pixelguard-baseline-${Date.now()}`);
 
   const inGitRepo  = tryExec('git rev-parse --git-dir');
-  const hasRemote  = inGitRepo && tryExec('git remote get-url origin');
+  const hasRemote  = inGitRepo && tryExec('git remote get-url origin', { env: NO_PROMPT_ENV });
 
   if (inGitRepo && hasRemote) {
     console.log(`  Buscando origin/${baseBranch}...`);
-    const fetched = tryExec(`git fetch origin ${baseBranch}`);
+    const fetched = tryExec(`git fetch origin ${baseBranch}`, { env: NO_PROMPT_ENV, timeout: 20000 });
 
     if (fetched) {
       console.log(`  Criando worktree de origin/${baseBranch}...`);

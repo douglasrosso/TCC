@@ -59,6 +59,16 @@ export async function capture(options = {}) {
     });
     await vite.listen();
     serverUrl = `http://localhost:${config.port}`;
+
+    // Warmup: trigger Vite's first compilation before Playwright navigates.
+    // On a fresh machine (no cache) dep pre-bundling can take several seconds;
+    // without this, Playwright may capture a blank page while Vite is still compiling.
+    const { get: httpGet } = await import('node:http');
+    await new Promise((resolve) => {
+      const req = httpGet(serverUrl, (res) => { res.resume(); res.on('end', resolve); });
+      req.on('error', resolve);
+      req.setTimeout(20000, () => { req.destroy(); resolve(); });
+    });
   }
 
   const { chromium } = await import('playwright');
@@ -77,13 +87,25 @@ export async function capture(options = {}) {
 
         const page = await ctx.newPage();
 
+        // Log browser-side errors to help diagnose blank-page issues
+        const browserErrors = [];
+        page.on('pageerror', (err) => browserErrors.push(err.message));
+
         if (freeze) await page.addInitScript({ content: FREEZE_SCRIPT });
 
         await page.goto(`${serverUrl}${pg.path}`, { waitUntil: 'networkidle' });
 
-        // Wait for the app root to have content — guards against Vite cold-start
-        // on a fresh machine where compilation may not finish before networkidle fires.
-        await page.waitForSelector('#root > *', { timeout: 30000 });
+        // Best-effort wait for React to mount — soft fail so a blank page doesn't hang forever.
+        try {
+          await page.waitForSelector('#root > *', { timeout: 10000 });
+        } catch {
+          if (browserErrors.length) {
+            console.warn(`    ⚠  Erros no browser durante captura de ${pg.name}:`);
+            browserErrors.forEach((e) => console.warn(`       ${e}`));
+          } else {
+            console.warn(`    ⚠  #root vazio após 10s — página pode não ter renderizado (${serverUrl}${pg.path})`);
+          }
+        }
 
         // Disable animations
         await page.addStyleTag({
