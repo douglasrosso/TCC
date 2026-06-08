@@ -6,12 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "vrt": "pixelguard test",
-    "vrt:review": "pixelguard test && npm run review",
-    "update-baselines": "pixelguard update-baselines",
+    "vrt": "npx pixelguard test",
+    "vrt:review": "npx pixelguard test && npm run review",
+    "update-baselines": "npx pixelguard update-baselines",
     "scenarios": "node tests/scenarios.js",
-    "review": "pixelguard review",
-    "deploy": "pixelguard deploy"
+    "review": "npx pixelguard review",
+    "deploy": "npx pixelguard deploy"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",

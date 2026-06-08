@@ -87,7 +87,7 @@ npm run review
 # → http://localhost:8080
 ```
 
-> **Nota:** Na primeira vez, como não há baselines de referência, o pipeline cria os screenshots mas não gera diffs. Crie as baselines com `npx pixelguard update-baselines` e depois rode `npm run vrt` novamente para ver a comparação.
+> **Nota:** Na primeira vez, como não há baselines de referência, o pipeline cria os screenshots mas não gera diffs. Crie as baselines com `npm run update-baselines` e depois rode `npm run vrt` novamente para ver a comparação.
 
 ---
 
@@ -169,8 +169,8 @@ npx playwright install chromium
 Na primeira vez, gere as imagens de referência:
 
 ```bash
-npx pixelguard capture          # captura screenshots → results/current/
-npx pixelguard update-baselines # copia current/ → baselines/
+npx pixelguard capture   # captura screenshots → results/current/
+npm run update-baselines # copia current/ → baselines/
 git add baselines/
 git commit -m "chore: criar baselines iniciais"
 ```
@@ -318,61 +318,54 @@ masks: [
 
 ## Uso Local — Dashboard MVP
 
-### Rodar o dashboard
+### 1. Instalar dependências
+
+```bash
+npm install
+npx playwright install chromium
+```
+
+### 2. Subir o dashboard
 
 ```bash
 npm run dev
 ```
 
-Abre o servidor de desenvolvimento em **http://localhost:8000**. O dashboard é uma SPA React com Material UI que contém: barra de navegação, hero section, cards de métricas, tabela de transações, sidebar e rodapé — responsivo em 3 breakpoints.
+Acesse **http://localhost:8000** para ver o dashboard.
 
-### Pipeline completo de testes visuais
+### 3. Simular uma alteração visual
 
-```bash
-npm run vrt
+Para ver o pipeline em ação, faça uma mudança visível em algum componente. Por exemplo, abra [src/components/HeroBanner.jsx](src/components/HeroBanner.jsx) e troque a cor do gradiente:
+
+```jsx
+// antes
+background: 'linear-gradient(135deg, #1a237e 0%, #4a148c 100%)',
+
+// depois — troque para qualquer outra cor
+background: 'linear-gradient(135deg, #b71c1c 0%, #e65100 100%)',
 ```
 
-Executa em sequência:
-1. **Captura** screenshots de todas as páginas e viewports
-2. **Compara** com as baselines usando as 3 técnicas em paralelo
-3. **Gera** o relatório em `results/report.html`
+Salve o arquivo e confirme a mudança em **http://localhost:8000**.
 
-### Testar e abrir a Review UI interativa
+### 4. Rodar o teste visual
+
+Em outro terminal, execute:
 
 ```bash
 npm run vrt:review
 ```
 
-Pipeline completo + abre a Review UI em **http://localhost:8080**.
+O pipeline captura screenshots, compara com as baselines e abre a **Review UI** em **http://localhost:8080** com as diferenças destacadas.
 
-### Atualizar baselines após mudança intencional
+### 5. Aceitar as mudanças como nova baseline
 
-Quando uma alteração visual é **intencional** (novo tema, nova cor, novo componente), atualize as baselines de referência:
+Se a alteração foi intencional, atualize as baselines:
 
 ```bash
-npx pixelguard capture          # captura o estado atual
-npx pixelguard update-baselines # copia current/ → baselines/
+npm run update-baselines
 git add baselines/
 git commit -m "chore: atualizar baselines"
 ```
-
-### Executar etapas individualmente
-
-```bash
-npx pixelguard capture     # captura screenshots → results/current/
-npx pixelguard compare     # compara com baselines → results/results.json
-npx pixelguard report      # gera relatório HTML → results/report.html
-npx pixelguard review      # inicia a Review UI → localhost:8080
-```
-
-### Diferença entre `baselines/` e `baselines-ci/`
-
-| Diretório | Usado por | Descrição |
-|:----------|:----------|:----------|
-| `baselines/` | Uso local (`npm run vrt`) | Baselines para desenvolvimento local, commitadas manualmente |
-| `baselines-ci/` | GitHub Actions | Baselines usadas pelo CI; atualizadas automaticamente após merge na `main` |
-
-O CI usa `PIXELGUARD_BASELINES_DIR=baselines-ci` para isolar as baselines de produção das locais.
 
 ---
 
@@ -766,9 +759,9 @@ export default {
 ```json
 {
   "scripts": {
-    "vrt":             "pixelguard test",
-    "vrt:review":      "pixelguard test && pixelguard review",
-    "update-baselines": "pixelguard update-baselines"
+    "vrt":             "npx pixelguard test",
+    "vrt:review":      "npx pixelguard test && npx pixelguard review",
+    "update-baselines": "npx pixelguard update-baselines"
   }
 }
 ```
@@ -781,7 +774,7 @@ npm run dev
 
 # 2. Criar baselines iniciais
 npx pixelguard capture
-npx pixelguard update-baselines
+npm run update-baselines
 git add baselines/
 git commit -m "chore: criar baselines iniciais"
 
