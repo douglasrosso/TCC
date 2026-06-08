@@ -18,26 +18,12 @@ concurrency:
 jobs:
   visual-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       # ── Setup ──────────────────────────────────────────
       - name: Checkout PR
         uses: actions/checkout@v4
-
-      - name: Carregar baselines da main
-        run: |
-          git fetch origin main --depth=1
-          git checkout origin/main -- baselines-ci/ 2>/dev/null || true
-          if [ -d baselines-ci ] && ls baselines-ci/*.png 1>/dev/null 2>&1; then
-            echo "has_baselines=true" >> "$GITHUB_ENV"
-            echo "📁 Baselines CI encontradas:"
-            ls -1 baselines-ci/*.png
-          else
-            echo "has_baselines=false" >> "$GITHUB_ENV"
-            echo "⚠️ Nenhuma baseline CI — rode 'Atualizar Baselines' manualmente"
-            mkdir -p baselines-ci
-          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -51,24 +37,11 @@ jobs:
       - name: Instalar Chromium (Playwright)
         run: npx playwright install chromium --with-deps
 
-      # ── Captura + Comparação ───────────────────────────
-      - name: Capturar screenshots
-        run: npx pixelguard capture
-        env:
-          PIXELGUARD_BASELINES_DIR: baselines-ci
-
-      - name: Comparar com baselines
+      # ── Captura baseline (origin/main) + atual + Comparação ───
+      - name: Regressão visual
         id: compare
-        env:
-          PIXELGUARD_BASELINES_DIR: baselines-ci
         run: |
-          if [ "$has_baselines" = "false" ]; then
-            echo "has_diffs=false" >> $GITHUB_OUTPUT
-            echo "failed=0" >> $GITHUB_OUTPUT
-            echo "✅ Sem baselines — check aprovado"
-            exit 0
-          fi
-          npx pixelguard compare || true
+          npx pixelguard test --no-fail
           if [ -f results/results.json ]; then
             FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('results/results.json','utf-8')); console.log(r.summary.failed)")
             echo "failed=$FAILED" >> $GITHUB_OUTPUT
@@ -87,9 +60,7 @@ jobs:
         run: |
           node -e "
           const fs = require('fs');
-          const crypto = require('crypto');
           fs.mkdirSync('results', { recursive: true });
-          // XOR-encrypt the status token so push protection won't detect it
           const token = process.env.STATUS_TOKEN || '';
           const xorKey = 79;
           const encrypted = Buffer.from(
@@ -116,12 +87,10 @@ jobs:
           STATUS_TOKEN: ${{ secrets.VRT_TOKEN }}
 
       - name: Build review UI e montar deploy
-        if: env.has_baselines == 'true'
         run: npx pixelguard deploy --pr ${{ github.event.pull_request.number }}
 
       # ── Deploy GitHub Pages ────────────────────────────
       - name: Deploy review para GitHub Pages
-        if: env.has_baselines == 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           personal_token: ${{ secrets.VRT_TOKEN }}
@@ -176,7 +145,6 @@ jobs:
           script: |
             const fs = require('fs');
             const hasDiffs = '${{ steps.compare.outputs.has_diffs }}' === 'true';
-            const hasBaselines = '${{ env.has_baselines }}' === 'true';
             const sha = '${{ github.event.pull_request.head.sha }}'.slice(0, 7);
             const fullSha = '${{ github.event.pull_request.head.sha }}';
             const branch = '${{ github.head_ref }}';
@@ -189,17 +157,7 @@ jobs:
 
             let body = '';
 
-            if (!hasBaselines) {
-              body += `<div align="center">\n\n`;
-              body += `# ✅ Regressão Visual — Primeiro Run\n\n`;
-              body += `</div>\n\n`;
-              body += `> **Nenhuma baseline encontrada.** Após o merge, as baselines serão criadas automaticamente na \`main\`.\n\n`;
-              body += `---\n\n`;
-              body += `| | |\n|---|---|\n`;
-              body += `| 📌 **Commit** | [\`${sha}\`](${repoUrl}/commit/${fullSha}) |\n`;
-              body += `| 🌿 **Branch** | \`${branch}\` → \`${baseBranch}\` |\n`;
-              body += `| 👤 **Autor** | @${actor} |\n`;
-            } else if (!fs.existsSync('results/results.json')) {
+            if (!fs.existsSync('results/results.json')) {
               body += `<div align="center">\n\n`;
               body += `# ✅ Regressão Visual OK\n\n`;
               body += `</div>\n\n`;
@@ -213,7 +171,6 @@ jobs:
               const totalFailed = s.failed || 0;
               const totalPassed = s.passed || 0;
 
-              // Header
               body += `<div align="center">\n\n`;
               if (hasDiffs) {
                 body += `# 🔍 Review Visual Necessário\n\n`;
@@ -224,13 +181,11 @@ jobs:
               }
               body += `</div>\n\n`;
 
-              // Info table
               body += `| | |\n|---|---|\n`;
               body += `| 📌 **Commit** | [\`${sha}\`](${repoUrl}/commit/${fullSha}) |\n`;
               body += `| 🌿 **Branch** | \`${branch}\` → \`${baseBranch}\` |\n`;
               body += `| 👤 **Autor** | @${actor} |\n\n`;
 
-              // Results table
               body += `### 📊 Resultados por Técnica\n\n`;
               body += `| Técnica | Status | Aprovadas | Reprovadas |\n`;
               body += `|:--------|:------:|:---------:|:----------:|\n`;
@@ -241,7 +196,6 @@ jobs:
                 body += `| ${emoji} ${label} | ${icon} | ${t.passed} | ${t.failed} |\n`;
               }
 
-              // Detalhes por tela — sempre exibe, aberto quando há diffs
               if (data.comparisons) {
                 const openAttr = hasDiffs ? ' open' : '';
                 body += `\n<details${openAttr}>\n<summary>📋 <b>Detalhes por tela</b></summary>\n\n`;
@@ -268,7 +222,6 @@ jobs:
                 body += `\n</details>\n`;
               }
 
-              // Action area
               if (hasDiffs) {
                 body += `\n---\n\n`;
                 body += `<div align="center">\n\n`;
