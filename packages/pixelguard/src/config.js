@@ -45,6 +45,9 @@ const DEFAULTS = {
 
   /** Review server port. */
   reviewPort: 8080,
+
+  /** Remote branch used as visual baseline. Captured fresh each run via git worktree. */
+  baseBranch: 'main',
 };
 
 /**
