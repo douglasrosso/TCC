@@ -16,11 +16,11 @@ const links = [
 
 export default function NavBar() {
   return (
-    <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#fff', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider' }}>
+    <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#0f172a', color: '#fff', borderBottom: '1px solid', borderColor: 'rgba(255,255,255,0.08)' }}>
       <Toolbar sx={{ px: { xs: 2, sm: 3 }, gap: 1 }}>
         {/* Logo */}
-        <DashboardRoundedIcon sx={{ color: 'primary.main', mr: 1, fontSize: 28 }} />
-        <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.dark', mr: 4 }}>
+        <DashboardRoundedIcon sx={{ color: '#60a5fa', mr: 1, fontSize: 28 }} />
+        <Typography variant="h6" sx={{ fontWeight: 700, color: '#fff', mr: 4 }}>
           VRT Demo
         </Typography>
 
@@ -31,15 +31,12 @@ export default function NavBar() {
               key={link.label}
               size="small"
               sx={{
-                color: link.active ? 'primary.main' : 'text.secondary',
-                bgcolor: link.active ? 'primary.light' : 'transparent',
-                opacity: link.active ? 0.15 : 1,
+                color: link.active ? '#60a5fa' : 'rgba(255,255,255,0.6)',
                 fontWeight: link.active ? 600 : 400,
                 px: 2,
                 borderRadius: 2,
                 ...(link.active && {
-                  opacity: 1,
-                  bgcolor: 'rgba(30, 64, 175, 0.08)',
+                  bgcolor: 'rgba(96,165,250,0.15)',
                 }),
               }}
             >
@@ -49,11 +46,11 @@ export default function NavBar() {
         </Box>
 
         {/* Ações */}
-        <IconButton size="small" sx={{ color: 'text.secondary' }}>
+        <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.6)' }}>
           <NotificationsNoneRoundedIcon fontSize="small" />
         </IconButton>
         <Avatar
-          sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '0.85rem', fontWeight: 600, ml: 1 }}
+          sx={{ width: 32, height: 32, bgcolor: '#2563eb', fontSize: '0.85rem', fontWeight: 600, ml: 1 }}
         >
           D
         </Avatar>
