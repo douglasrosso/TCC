@@ -9,7 +9,7 @@ export default function HeroBanner() {
   return (
     <Box
       sx={{
-        background: 'linear-gradient(135deg, #4c1d95 0%, #6d28d9 50%, #7c3aed 100%)',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%)',
         color: '#fff',
         py: { xs: 1.5, sm: 2 },
         px: { xs: 2, sm: 3 },
