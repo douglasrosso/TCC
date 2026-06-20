@@ -14,7 +14,7 @@ jobs:
   log:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
 
     steps:
       - name: Checkout (com token para poder criar branch vrt-logs)
@@ -23,25 +23,37 @@ jobs:
           token: ${{ secrets.VRT_TOKEN }}
           fetch-depth: 0
 
-      - name: Encontrar run da regressão visual deste PR
+      - name: Encontrar run concluída da regressão visual deste PR
         id: find-run
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.VRT_TOKEN }}
           script: |
-            const { data } = await github.rest.actions.listWorkflowRunsForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'visual-regression.yml',
-              head_sha: context.payload.pull_request.head.sha,
-              per_page: 1,
-            });
-            if (!data.workflow_runs.length) {
-              core.setOutput('has_run', 'false');
-              return;
+            // O PR pode ser mergeado antes da run de visual-regression.yml
+            // terminar (e subir o artefato). Faz polling até achar uma run
+            // *concluída* para este head_sha, em vez de pegar a mais recente
+            // (que pode ainda estar in_progress/queued e não ter artefato).
+            const headSha = context.payload.pull_request.head.sha;
+            const maxAttempts = 40; // 40 * 30s = ~20 min
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'visual-regression.yml',
+                head_sha: headSha,
+                status: 'completed',
+                per_page: 1,
+              });
+              if (data.workflow_runs.length) {
+                core.setOutput('has_run', 'true');
+                core.setOutput('run_id', String(data.workflow_runs[0].id));
+                return;
+              }
+              core.info(`Run de visual-regression.yml ainda não concluída para ${headSha} (tentativa ${attempt}/${maxAttempts}), aguardando...`);
+              await new Promise((r) => setTimeout(r, 30000));
             }
-            core.setOutput('has_run', 'true');
-            core.setOutput('run_id', String(data.workflow_runs[0].id));
+            core.warning(`Nenhuma run concluída de visual-regression.yml encontrada para ${headSha} após ${maxAttempts} tentativas.`);
+            core.setOutput('has_run', 'false');
 
       - name: Baixar artefato de resultados
         if: steps.find-run.outputs.has_run == 'true'
