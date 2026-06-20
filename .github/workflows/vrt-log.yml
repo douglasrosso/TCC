@@ -87,6 +87,11 @@ jobs:
 
           echo "$FAILED diff(s) detectado(s) — registrando no vrt-logs..."
 
+          # Configurar identidade git antes de qualquer commit (inclusive o
+          # commit inicial da branch --orphan, na primeira execução).
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
           # Criar ou fazer checkout da branch vrt-logs
           git fetch origin vrt-logs 2>/dev/null \
             && git checkout vrt-logs \
@@ -123,8 +128,6 @@ jobs:
             fs.writeFileSync('pr-' + pr + '/summary.md', lines.join('\n') + '\n');
           "
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "pr-${PR_NUMBER}/"
           git commit -m "log: PR #${PR_NUMBER} mergeada com ${FAILED} diff(s) visual(is)"
           git push origin vrt-logs
