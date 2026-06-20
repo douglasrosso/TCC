@@ -6,7 +6,7 @@ import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import CommitRoundedIcon from '@mui/icons-material/CommitRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
-import { BORDER, CARD, CollapseButton, PanelHeaderLabel } from './shared.jsx';
+import { useReviewColors, CollapseButton, PanelHeaderLabel } from './shared.jsx';
 
 function getTimeAgo(timestamp) {
   const now = new Date();
@@ -25,6 +25,7 @@ function TestRunCard({ run, isSelected, onSelect }) {
   const pendingCount = run.diffs.filter((d) => d.status === 'pending').length;
   const reviewedCount = run.diffs.filter((d) => d.status !== 'pending').length;
   const progressValue = (reviewedCount / Math.max(run.diffs.length, 1)) * 100;
+  const { BORDER, CARD, FG, MUTED, HOVER_WEAK } = useReviewColors();
 
   return (
     <Box
@@ -42,7 +43,7 @@ function TestRunCard({ run, isSelected, onSelect }) {
         transition: 'all 0.15s',
         '&:hover': {
           borderColor: isSelected ? 'rgba(59,130,246,.5)' : BORDER,
-          bgcolor: isSelected ? 'rgba(59,130,246,.05)' : 'rgba(255,255,255,.03)',
+          bgcolor: isSelected ? 'rgba(59,130,246,.05)' : HOVER_WEAK,
         },
         display: 'block',
         outline: 'none',
@@ -54,7 +55,7 @@ function TestRunCard({ run, isSelected, onSelect }) {
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1.5, mb: 1.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
           <AccountTreeRoundedIcon sx={{ fontSize: 16, color: '#3b82f6', flexShrink: 0 }} />
-          <Typography sx={{ fontFamily: 'monospace', fontSize: '0.85rem', color: '#fafafa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Typography sx={{ fontFamily: 'monospace', fontSize: '0.85rem', color: FG, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {run.branch}
           </Typography>
         </Box>
@@ -79,15 +80,15 @@ function TestRunCard({ run, isSelected, onSelect }) {
 
       {/* Meta info */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5, flexWrap: 'wrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#a1a1aa' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: MUTED }}>
           <CommitRoundedIcon sx={{ fontSize: 12 }} />
           <Typography sx={{ fontFamily: 'monospace', fontSize: '0.72rem' }}>{run.commit}</Typography>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#a1a1aa' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: MUTED }}>
           <PersonRoundedIcon sx={{ fontSize: 12 }} />
           <Typography sx={{ fontSize: '0.72rem' }}>{run.author}</Typography>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#a1a1aa' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: MUTED }}>
           <AccessTimeRoundedIcon sx={{ fontSize: 12 }} />
           <Typography sx={{ fontSize: '0.72rem' }}>{getTimeAgo(run.timestamp)}</Typography>
         </Box>
@@ -96,10 +97,10 @@ function TestRunCard({ run, isSelected, onSelect }) {
       {/* Progress bar */}
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-          <Typography sx={{ fontSize: '0.72rem', color: '#a1a1aa' }}>
+          <Typography sx={{ fontSize: '0.72rem', color: MUTED }}>
             {reviewedCount} de {run.diffs.length} telas revisadas
           </Typography>
-          <Typography sx={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#fafafa' }}>
+          <Typography sx={{ fontFamily: 'monospace', fontSize: '0.72rem', color: FG }}>
             {Math.round(progressValue)}%
           </Typography>
         </Box>
@@ -109,7 +110,7 @@ function TestRunCard({ run, isSelected, onSelect }) {
           sx={{
             height: 6,
             borderRadius: 3,
-            bgcolor: 'rgba(255,255,255,.08)',
+            bgcolor: 'rgba(127,127,127,.18)',
             '& .MuiLinearProgress-bar': {
               bgcolor: progressValue === 100 ? '#22c55e' : '#3b82f6',
               borderRadius: 3,
@@ -122,6 +123,7 @@ function TestRunCard({ run, isSelected, onSelect }) {
 }
 
 export default function TestRunPanel({ testRuns, selectedRunId, onSelectRun, onCollapse }) {
+  const { BORDER, CARD } = useReviewColors();
   return (
     <Box
       component="aside"

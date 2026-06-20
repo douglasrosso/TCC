@@ -15,7 +15,7 @@ import TestRunPanel from './components/TestRunPanel.jsx';
 import DiffListPanel, { getDeviceLabel } from './components/DiffListPanel.jsx';
 import DiffViewer from './components/DiffViewer.jsx';
 import ReviewEmptyState from './components/ReviewEmptyState.jsx';
-import { BORDER, CARD, BG, FG, SUBTLE, DIM } from './components/shared.jsx';
+import { useReviewColors } from './components/shared.jsx';
 
 const DRAWER_WIDTH = 340;
 const MIN_PANEL = 200;
@@ -32,6 +32,7 @@ const DEFAULT_DIFFS_W = 300;
  */
 export default function ReviewPage({ apiBase = '', onBack } = {}) {
   const API_BASE = apiBase;
+  const { BORDER, CARD, BG, FG, SUBTLE, DIM, PANEL_BG, HOVER_WEAK } = useReviewColors();
 
   const [testRuns, setTestRuns] = useState([]);
   const [selectedRunId, setSelectedRunId] = useState('');
@@ -630,7 +631,7 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
                   sx={{
                     width: 36, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 1.5, gap: 1,
                     borderRight: '1px solid', borderColor: BORDER, bgcolor: CARD,
-                    cursor: 'pointer', '&:hover': { bgcolor: 'rgba(255,255,255,.03)' }, transition: 'background-color .15s',
+                    cursor: 'pointer', '&:hover': { bgcolor: HOVER_WEAK }, transition: 'background-color .15s',
                   }}
                 >
                   <ChevronRightRoundedIcon sx={{ fontSize: 16, color: SUBTLE }} />
@@ -659,8 +660,8 @@ export default function ReviewPage({ apiBase = '', onBack } = {}) {
                   onClick={() => setDiffsCollapsed(false)}
                   sx={{
                     width: 36, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 1.5, gap: 1,
-                    borderRight: '1px solid', borderColor: BORDER, bgcolor: 'rgba(9,9,11,.5)',
-                    cursor: 'pointer', '&:hover': { bgcolor: 'rgba(255,255,255,.03)' }, transition: 'background-color .15s',
+                    borderRight: '1px solid', borderColor: BORDER, bgcolor: PANEL_BG,
+                    cursor: 'pointer', '&:hover': { bgcolor: HOVER_WEAK }, transition: 'background-color .15s',
                   }}
                 >
                   <ChevronRightRoundedIcon sx={{ fontSize: 16, color: SUBTLE }} />

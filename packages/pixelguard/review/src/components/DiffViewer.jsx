@@ -26,7 +26,7 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { BORDER, CARD, FG, MUTED, DIM, TechBadge, StatusBadge, KbdHint } from './shared.jsx';
+import { useReviewColors, useAccent, TechBadge, StatusBadge, KbdHint } from './shared.jsx';
 
 /* ---------- Fullscreen Viewer ---------- */
 function FullscreenViewer({ open, onClose, src, label }) {
@@ -197,6 +197,7 @@ function FullscreenViewer({ open, onClose, src, label }) {
 /* ---------- Screenshot component ---------- */
 function ScreenshotImage({ src, label, zoom }) {
   const [fullscreen, setFullscreen] = useState(false);
+  const { BORDER, SURFACE_2, IMG_BG } = useReviewColors();
 
   return (
     <>
@@ -213,13 +214,13 @@ function ScreenshotImage({ src, label, zoom }) {
         }}
       >
         {/* Browser chrome bar */}
-        <Box sx={{ px: 1.5, py: 0.75, display: 'flex', alignItems: 'center', gap: 0.75, bgcolor: 'rgba(255,255,255,.04)' }}>
+        <Box sx={{ px: 1.5, py: 0.75, display: 'flex', alignItems: 'center', gap: 0.75, bgcolor: SURFACE_2 }}>
           <Box sx={{ display: 'flex', gap: 0.75 }}>
             <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: '#ef4444aa' }} />
             <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: '#eab308aa' }} />
             <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: '#22c55eaa' }} />
           </Box>
-          <Box sx={{ flex: 1, height: 14, borderRadius: 1, bgcolor: 'rgba(255,255,255,.04)', mx: 4 }} />
+          <Box sx={{ flex: 1, height: 14, borderRadius: 1, bgcolor: SURFACE_2, mx: 4 }} />
           {/* Fullscreen button */}
           <Tooltip title="Tela cheia" arrow>
             <IconButton
@@ -232,7 +233,7 @@ function ScreenshotImage({ src, label, zoom }) {
                 transition: 'opacity 0.2s',
                 width: 22,
                 height: 22,
-                '&:hover': { bgcolor: 'rgba(255,255,255,.1)', color: '#fafafa' },
+                '&:hover': { bgcolor: 'rgba(127,127,127,.2)', color: '#fafafa' },
               }}
             >
               <FullscreenRoundedIcon sx={{ fontSize: 16 }} />
@@ -245,7 +246,7 @@ function ScreenshotImage({ src, label, zoom }) {
           src={src}
           alt={label}
           onClick={() => setFullscreen(true)}
-          sx={{ display: 'block', width: '100%', height: 'auto', bgcolor: '#09090b', cursor: 'zoom-in' }}
+          sx={{ display: 'block', width: '100%', height: 'auto', bgcolor: IMG_BG, cursor: 'zoom-in' }}
           onError={(e) => {
             e.target.style.minHeight = '200px';
             e.target.alt = `Imagem não encontrada: ${label}`;
@@ -264,6 +265,7 @@ function ScreenshotImage({ src, label, zoom }) {
 
 /* ---------- Side-by-side view ---------- */
 function SideBySideView({ diff, zoom, diffUrl, techniqueLabel }) {
+  const { MUTED, BORDER } = useReviewColors();
   const panels = [
     { label: 'Baseline', src: diff.baselineUrl },
     { label: 'Atual', src: diff.currentUrl },
@@ -366,8 +368,8 @@ function SliderView({ diff, zoom, sliderPosition, sliderRef, onMouseDown, onMous
         </Box>
 
         {/* Labels */}
-        <Chip label="Atual" size="small" sx={{ position: 'absolute', top: 12, left: 12, zIndex: 20, fontSize: '0.65rem', bgcolor: 'rgba(9,9,11,.85)', color: FG, backdropFilter: 'blur(4px)', height: 22, pointerEvents: 'none' }} />
-        <Chip label="Baseline" size="small" sx={{ position: 'absolute', top: 12, right: 12, zIndex: 20, fontSize: '0.65rem', bgcolor: 'rgba(9,9,11,.85)', color: FG, backdropFilter: 'blur(4px)', height: 22, pointerEvents: 'none' }} />
+        <Chip label="Atual" size="small" sx={{ position: 'absolute', top: 12, left: 12, zIndex: 20, fontSize: '0.65rem', bgcolor: 'rgba(9,9,11,.85)', color: '#fafafa', backdropFilter: 'blur(4px)', height: 22, pointerEvents: 'none' }} />
+        <Chip label="Baseline" size="small" sx={{ position: 'absolute', top: 12, right: 12, zIndex: 20, fontSize: '0.65rem', bgcolor: 'rgba(9,9,11,.85)', color: '#fafafa', backdropFilter: 'blur(4px)', height: 22, pointerEvents: 'none' }} />
       </Box>
     </Box>
   );
@@ -385,6 +387,8 @@ export default function DiffViewer({
   currentIndex,
   totalCount,
 }) {
+  const { BORDER, CARD, FG, MUTED, DIM, SURFACE_1, SURFACE_2, SURFACE_3, HOVER, IMG_BG } = useReviewColors();
+  const accent = useAccent();
   const [viewMode, setViewMode] = useState(0);
   const [zoom, setZoom] = useState(100);
   const [overlayOpacity, setOverlayOpacity] = useState(50);
@@ -447,15 +451,15 @@ export default function DiffViewer({
                     border: '1px solid',
                     borderColor: BORDER,
                     borderRadius: 1.5,
-                    '&:hover': { bgcolor: 'rgba(255,255,255,.06)' },
-                    '&.Mui-disabled': { color: '#333', borderColor: 'rgba(255,255,255,.04)' },
+                    '&:hover': { bgcolor: HOVER },
+                    '&.Mui-disabled': { color: DIM, borderColor: SURFACE_1 },
                   }}
                 >
                   <ChevronLeftRoundedIcon sx={{ fontSize: 18 }} />
                 </IconButton>
               </span>
             </Tooltip>
-            <Typography sx={{ fontFamily: 'monospace', color: '#71717a', minWidth: { xs: 36, sm: 48 }, textAlign: 'center', fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 500 }}>
+            <Typography sx={{ fontFamily: 'monospace', color: MUTED, minWidth: { xs: 36, sm: 48 }, textAlign: 'center', fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 500 }}>
               {currentIndex + 1} / {totalCount}
             </Typography>
             <Tooltip title="Próximo (→)">
@@ -471,8 +475,8 @@ export default function DiffViewer({
                     border: '1px solid',
                     borderColor: BORDER,
                     borderRadius: 1.5,
-                    '&:hover': { bgcolor: 'rgba(255,255,255,.06)' },
-                    '&.Mui-disabled': { color: '#333', borderColor: 'rgba(255,255,255,.04)' },
+                    '&:hover': { bgcolor: HOVER },
+                    '&.Mui-disabled': { color: DIM, borderColor: SURFACE_1 },
                   }}
                 >
                   <ChevronRightRoundedIcon sx={{ fontSize: 18 }} />
@@ -560,7 +564,7 @@ export default function DiffViewer({
           py: 0.75,
           borderBottom: '1px solid',
           borderColor: BORDER,
-          bgcolor: 'rgba(255,255,255,.02)',
+          bgcolor: SURFACE_1,
           flexWrap: 'wrap',
           flexShrink: 0,
         }}
@@ -571,7 +575,7 @@ export default function DiffViewer({
           onChange={(_, v) => setViewMode(v)}
           sx={{
             minHeight: 34,
-            bgcolor: 'rgba(255,255,255,.04)',
+            bgcolor: SURFACE_2,
             borderRadius: 1.5,
             p: 0.35,
             '& .MuiTabs-indicator': { display: 'none' },
@@ -582,9 +586,9 @@ export default function DiffViewer({
               px: { xs: 1, sm: 1.5 },
               fontSize: '0.72rem',
               textTransform: 'none',
-              color: '#71717a',
+              color: MUTED,
               borderRadius: 1,
-              '&.Mui-selected': { color: FG, bgcolor: 'rgba(255,255,255,.08)' },
+              '&.Mui-selected': { color: FG, bgcolor: SURFACE_3 },
             },
           }}
         >
@@ -618,17 +622,17 @@ export default function DiffViewer({
                   '& .MuiToggleButton-root': {
                     fontSize: '0.68rem',
                     textTransform: 'none',
-                    color: '#71717a',
+                    color: MUTED,
                     borderColor: BORDER,
                     py: 0,
                     px: 1,
                     '&.Mui-selected': {
-                      bgcolor: 'rgba(59,130,246,.12)',
-                      color: '#60a5fa',
-                      borderColor: 'rgba(59,130,246,.3)',
-                      '&:hover': { bgcolor: 'rgba(59,130,246,.18)' },
+                      bgcolor: accent.blueBg,
+                      color: accent.blueText,
+                      borderColor: accent.blueBorder,
+                      '&:hover': { bgcolor: accent.blueBg },
                     },
-                    '&:hover': { bgcolor: 'rgba(255,255,255,.04)' },
+                    '&:hover': { bgcolor: SURFACE_2 },
                   },
                 }}
               >
@@ -641,7 +645,7 @@ export default function DiffViewer({
           {/* Overlay opacity (only in overlay mode) */}
           {viewMode === 1 && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ color: '#71717a', fontSize: '0.72rem', whiteSpace: 'nowrap' }}>Opacidade:</Typography>
+              <Typography sx={{ color: MUTED, fontSize: '0.72rem', whiteSpace: 'nowrap' }}>Opacidade:</Typography>
               <Slider
                 value={overlayOpacity}
                 onChange={(_, v) => setOverlayOpacity(v)}
@@ -650,7 +654,7 @@ export default function DiffViewer({
                 size="small"
                 sx={{ width: { xs: 80, sm: 120 }, color: '#3b82f6', '& .MuiSlider-thumb': { width: 14, height: 14 } }}
               />
-              <Typography sx={{ fontFamily: 'monospace', color: '#71717a', width: 30, fontSize: '0.72rem' }}>
+              <Typography sx={{ fontFamily: 'monospace', color: MUTED, width: 30, fontSize: '0.72rem' }}>
                 {overlayOpacity}%
               </Typography>
             </Box>
@@ -664,19 +668,19 @@ export default function DiffViewer({
               <IconButton
                 size="small"
                 onClick={() => setZoom((z) => Math.max(25, z - 25))}
-                sx={{ color: MUTED, width: 30, height: 30, '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
+                sx={{ color: MUTED, width: 30, height: 30, '&:hover': { bgcolor: HOVER } }}
               >
                 <ZoomOutRoundedIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
-            <Typography sx={{ fontFamily: 'monospace', color: '#71717a', width: 38, textAlign: 'center', fontSize: '0.75rem' }}>
+            <Typography sx={{ fontFamily: 'monospace', color: MUTED, width: 38, textAlign: 'center', fontSize: '0.75rem' }}>
               {zoom}%
             </Typography>
             <Tooltip title="Aumentar zoom">
               <IconButton
                 size="small"
                 onClick={() => setZoom((z) => Math.min(200, z + 25))}
-                sx={{ color: MUTED, width: 30, height: 30, '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
+                sx={{ color: MUTED, width: 30, height: 30, '&:hover': { bgcolor: HOVER } }}
               >
                 <ZoomInRoundedIcon sx={{ fontSize: 16 }} />
               </IconButton>
@@ -685,7 +689,7 @@ export default function DiffViewer({
               <IconButton
                 size="small"
                 onClick={() => setZoom(100)}
-                sx={{ color: MUTED, width: 30, height: 30, '&:hover': { bgcolor: 'rgba(255,255,255,.06)' } }}
+                sx={{ color: MUTED, width: 30, height: 30, '&:hover': { bgcolor: HOVER } }}
               >
                 <RestartAltRoundedIcon sx={{ fontSize: 16 }} />
               </IconButton>
@@ -703,7 +707,7 @@ export default function DiffViewer({
       </Box>}
 
       {/* =============== Image comparison area =============== */}
-      <Box data-testid="diff-area" sx={{ flex: 1, overflow: 'auto', bgcolor: '#09090b', p: { xs: 1, sm: 2 } }}>
+      <Box data-testid="diff-area" sx={{ flex: 1, overflow: 'auto', bgcolor: IMG_BG, p: { xs: 1, sm: 2 } }}>
         {allPassed && !showImages ? (
           <Box
             sx={{
@@ -721,20 +725,21 @@ export default function DiffViewer({
                 width: 72,
                 height: 72,
                 borderRadius: 3,
-                bgcolor: 'rgba(34,197,94,.08)',
-                border: '1px solid rgba(34,197,94,.25)',
+                bgcolor: accent.greenBg,
+                border: '1px solid',
+                borderColor: accent.greenBorder,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <CheckCircleOutlineRoundedIcon sx={{ fontSize: 36, color: '#22c55e' }} />
+              <CheckCircleOutlineRoundedIcon sx={{ fontSize: 36, color: accent.greenText }} />
             </Box>
             <Box>
-              <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#fafafa', mb: 0.75 }}>
+              <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: FG, mb: 0.75 }}>
                 {allZero ? 'Nenhuma diferença visual detectada' : 'Diferenças dentro do limiar aceitável'}
               </Typography>
-              <Typography sx={{ fontSize: '0.82rem', color: '#71717a', maxWidth: 380, lineHeight: 1.6 }}>
+              <Typography sx={{ fontSize: '0.82rem', color: MUTED, maxWidth: 380, lineHeight: 1.6 }}>
                 {allZero
                   ? 'A tela atual é idêntica ao baseline. Todas as técnicas de comparação retornaram 0% de diferença.'
                   : 'Foram detectadas pequenas diferenças, mas todas estão dentro dos limiares configurados. Nenhuma ação é necessária.'}
@@ -749,9 +754,10 @@ export default function DiffViewer({
                   sx={{
                     fontSize: '0.72rem',
                     fontFamily: 'monospace',
-                    bgcolor: 'rgba(34,197,94,.1)',
-                    color: '#4ade80',
-                    border: '1px solid rgba(34,197,94,.2)',
+                    bgcolor: accent.greenBg,
+                    color: accent.greenText,
+                    border: '1px solid',
+                    borderColor: accent.greenBorder,
                     height: 26,
                   }}
                 />
@@ -766,9 +772,9 @@ export default function DiffViewer({
                 fontSize: '0.78rem',
                 textTransform: 'none',
                 fontWeight: 500,
-                borderColor: 'rgba(255,255,255,.15)',
-                color: '#a1a1aa',
-                '&:hover': { bgcolor: 'rgba(255,255,255,.06)', borderColor: 'rgba(255,255,255,.25)' },
+                borderColor: BORDER,
+                color: MUTED,
+                '&:hover': { bgcolor: HOVER, borderColor: MUTED },
                 height: 36,
                 px: 2.5,
                 borderRadius: 1.5,

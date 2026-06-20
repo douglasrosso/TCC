@@ -15,7 +15,7 @@ import MonitorRoundedIcon from '@mui/icons-material/MonitorRounded';
 import SmartphoneRoundedIcon from '@mui/icons-material/SmartphoneRounded';
 import TabletRoundedIcon from '@mui/icons-material/TabletRounded';
 import DevicesRoundedIcon from '@mui/icons-material/DevicesRounded';
-import { BORDER, StatusIcon, TechBadge, CollapseButton, PanelHeaderLabel } from './shared.jsx';
+import { useReviewColors, useAccent, StatusIcon, TechBadge, CollapseButton, PanelHeaderLabel } from './shared.jsx';
 
 function getDeviceLabel(viewport) {
   if (!viewport) return 'Desktop';
@@ -28,6 +28,7 @@ function getDeviceLabel(viewport) {
 
 function DiffListItem({ diff, isSelected, onSelect }) {
   const device = getDeviceLabel(diff.viewport);
+  const { BORDER, FG, MUTED, HOVER_WEAK } = useReviewColors();
 
   return (
     <Box
@@ -45,7 +46,7 @@ function DiffListItem({ diff, isSelected, onSelect }) {
         bgcolor: isSelected ? 'rgba(59,130,246,.05)' : 'transparent',
         cursor: 'pointer',
         transition: 'all 0.12s',
-        '&:hover': { bgcolor: isSelected ? 'rgba(59,130,246,.05)' : 'rgba(255,255,255,.03)' },
+        '&:hover': { bgcolor: isSelected ? 'rgba(59,130,246,.05)' : HOVER_WEAK },
         display: 'block',
         outline: 'none',
         fontFamily: 'inherit',
@@ -57,7 +58,7 @@ function DiffListItem({ diff, isSelected, onSelect }) {
           sx={{
             fontSize: '0.82rem',
             fontWeight: 500,
-            color: '#fafafa',
+            color: FG,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -68,7 +69,7 @@ function DiffListItem({ diff, isSelected, onSelect }) {
         <StatusIcon status={diff.status} />
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#a1a1aa', mb: 0.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: MUTED, mb: 0.5 }}>
         {device === 'Mobile' ? (
           <SmartphoneRoundedIcon sx={{ fontSize: 12 }} />
         ) : device === 'Tablet' ? (
@@ -103,6 +104,8 @@ export default function DiffListPanel({
   onCollapse,
 }) {
   const pendingCount = diffs.filter((d) => d.status === 'pending').length;
+  const { BORDER, PANEL_BG, SURFACE_2, MUTED, FG, SUBTLE } = useReviewColors();
+  const accent = useAccent();
 
   return (
     <Box
@@ -114,7 +117,7 @@ export default function DiffListPanel({
         borderColor: BORDER,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: 'rgba(9,9,11,.5)',
+        bgcolor: PANEL_BG,
         overflow: 'hidden',
       }}
     >
@@ -143,7 +146,7 @@ export default function DiffListPanel({
       {/* Filter bar — search + status */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.25, borderBottom: '1px solid', borderColor: BORDER }}>
         <Box sx={{ position: 'relative', flex: 1 }}>
-          <SearchRoundedIcon sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: '#a1a1aa', pointerEvents: 'none' }} />
+          <SearchRoundedIcon sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: MUTED, pointerEvents: 'none' }} />
           <TextField
             size="small"
             placeholder="Buscar telas..."
@@ -153,10 +156,10 @@ export default function DiffListPanel({
               sx: {
                 fontSize: '0.75rem',
                 pl: 3.5,
-                bgcolor: 'rgba(255,255,255,.04)',
-                color: '#fafafa',
+                bgcolor: SURFACE_2,
+                color: FG,
                 '& .MuiOutlinedInput-notchedOutline': { borderColor: BORDER },
-                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'hsl(240 3.7% 22%)' },
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: SUBTLE },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
                 height: 32,
               },
@@ -176,14 +179,14 @@ export default function DiffListPanel({
           )}
           sx={{
             fontSize: '0.72rem',
-            color: '#a1a1aa',
+            color: MUTED,
             height: 32,
             minWidth: 110,
-            bgcolor: 'rgba(255,255,255,.04)',
+            bgcolor: SURFACE_2,
             '& .MuiOutlinedInput-notchedOutline': { borderColor: BORDER },
-            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'hsl(240 3.7% 22%)' },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: SUBTLE },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
-            '& .MuiSelect-icon': { color: '#71717a' },
+            '& .MuiSelect-icon': { color: SUBTLE },
           }}
         >
           <MenuItem value="all" sx={{ fontSize: '0.75rem' }}>Todos</MenuItem>
@@ -206,17 +209,17 @@ export default function DiffListPanel({
             '& .MuiToggleButton-root': {
               fontSize: '0.65rem',
               textTransform: 'none',
-              color: '#a1a1aa',
+              color: MUTED,
               borderColor: BORDER,
               py: 0,
               gap: 0.5,
               '&.Mui-selected': {
-                bgcolor: 'rgba(59,130,246,.12)',
-                color: '#60a5fa',
-                borderColor: 'rgba(59,130,246,.3)',
-                '&:hover': { bgcolor: 'rgba(59,130,246,.18)' },
+                bgcolor: accent.blueBg,
+                color: accent.blueText,
+                borderColor: accent.blueBorder,
+                '&:hover': { bgcolor: accent.blueBg },
               },
-              '&:hover': { bgcolor: 'rgba(255,255,255,.04)' },
+              '&:hover': { bgcolor: SURFACE_2 },
             },
           }}
         >
@@ -231,7 +234,7 @@ export default function DiffListPanel({
       <Box sx={{ flex: 1, overflow: 'auto' }}>
         {diffs.length === 0 ? (
           <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography sx={{ fontSize: '0.75rem', color: '#71717a' }}>
+            <Typography sx={{ fontSize: '0.75rem', color: SUBTLE }}>
               Nenhuma tela encontrada.
             </Typography>
           </Box>

@@ -5,9 +5,10 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
 import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
 import ListRoundedIcon from '@mui/icons-material/ListRounded';
-import { BORDER, DIM, MUTED, KbdHint } from './shared.jsx';
+import { useReviewColors, KbdHint } from './shared.jsx';
 
 export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns, noDiffs, hasFilters }) {
+  const { BORDER, DIM, MUTED, FG, SUBTLE, HOVER_WEAK } = useReviewColors();
   const icon = noDiffs ? (
     <CheckCircleOutlineRoundedIcon sx={{ fontSize: 36, color: '#22c55e' }} />
   ) : (
@@ -42,8 +43,9 @@ export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns, noDiffs, has
           width: 72,
           height: 72,
           borderRadius: 3,
-          bgcolor: noDiffs ? 'rgba(34,197,94,.08)' : 'rgba(255,255,255,.04)',
-          border: noDiffs ? '1px solid rgba(34,197,94,.25)' : '1px solid hsl(240 3.7% 15.9%)',
+          bgcolor: noDiffs ? 'rgba(34,197,94,.08)' : 'rgba(127,127,127,.08)',
+          border: noDiffs ? '1px solid rgba(34,197,94,.25)' : '1px solid',
+          borderColor: noDiffs ? undefined : BORDER,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -53,10 +55,10 @@ export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns, noDiffs, has
       </Box>
 
       <Box>
-        <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: '#fafafa', mb: 0.75 }}>
+        <Typography sx={{ fontSize: '1rem', fontWeight: 600, color: FG, mb: 0.75 }}>
           {title}
         </Typography>
-        <Typography sx={{ fontSize: '0.82rem', color: '#71717a', maxWidth: 320, lineHeight: 1.6 }}>
+        <Typography sx={{ fontSize: '0.82rem', color: SUBTLE, maxWidth: 320, lineHeight: 1.6 }}>
           {description}
         </Typography>
       </Box>
@@ -76,7 +78,7 @@ export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns, noDiffs, has
                 color: MUTED,
                 height: 40,
                 px: 2.5,
-                '&:hover': { bgcolor: 'rgba(255,255,255,.04)', borderColor: MUTED },
+                '&:hover': { bgcolor: HOVER_WEAK, borderColor: MUTED },
               }}
             >
               Test Runs
@@ -94,7 +96,7 @@ export default function ReviewEmptyState({ onOpenDiffs, onOpenRuns, noDiffs, has
                 color: MUTED,
                 height: 40,
                 px: 2.5,
-                '&:hover': { bgcolor: 'rgba(255,255,255,.04)', borderColor: MUTED },
+                '&:hover': { bgcolor: HOVER_WEAK, borderColor: MUTED },
               }}
             >
               Lista de Telas

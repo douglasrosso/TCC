@@ -8,7 +8,10 @@ import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
-import { BORDER, CARD, FG, MUTED, SUBTLE, STATUS_MAP } from './shared.jsx';
+import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
+import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
+import { useReviewColors, useStatusMap, useAccent } from './shared.jsx';
+import { useThemeMode } from '../ThemeModeContext.js';
 
 export default function ReviewHeader({
   totalPending,
@@ -23,6 +26,10 @@ export default function ReviewHeader({
   repoUrl,
   onBack,
 }) {
+  const { BORDER, CARD, FG, MUTED, SUBTLE } = useReviewColors();
+  const STATUS_MAP = useStatusMap();
+  const accent = useAccent();
+  const { mode, toggleMode } = useThemeMode();
   return (
     <Box
       component="header"
@@ -149,7 +156,7 @@ export default function ReviewHeader({
           {branch && (
             <Chip label={branch} size="small" variant="outlined"
               sx={{ height: 20, fontSize: '0.68rem', fontWeight: 500, fontFamily: 'monospace',
-                borderColor: 'rgba(139,92,246,.4)', bgcolor: 'rgba(139,92,246,.08)', color: '#a78bfa',
+                borderColor: accent.purpleBorder, bgcolor: accent.purpleBg, color: accent.purpleText,
                 '& .MuiChip-label': { px: 0.75 },
               }}
             />
@@ -160,7 +167,7 @@ export default function ReviewHeader({
               href={repoUrl ? `${repoUrl}/commit/${commitSha}` : undefined}
               target="_blank" rel="noopener noreferrer" clickable={!!repoUrl}
               sx={{ height: 20, fontSize: '0.68rem', fontWeight: 500, fontFamily: 'monospace',
-                borderColor: 'rgba(59,130,246,.4)', bgcolor: 'rgba(59,130,246,.08)', color: '#60a5fa',
+                borderColor: accent.blueBorder, bgcolor: accent.blueBg, color: accent.blueText,
                 '& .MuiChip-label': { px: 0.75 }, textDecoration: 'none',
               }}
             />
@@ -171,13 +178,23 @@ export default function ReviewHeader({
               href={repoUrl ? `${repoUrl}/pull/${prNumber}` : undefined}
               target="_blank" rel="noopener noreferrer" clickable={!!repoUrl}
               sx={{ height: 20, fontSize: '0.68rem', fontWeight: 500, fontFamily: 'monospace',
-                borderColor: 'rgba(34,197,94,.4)', bgcolor: 'rgba(34,197,94,.08)', color: '#4ade80',
+                borderColor: accent.greenBorder, bgcolor: accent.greenBg, color: accent.greenText,
                 '& .MuiChip-label': { px: 0.75 }, textDecoration: 'none',
               }}
             />
           )}
           {!branch && !commitSha && <span>Execução local</span>}
         </Box>
+
+        <Tooltip title={mode === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+          <IconButton
+            size="small"
+            onClick={toggleMode}
+            sx={{ color: SUBTLE, '&:hover': { bgcolor: 'rgba(59,130,246,.1)', color: '#3b82f6' } }}
+          >
+            {mode === 'dark' ? <LightModeRoundedIcon sx={{ fontSize: 20 }} /> : <DarkModeRoundedIcon sx={{ fontSize: 20 }} />}
+          </IconButton>
+        </Tooltip>
 
         <Tooltip title="Resetar todas as revisões">
           <IconButton
