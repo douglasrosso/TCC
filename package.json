@@ -1,0 +1,31 @@
+{
+  "name": "visual-regression-tcc",
+  "version": "1.0.0",
+  "description": "Comparativo de técnicas de regressão visual: pixel-a-pixel, SSIM e regiões",
+  "type": "module",
+  "scripts": {
+    "postinstall": "playwright install chromium",
+    "dev": "vite",
+    "build": "vite build",
+    "vrt": "pixelguard test",
+    "review:local": "pixelguard test --no-fail && npm run review",
+    "update-baselines": "pixelguard update-baselines",
+    "scenarios": "node tests/scenarios.js",
+    "review": "pixelguard review",
+    "deploy": "pixelguard deploy"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.13.0",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^6.4.0",
+    "@mui/material": "^6.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "pixelguard": "file:packages/pixelguard",
+    "playwright": "^1.49.0",
+    "vite": "^6.0.0"
+  }
+}

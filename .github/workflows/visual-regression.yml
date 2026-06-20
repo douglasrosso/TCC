@@ -1,0 +1,265 @@
+name: Visual Regression Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: visual-regression-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  visual-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ── Setup ──────────────────────────────────────────
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Instalar Chromium (Playwright)
+        run: npx playwright install chromium --with-deps
+
+      # ── Captura baseline (origin/main) + atual + Comparação ───
+      - name: Regressão visual
+        id: compare
+        run: |
+          npx pixelguard test --no-fail
+          if [ -f results/results.json ]; then
+            FAILED=$(node -e "const r=JSON.parse(require('fs').readFileSync('results/results.json','utf-8')); console.log(r.summary.failed)")
+            echo "failed=$FAILED" >> $GITHUB_OUTPUT
+            if [ "$FAILED" -gt 0 ]; then
+              echo "has_diffs=true" >> $GITHUB_OUTPUT
+            else
+              echo "has_diffs=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "failed=0" >> $GITHUB_OUTPUT
+            echo "has_diffs=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ── Meta + Report ─────────────────────────────────
+      - name: Gerar meta.json
+        run: |
+          node -e "
+          const fs = require('fs');
+          fs.mkdirSync('results', { recursive: true });
+          const token = process.env.STATUS_TOKEN || '';
+          const xorKey = 79;
+          const encrypted = Buffer.from(
+            Array.from(token).map(c => c.charCodeAt(0) ^ xorKey)
+          ).toString('base64');
+          fs.writeFileSync('results/meta.json', JSON.stringify({
+            commitSha: '${{ github.event.pull_request.head.sha }}',
+            commitShort: '${{ github.event.pull_request.head.sha }}'.slice(0, 7),
+            branch: '${{ github.head_ref }}',
+            baseBranch: '${{ github.base_ref }}',
+            prNumber: ${{ github.event.pull_request.number }},
+            prTitle: process.env.PR_TITLE,
+            actor: '${{ github.actor }}',
+            runId: '${{ github.run_id }}',
+            repository: '${{ github.repository }}',
+            timestamp: new Date().toISOString(),
+            hasDiffs: ${{ steps.compare.outputs.has_diffs || false }},
+            failedCount: ${{ steps.compare.outputs.failed || 0 }},
+            statusAuth: { e: encrypted, k: xorKey }
+          }, null, 2));
+          "
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          STATUS_TOKEN: ${{ secrets.VRT_TOKEN }}
+
+      - name: Build review UI e montar deploy
+        if: steps.compare.outputs.has_diffs == 'true'
+        run: npx pixelguard deploy --pr ${{ github.event.pull_request.number }}
+
+      # ── Deploy GitHub Pages ────────────────────────────
+      - name: Deploy review para GitHub Pages
+        if: steps.compare.outputs.has_diffs == 'true'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.VRT_TOKEN }}
+          publish_dir: ./deploy
+          destination_dir: .
+          keep_files: true
+
+      # ── Status check ───────────────────────────────────
+      - name: Status — pendente (diffs encontrados)
+        if: steps.compare.outputs.has_diffs == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: 'pending',
+              description: 'Diferenças visuais — review necessário',
+              context: 'visual-regression/review',
+              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.run_id }}`
+            });
+
+      - name: Status — sucesso
+        if: steps.compare.outputs.has_diffs != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: 'success',
+              description: 'Nenhuma diferença visual',
+              context: 'visual-regression/review'
+            });
+
+      # ── Upload artefatos ───────────────────────────────
+      - name: Upload resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-results
+          path: results/
+          retention-days: 30
+
+      # ── Comentar no PR ─────────────────────────────────
+      - name: Comentar no PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const hasDiffs = '${{ steps.compare.outputs.has_diffs }}' === 'true';
+            const sha = '${{ github.event.pull_request.head.sha }}'.slice(0, 7);
+            const fullSha = '${{ github.event.pull_request.head.sha }}';
+            const branch = '${{ github.head_ref }}';
+            const baseBranch = '${{ github.base_ref }}';
+            const prNumber = ${{ github.event.pull_request.number }};
+            const actor = '${{ github.actor }}';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.run_id }}`;
+            const pagesUrl = `https://${{ github.repository_owner }}.github.io/${context.repo.repo}/pr-${prNumber}/`;
+            const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}`;
+
+            let body = '';
+
+            if (!fs.existsSync('results/results.json')) {
+              body += `<div align="center">\n\n`;
+              body += `# ✅ Regressão Visual OK\n\n`;
+              body += `</div>\n\n`;
+              body += `| | |\n|---|---|\n`;
+              body += `| 📌 **Commit** | [\`${sha}\`](${repoUrl}/commit/${fullSha}) |\n`;
+              body += `| 🌿 **Branch** | \`${branch}\` → \`${baseBranch}\` |\n`;
+            } else {
+              const data = JSON.parse(fs.readFileSync('results/results.json', 'utf-8'));
+              const s = data.summary;
+              const totalComps = data.comparisons?.length || 0;
+              const totalFailed = s.failed || 0;
+              const totalPassed = s.passed || 0;
+
+              body += `<div align="center">\n\n`;
+              if (hasDiffs) {
+                body += `# 🔍 Review Visual Necessário\n\n`;
+                body += `**${totalFailed} diferença(s) encontrada(s)** em ${totalComps} tela(s) comparada(s)\n\n`;
+              } else {
+                body += `# ✅ Regressão Visual OK\n\n`;
+                body += `**Todas as ${totalComps} tela(s) passaram** sem diferenças visuais\n\n`;
+              }
+              body += `</div>\n\n`;
+
+              body += `| | |\n|---|---|\n`;
+              body += `| 📌 **Commit** | [\`${sha}\`](${repoUrl}/commit/${fullSha}) |\n`;
+              body += `| 🌿 **Branch** | \`${branch}\` → \`${baseBranch}\` |\n`;
+              body += `| 👤 **Autor** | @${actor} |\n\n`;
+
+              body += `### 📊 Resultados por Técnica\n\n`;
+              body += `| Técnica | Status | Aprovadas | Reprovadas |\n`;
+              body += `|:--------|:------:|:---------:|:----------:|\n`;
+
+              for (const [tech, label, emoji] of [['pixel','Pixel','🔵'],['ssim','SSIM','🟣'],['region','Região','🟠']]) {
+                const t = s.techniques[tech];
+                const icon = t.failed > 0 ? '❌' : '✅';
+                body += `| ${emoji} ${label} | ${icon} | ${t.passed} | ${t.failed} |\n`;
+              }
+
+              if (data.comparisons) {
+                const openAttr = hasDiffs ? ' open' : '';
+                body += `\n<details${openAttr}>\n<summary>📋 <b>Detalhes por tela</b></summary>\n\n`;
+                body += `| Tela | Pixel | SSIM | Região |\n`;
+                body += `|:-----|:-----:|:----:|:------:|\n`;
+                for (const c of data.comparisons) {
+                  const p  = c.results.pixel;
+                  const ss = c.results.ssim;
+                  const r  = c.results.region;
+                  const pMs  = p.executionMs  != null ? ` (${p.executionMs}ms)`  : '';
+                  const ssMs = ss.executionMs != null ? ` (${ss.executionMs}ms)` : '';
+                  const rMs  = r.executionMs  != null ? ` (${r.executionMs}ms)`  : '';
+                  const pIcon  = p.error  ? `❌ dim.`
+                    : p.passed  ? `✅ ${Number(p.diffPercent).toFixed(2)}%${pMs}`
+                    : `❌ ${Number(p.diffPercent).toFixed(2)}%${pMs}`;
+                  const sIcon  = ss.error ? `❌ dim.`
+                    : ss.passed ? `✅ ${ss.score}${ssMs}`
+                    : `❌ ${ss.score}${ssMs}`;
+                  const rIcon  = r.error  ? `❌ dim.`
+                    : r.passed  ? `✅ ${r.failedRegions}/${r.totalRegions}${rMs}`
+                    : `❌ ${r.failedRegions}/${r.totalRegions}${rMs}`;
+                  body += `| \`${c.imageName}\` | ${pIcon} | ${sIcon} | ${rIcon} |\n`;
+                }
+                body += `\n</details>\n`;
+              }
+
+              if (hasDiffs) {
+                body += `\n---\n\n`;
+                body += `<div align="center">\n\n`;
+                body += `### ⏳ Merge bloqueado — review visual necessário\n\n`;
+                body += `<a href="${pagesUrl}" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/🔍_Abrir_Review_Visual-4f46e5?style=for-the-badge&logoColor=white" alt="Abrir Review" /></a>\n\n`;
+                body += `</div>\n\n`;
+                body += `> **Como aprovar:** Abra o review visual, analise as diferenças e clique em **Aprovar** ou **Rejeitar**.\n`;
+                body += `> O status do PR é atualizado **automaticamente** — nenhum comando manual necessário.\n`;
+              }
+            }
+
+            body += `\n\n---\n<div align="center">\n\n`;
+            body += `🤖 **PixelGuard** · [workflow run](${runUrl})\n\n`;
+            body += `</div>`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Regressão Visual')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

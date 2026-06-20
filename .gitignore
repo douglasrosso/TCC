@@ -1,0 +1,35 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+
+# Resultados de testes visuais (gerados pelo capture/compare)
+results/
+
+# Baselines locais — geradas dinamicamente de origin/baseBranch, não commitadas
+baselines/
+baselines-ci/
+
+# Deploy temporário para GitHub Pages
+deploy/
+
+# Logs
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.swp
+
+# Editor / ferramentas locais
+.vscode/
+.claude/
+
+.env
+
+# Materiais locais — não versionados
+slides/
+results-battery/
+latex/
+scripts/
