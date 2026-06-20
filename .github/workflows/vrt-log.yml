@@ -101,6 +101,14 @@ jobs:
           mkdir -p "pr-${PR_NUMBER}"
           cp artifact/results.json "pr-${PR_NUMBER}/results.json"
 
+          # Copiar tambem as imagens (baseline, atual e diffs por tecnica)
+          # que ja vem dentro do artefato de resultados.
+          for dir in baseline current diffs; do
+            if [ -d "artifact/$dir" ]; then
+              cp -r "artifact/$dir" "pr-${PR_NUMBER}/$dir"
+            fi
+          done
+
           node -e "
             const fs = require('fs');
             const r = JSON.parse(fs.readFileSync('artifact/results.json'));
