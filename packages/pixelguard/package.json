@@ -1,0 +1,52 @@
+{
+  "name": "pixelguard",
+  "version": "1.0.0",
+  "description": "Visual regression testing with pixel, SSIM, and region comparison techniques",
+  "type": "module",
+  "types": "./index.d.ts",
+  "bin": {
+    "pixelguard": "./bin/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./capture": "./src/capture.js",
+    "./compare": "./src/compare.js",
+    "./report": "./src/report.js",
+    "./deploy": "./src/deploy.js",
+    "./comparators/pixel": "./src/comparators/pixel.js",
+    "./comparators/ssim": "./src/comparators/ssim.js",
+    "./comparators/region": "./src/comparators/region.js",
+    "./review": "./review/server/review.js",
+    "./review/server": "./review/server/index.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "review/",
+    "index.d.ts",
+    "README.md"
+  ],
+  "dependencies": {
+    "pixelmatch": "^6.0.0",
+    "pngjs": "^7.0.0",
+    "dotenv": "^16.4.0"
+  },
+  "peerDependencies": {
+    "playwright": "^1.40.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "visual-regression",
+    "screenshot",
+    "testing",
+    "pixel",
+    "ssim",
+    "diff",
+    "pixelguard"
+  ],
+  "license": "MIT"
+}
